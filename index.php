@@ -434,8 +434,8 @@ function handleApiRoute($uri) {
         $db = getDB();
         $now = nowString();
         $whenStr = date('Y-m-d H:i:s', $when);
-        $stmt = $db->prepare('INSERT INTO scheduled_queue (user_id, slot_number, topic_title, keyword, category, scheduled_time, target_platform, status, created_at, target_link, target_anchor, plan_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
-        $stmt->execute([$userId, $activeSlot, $title, $keyword, $category, $whenStr, $input['target_platform'] ?? 'local', 'Scheduled', $now, $targetLink, $targetAnchor, $planId]);
+        $stmt = $db->prepare('INSERT INTO scheduled_queue (user_id, slot_number, topic_title, keyword, category, scheduled_time, target_platform, status, created_at, target_link, target_anchor, plan_id, campaign_item_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+        $stmt->execute([$userId, $activeSlot, $title, $keyword, $category, $whenStr, $input['target_platform'] ?? 'local', 'Scheduled', $now, $targetLink, $targetAnchor, $planId, $planId]);
         $qid = $db->lastInsertId();
         jsonResponse(['success' => true, 'queue_id' => $qid, 'status' => 'Scheduled', 'message' => 'Approved article added to the publishing queue.']);
     }
@@ -474,8 +474,8 @@ function handleApiRoute($uri) {
                 if ($when <= $now) $when->modify('+1 day');
 
                 $whenStr = $when->format('Y-m-d H:i:s');
-                $stmt = $db->prepare('INSERT INTO scheduled_queue (user_id, slot_number, topic_title, keyword, category, scheduled_time, target_platform, status, created_at, target_link, target_anchor, plan_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
-                $stmt->execute([$userId, $activeSlot, $plan['title'], $plan['primary_keyword'], 'Planned Article', $whenStr, $destination, 'Scheduled', $created, $plan['target_link'], $plan['target_anchor'], $plan['id']]);
+                $stmt = $db->prepare('INSERT INTO scheduled_queue (user_id, slot_number, topic_title, keyword, category, scheduled_time, target_platform, status, created_at, target_link, target_anchor, plan_id, campaign_item_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+                $stmt->execute([$userId, $activeSlot, $plan['title'], $plan['primary_keyword'], 'Planned Article', $whenStr, $destination, 'Scheduled', $created, $plan['target_link'], $plan['target_anchor'], $plan['id'], $plan['id']]);
                 $count++;
             }
         }
@@ -1106,8 +1106,8 @@ function handleApiRoute($uri) {
                 }
 
                 $nowS = nowString();
-                $stmt = $db->prepare('INSERT INTO scheduled_queue (user_id, slot_number, topic_title, keyword, category, scheduled_time, target_platform, status, created_at, target_link, target_anchor) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
-                $stmt->execute([$tok['user_id'], $activeSlot, $ci['title'], $ci['primary_keyword'], 'Approved Article', $scheduledStr, $platform, 'Scheduled', $nowS, $ci['internal_links'] ?? '', $ci['primary_keyword'] ?? '']);
+                $stmt = $db->prepare('INSERT INTO scheduled_queue (user_id, slot_number, topic_title, keyword, category, scheduled_time, target_platform, status, created_at, target_link, target_anchor, campaign_item_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+                $stmt->execute([$tok['user_id'], $activeSlot, $ci['title'], $ci['primary_keyword'], 'Approved Article', $scheduledStr, $platform, 'Scheduled', $nowS, $ci['internal_links'] ?? '', $ci['primary_keyword'] ?? '', $ci['id']]);
             }
         } else {
             $stmt = $db->prepare("UPDATE approval_tokens SET decision = 'Rejected' WHERE id = ?");

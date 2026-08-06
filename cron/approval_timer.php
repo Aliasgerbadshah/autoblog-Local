@@ -190,8 +190,8 @@ foreach ($needSchedule as $item) {
         $scheduledStr = $scheduledDate->format('Y-m-d H:i:s');
     }
 
-    $stmt = $db->prepare('INSERT INTO scheduled_queue (user_id, slot_number, topic_title, keyword, category, scheduled_time, target_platform, status, created_at, target_link, target_anchor) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
-    $stmt->execute([$userId, $activeSlot, $item['title'], $item['primary_keyword'], 'Approved Article', $scheduledStr, $platform, 'Scheduled', $nowStr, $item['internal_links'] ?? '', $item['primary_keyword'] ?? '']);
+    $stmt = $db->prepare('INSERT INTO scheduled_queue (user_id, slot_number, topic_title, keyword, category, scheduled_time, target_platform, status, created_at, target_link, target_anchor, campaign_item_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+    $stmt->execute([$userId, $activeSlot, $item['title'], $item['primary_keyword'], 'Approved Article', $scheduledStr, $platform, 'Scheduled', $nowStr, $item['internal_links'] ?? '', $item['primary_keyword'] ?? '', $item['id']]);
     echo "[Timer] Auto-scheduled: {$item['title']} for $scheduledStr on $platform\n";
 }
 

@@ -127,11 +127,12 @@ function initAutoblogDB() {
     try { $db->exec('ALTER TABLE campaigns ADD COLUMN target_platform TEXT DEFAULT \'blogger\''); } catch (Exception $e) {}
     try { $db->exec('ALTER TABLE campaign_items ADD COLUMN scheduled_date TEXT'); } catch (Exception $e) {}
     try { $db->exec('ALTER TABLE campaign_items ADD COLUMN target_platform TEXT DEFAULT \'local\''); } catch (Exception $e) {}
+    try { $db->exec('ALTER TABLE scheduled_queue ADD COLUMN campaign_item_id INTEGER'); } catch (Exception $e) {}
 
     $db->exec('CREATE TABLE IF NOT EXISTS approval_tokens (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER NOT NULL,
-        campaign_item_id INTEGER NOT NULL,
+        campaign_item_id INTEGER,
         approval_type TEXT NOT NULL,
         token TEXT UNIQUE NOT NULL,
         decision TEXT DEFAULT \'Pending\',

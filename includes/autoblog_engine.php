@@ -532,36 +532,6 @@ function generateArticleHtmlFromCampaignItem($item, $userId, $activeSlot, $db, $
         $chatContent = generateFallbackArticleHtml($title, $keyword, $h1, $h2s, $h3s, $kws, $links, $ext, $prompts);
     }
 
-    // IMAGE 1: Featured THUMBNAIL — 9:16 ratio, MANDATORY first image after H1
-    // Short prompt to save tokens/cost
-    $featuredImgUrl = '';
-    if (!empty($imageVault['api_key'])) {
-        for ($imgAttempt = 1; $imgAttempt <= 3; $imgAttempt++) {
-            $thumbPrompt = "9:16 vertical thumbnail for $keyword blog. Professional, bold visual, no text or logos.";
-            $imgResult = AIProviderClient::image($imageVault, $thumbPrompt);
-            if (!empty($imgResult['success']) && !empty($imgResult['url'])) {
-                if (validateImageUrl($imgResult['url'])) {
-                    $featuredImgUrl = $imgResult['url'];
-                    break;
-                }
-                error_log("[Image Validation] Thumbnail attempt $imgAttempt URL not accessible: " . $imgResult['url']);
-            }
-        }
-    }
-
-    // IMAGE 2: Content illustration — placed in middle of article
-    // Short prompt to save tokens/cost
-    $contentImgUrl = '';
-    if (!empty($imageVault['api_key'])) {
-        $contentPrompt = "Editorial photo illustrating $keyword. Natural lighting, no text, no logos.";
-        $contentResult = AIProviderClient::image($imageVault, $contentPrompt);
-        if (!empty($contentResult['success']) && !empty($contentResult['url'])) {
-            if (validateImageUrl($contentResult['url'])) {
-                $contentImgUrl = $contentResult['url'];
-            }
-        }
-    }
-
     // Strip ALL images from Chat API content first (we add our own 2 images)
     // This prevents duplicate images and prompt text leaking into blog
     $chatContent = preg_replace('#<figure[^>]*>.*?</figure>#is', '', $chatContent);
@@ -570,6 +540,7 @@ function generateArticleHtmlFromCampaignItem($item, $userId, $activeSlot, $db, $
     $chatContent = preg_replace('#<p[^>]*>\s*(Image prompt|Image:|Alt:|Prompt:).*?</p>#is', '', $chatContent);
 
     // IMAGE 1: Featured THUMBNAIL - 9:16 ratio, MANDATORY first image after H1
+    // Short prompt to save tokens/cost. Up to 3 retries for validation.
     $featuredImgUrl = '';
     if (!empty($imageVault['api_key'])) {
         for ($imgAttempt = 1; $imgAttempt <= 3; $imgAttempt++) {
@@ -733,7 +704,6 @@ function generateArticleHtmlFromCampaignItem($item, $userId, $activeSlot, $db, $
 <body>
     <a href="/index.php" class="nav-back">&larr; Back to Dashboard</a>
     <article>
-        $thumbHtml
         $chatContent
     </article>
     <footer>&copy; $nowYear AutoBlog Autonomous Magazine Network &middot; Published $dateStr</footer>
