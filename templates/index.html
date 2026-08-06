@@ -634,7 +634,8 @@
 
                 <!-- Google Blogger API Credentials + Connection Tester -->
                 <div style="background:var(--inner-bg); padding:1.25rem; border-radius:12px; border:1px solid var(--border-light); margin-bottom:1.25rem;">
-                    <h3 style="font-size:1rem; margin-bottom:0.75rem; color:#f59e0b;">1. Google Blogger API Integration</h3>
+                    <h3 style="font-size:1rem; margin-bottom:0.75rem; color:#f59e0b;">1. Google Blogger API Integration (API Key — No OAuth!)</h3>
+                    <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:12px;">Use a <strong>Google Cloud API Key</strong> (not OAuth). API keys never expire — no refresh tokens needed! Create one in Google Cloud Console → APIs & Services → Credentials → Create API Key → Restrict to Blogger API v3.</p>
                     <form id="blogger-vault-form" onsubmit="return handleSaveBloggerVault(event)">
                         <div class="form-grid">
                             <div class="form-group"><label>Blogger Account Name</label><input type="text" id="v-blog-alias" value="Primary Blogger Account"></div>
@@ -643,25 +644,8 @@
                                 <input type="text" id="v-blog-id" placeholder="e.g. 810293810238190" required>
                             </div>
                             <div class="form-group">
-                                <label>OAuth Access Token</label>
-                                <input type="password" id="v-blog-token" placeholder="ya29.a0A... / Blogger Token">
-                            </div>
-                        </div>
-                        <div style="background:rgba(245, 158, 11, 0.1); padding:12px 16px; border-radius:8px; border:1px solid rgba(245, 158, 11, 0.2); margin-bottom:12px;">
-                            <p style="font-size:0.8rem; font-weight:700; color:#b45309; margin-bottom:6px;">🔄 Permanent Auto-Renewal (Optional Refresh Credentials):</p>
-                            <div class="form-grid">
-                                <div class="form-group">
-                                    <label>OAuth Client ID</label>
-                                    <input type="text" id="v-blog-cid" placeholder="xxxx.apps.googleusercontent.com">
-                                </div>
-                                <div class="form-group">
-                                    <label>Client Secret</label>
-                                    <input type="password" id="v-blog-secret" placeholder="GOCSPX-...">
-                                </div>
-                                <div class="form-group">
-                                    <label>Refresh Token</label>
-                                    <input type="password" id="v-blog-refresh" placeholder="1//04...">
-                                </div>
+                                <label>Blogger API Key</label>
+                                <input type="password" id="v-blog-apikey" placeholder="AIzaSy... (Google Cloud API Key)" required>
                             </div>
                         </div>
                         <div style="display:flex; gap:12px;">
@@ -949,10 +933,7 @@
                 alert('Credential removed from Vault!');
                 if (serviceName === 'blogger_api') {
                     document.getElementById('v-blog-id').value = '';
-                    document.getElementById('v-blog-token').value = '';
-                    document.getElementById('v-blog-cid').value = '';
-                    document.getElementById('v-blog-secret').value = '';
-                    document.getElementById('v-blog-refresh').value = '';
+                    document.getElementById('v-blog-apikey').value = '';
                 } else if (serviceName === 'brevo_api') {
                     document.getElementById('v-brevo-key').value = '';
                     document.getElementById('v-brevo-sender').value = '';
@@ -974,10 +955,7 @@
 
                 if (services.blogger_api) {
                     if (services.blogger_api.blogger_blog_id) document.getElementById('v-blog-id').value = services.blogger_api.blogger_blog_id;
-                    if (services.blogger_api.access_token) document.getElementById('v-blog-token').value = services.blogger_api.access_token;
-                    if (services.blogger_api.client_id) document.getElementById('v-blog-cid').value = services.blogger_api.client_id;
-                    if (services.blogger_api.client_secret) document.getElementById('v-blog-secret').value = services.blogger_api.client_secret;
-                    if (services.blogger_api.refresh_token) document.getElementById('v-blog-refresh').value = services.blogger_api.refresh_token;
+                    if (services.blogger_api.blogger_api_key) document.getElementById('v-blog-apikey').value = services.blogger_api.blogger_api_key;
                 }
 
                 if (services.brevo_api) {
@@ -1022,10 +1000,7 @@
             const creds = {
                 account_alias: document.getElementById('v-blog-alias').value || 'Primary Blogger Account',
                 blogger_blog_id: document.getElementById('v-blog-id').value,
-                access_token: document.getElementById('v-blog-token').value,
-                client_id: document.getElementById('v-blog-cid').value,
-                client_secret: document.getElementById('v-blog-secret').value,
-                refresh_token: document.getElementById('v-blog-refresh').value
+                blogger_api_key: document.getElementById('v-blog-apikey').value
             };
             await saveVaultService('blogger_api', creds);
             return false;
@@ -1045,14 +1020,14 @@
         function updateAiDefaults() {
             const chat=document.getElementById('v-chat-provider').value, image=document.getElementById('v-image-provider').value;
             const chatModel={gemini:'gemini-2.5-flash-lite',openai:'gpt-4o-mini',anthropic:'claude-3-5-sonnet-latest',huggingface:'meta-llama/Llama-3.1-8B-Instruct',openrouter:'openai/gpt-4o-mini',zenmux:'moonshotai/kimi-k3',custom:''}[chat]||'';
-            const imageModel={huggingface:'black-forest-labs/FLUX.1-schnell',openai:'gpt-image-1-mini',gemini:'gemini-2.5-flash-preview-image-generation',stability:'stable-image-ultra',replicate:'black-forest-labs/flux-schnell',custom:''}[image]||'';
+            const imageModel={huggingface:'black-forest-labs/FLUX.1-schnell',openai:'gpt-image-1',gemini:'gemini-3.1-flash-image-preview',stability:'stable-image-ultra',replicate:'black-forest-labs/flux-schnell',custom:''}[image]||'';
             document.getElementById('v-chat-model').value=chatModel; document.getElementById('v-image-model').value=imageModel;
             const chatEndpoints={gemini:'',openai:'https://api.openai.com/v1/chat/completions',anthropic:'https://api.anthropic.com/v1/messages',huggingface:'https://router.huggingface.co/v1/chat/completions',openrouter:'https://openrouter.ai/api/v1/chat/completions',zenmux:'https://zenmux.ai/api/v1/chat/completions',custom:''};
             const imageEndpoints={huggingface:'',openai:'https://api.openai.com/v1/images/generations',gemini:'',stability:'',replicate:'',custom:''};
             document.getElementById('v-chat-endpoint').value=chatEndpoints[chat]||'';
             document.getElementById('v-image-endpoint').value=imageEndpoints[image]||'';
         }
-        async function testAi(service) { const el=document.getElementById('ai-test-status'); el.innerText='Testing '+service+'...'; const isChat=service==='chat_api'; const res=await fetch('/api/vault/test-ai',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({service_name:service,provider:document.getElementById(isChat?'v-chat-provider':'v-image-provider').value,api_key:document.getElementById(isChat?'v-chat-key':'v-image-key').value,model:document.getElementById(isChat?'v-chat-model':'v-image-model').value,endpoint:document.getElementById(isChat?'v-chat-endpoint':'v-image-endpoint').value})}); const data=await res.json(); el.innerText=res.ok?'🟢 '+service+' connected successfully.':'🔴 '+(data.error||'API test failed.'); }
+        async function testAi(service) { updateAiDefaults(); const el=document.getElementById('ai-test-status'); el.innerText='Testing '+service+'...'; const isChat=service==='chat_api'; const res=await fetch('/api/vault/test-ai',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({service_name:service,provider:document.getElementById(isChat?'v-chat-provider':'v-image-provider').value,api_key:document.getElementById(isChat?'v-chat-key':'v-image-key').value,model:document.getElementById(isChat?'v-chat-model':'v-image-model').value,endpoint:document.getElementById(isChat?'v-chat-endpoint':'v-image-endpoint').value})}); const data=await res.json(); el.innerText=res.ok?'🟢 '+service+' connected successfully.':'🔴 '+(data.error||'API test failed.'); }
 
         async function handleSaveAiApis(e) {
             e.preventDefault();
@@ -1138,7 +1113,7 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     blogger_blog_id: document.getElementById('v-blog-id').value,
-                    access_token: document.getElementById('v-blog-token').value
+                    blogger_api_key: document.getElementById('v-blog-apikey').value
                 })
             });
 
@@ -1157,14 +1132,10 @@
         }
         async function dashboardDecision(token,decision) { const res=await fetch('/api/demo/decision/'+token+'/'+decision,{method:'POST'}); if(!res.ok){alert('This approval link is expired or already used.');} loadDemoProgress(); loadStats(); }
         async function htmlDecision(token,decision) { if(!confirm('Are you sure you want to '+(decision==='approve'?'APPROVE this HTML for publishing?':'REJECT and rewrite this HTML?'))) return; const res=await fetch('/api/demo/html-decision/'+token+'/'+decision,{method:'POST'}); if(res.ok){alert(decision==='approve'?'✅ HTML Approved! Article is now scheduled for publishing.':'🔄 HTML Rejected! A rewritten version will be generated shortly.');loadDemoProgress();loadStats();}else{alert('This HTML approval link is expired or already used.');} }
-        async function generateMissingHtml(campaignId) { const el=document.getElementById('gen-html-status'); if(el) el.innerText='⏳ Generating HTML...'; const res=await fetch('/api/demo/generate-html/'+campaignId,{method:'POST'}); const data=await res.json(); if(el) el.innerText=res.ok?('🟢 '+data.message):('🔴 '+(data.error||'Failed')); loadDemoProgress(); loadStats(); }
         async function loadDemoProgress() { try { const data=await (await fetch('/api/demo/campaign-status')).json(); const body=document.getElementById('demo-progress-tbody'); const approvedBody=document.getElementById('approved-scheduled-tbody'); const approvedCard=document.getElementById('approved-scheduled-card'); if(!data.items||!data.items.length){body.innerHTML='<tr><td colspan="9">No campaign loaded.</td></tr>';approvedCard.style.display='none';return;} 
             const pendingItems=[];const approvedItems=[];
             data.items.forEach(x=>{if(x.plan_status==='Approved'||x.plan_status==='Provisional Approved'||x.article_status==='HTML Ready'||x.article_status==='Final Article Approved'){approvedItems.push(x);}else{pendingItems.push(x);}});
-            // Check if any approved items are missing HTML - show Generate button
-            const needHtml=approvedItems.filter(x=>x.plan_status==='Approved'&&(!x.article_status||x.article_status==='Not Created'||!x.html_path));
-            const genBtn=needHtml.length&&data.campaign?`<div style="margin:10px 0;"><button class="btn btn-purple" onclick="generateMissingHtml(${data.campaign.id})">📄 Generate HTML for ${needHtml.length} Approved Article(s)</button> <span id="gen-html-status" style="font-size:0.85rem;font-weight:700;"></span></div>`:'';
-            body.innerHTML=pendingItems.length?pendingItems.map(x=>`<tr><td>Day ${x.day_number} / Slot ${x.post_number}</td><td>${escapeHtml(x.title)}</td><td><span class="badge badge-purple">${x.plan_status}</span></td><td><span class="badge badge-purple">${x.article_status}</span></td><td>${x.scheduled_date||'—'}</td><td>${x.scheduled_time||'—'}</td><td><span class="badge badge-success">${(x.target_platform||'local').toUpperCase()}</span></td><td>${x.html_path?`<a href="${x.html_path}" target="_blank">View HTML</a>`:'—'}</td><td>${x.approval_token?`<button class="btn btn-purple" onclick="dashboardDecision('${x.approval_token}','approve')">Approve</button> <button class="btn btn-danger" onclick="dashboardDecision('${x.approval_token}','reject')">Disapprove</button>`:''}${x.html_approval_token?` <button class="btn btn-accent" onclick="htmlDecision('${x.html_approval_token}','approve')">✅ Approve HTML</button> <button class="btn btn-danger" onclick="htmlDecision('${x.html_approval_token}','reject')">🔄 Rewrite HTML</button>`:''}${(!x.approval_token&&!x.html_approval_token)?'—':''}</td></tr>`).join(''):'<tr><td colspan="9" style="text-align:center;color:var(--accent-green);font-weight:700;">✅ All items approved! Check Approved & Scheduled section below.</td></tr>'+genBtn;
+            body.innerHTML=pendingItems.length?pendingItems.map(x=>`<tr><td>Day ${x.day_number} / Slot ${x.post_number}</td><td>${escapeHtml(x.title)}</td><td><span class="badge badge-purple">${x.plan_status}</span></td><td><span class="badge badge-purple">${x.article_status}</span></td><td>${x.scheduled_date||'—'}</td><td>${x.scheduled_time||'—'}</td><td><span class="badge badge-success">${(x.target_platform||'local').toUpperCase()}</span></td><td>${x.html_path?`<a href="${x.html_path}" target="_blank">View HTML</a>`:'—'}</td><td>${x.approval_token?`<button class="btn btn-purple" onclick="dashboardDecision('${x.approval_token}','approve')">Approve</button> <button class="btn btn-danger" onclick="dashboardDecision('${x.approval_token}','reject')">Disapprove</button>`:''}${x.html_approval_token?` <button class="btn btn-accent" onclick="htmlDecision('${x.html_approval_token}','approve')">✅ Approve HTML</button> <button class="btn btn-danger" onclick="htmlDecision('${x.html_approval_token}','reject')">🔄 Rewrite HTML</button>`:''}${(!x.approval_token&&!x.html_approval_token)?'—':''}</td></tr>`).join(''):'<tr><td colspan="9" style="text-align:center;color:var(--accent-green);font-weight:700;">✅ All items approved! Check Approved & Scheduled section below.</td></tr>';
             if(approvedItems.length){approvedCard.style.display='block';approvedBody.innerHTML=approvedItems.map(x=>`<tr><td>Day ${x.day_number}</td><td><strong>${escapeHtml(x.title)}</strong></td><td>${x.scheduled_date||'—'}</td><td>${x.scheduled_time||'—'}</td><td><span class="badge badge-success">${(x.target_platform||'local').toUpperCase()}</span></td><td><span class="badge badge-success">${x.article_status}</span></td><td>${x.html_path?`<a href="${x.html_path}" target="_blank">View HTML</a>`:'—'}</td></tr>`).join('');}else{approvedCard.style.display='none';}
         } catch(e){} }
         async function createDemoCampaign() {

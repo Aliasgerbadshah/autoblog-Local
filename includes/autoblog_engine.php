@@ -299,19 +299,13 @@ HTML;
         return $publishedUrl;
     }
 
-    public static function publishBlogger($userId, $blogId, $accessToken, $title, $content, $clientId = null, $clientSecret = null, $refreshToken = null) {
-        if ($refreshToken && $clientId && $clientSecret) {
-            $rfRes = BloggerOAuthHelper::refreshAccessToken($clientId, $clientSecret, $refreshToken);
-            if ($rfRes['success']) {
-                $accessToken = $rfRes['access_token'];
-            }
+    public static function publishBlogger($userId, $blogId, $apiKey, $title, $content) {
+        if (empty($blogId) || empty($apiKey)) {
+            return ['success' => false, 'error' => 'Missing Blogger Blog ID or API Key. Save them in API Vault.'];
         }
 
-        if (empty($blogId) || empty($accessToken)) {
-            return ['success' => false, 'error' => 'Missing Blogger Blog ID or OAuth Access Token.'];
-        }
-
-        $url = "https://www.googleapis.com/blogger/v3/blogs/" . trim($blogId) . "/posts/";
+        // Blogger API v3 with API Key (no OAuth, no token expiry, no refresh needed!)
+        $url = "https://www.googleapis.com/blogger/v3/blogs/" . trim($blogId) . "/posts/?key=" . trim($apiKey);
         $payload = [
             'kind' => 'blogger#post',
             'blog' => ['id' => trim($blogId)],
@@ -320,9 +314,8 @@ HTML;
         ];
 
         $result = curlPost($url, $payload, [
-            'Authorization: Bearer ' . trim($accessToken),
             'Content-Type: application/json'
-        ], 12);
+        ], 15);
 
         $data = $result['data'] ?? [];
         if ($result['success'] && in_array($result['http_code'], [200, 201])) {
@@ -532,12 +525,12 @@ function generateArticleHtmlFromCampaignItem($item, $userId, $activeSlot, $db, $
         $chatContent = generateFallbackArticleHtml($title, $keyword, $h1, $h2s, $h3s, $kws, $links, $ext, $prompts);
     }
 
-    // IMAGE 1: Featured THUMBNAIL — 9:16 ratio, MANDATORY first image after H1
-    // Short prompt to save tokens/cost
+    // Featured THUMBNAIL image via Image API — 9:16 ratio, MANDATORY first image
+    // This is the ONLY image we generate. Retries up to 3 times.
     $featuredImgUrl = '';
     if (!empty($imageVault['api_key'])) {
         for ($imgAttempt = 1; $imgAttempt <= 3; $imgAttempt++) {
-            $thumbPrompt = "9:16 vertical thumbnail for $keyword blog. Professional, bold visual, no text or logos.";
+            $thumbPrompt = "YouTube thumbnail image for a blog about $keyword. Vertical 9:16 aspect ratio, 1080x1920. Eye-catching, professional, bold visual representing the concept. No text, no logos, no watermarks. Clean editorial style.";
             $imgResult = AIProviderClient::image($imageVault, $thumbPrompt);
             if (!empty($imgResult['success']) && !empty($imgResult['url'])) {
                 if (validateImageUrl($imgResult['url'])) {
@@ -545,19 +538,6 @@ function generateArticleHtmlFromCampaignItem($item, $userId, $activeSlot, $db, $
                     break;
                 }
                 error_log("[Image Validation] Thumbnail attempt $imgAttempt URL not accessible: " . $imgResult['url']);
-            }
-        }
-    }
-
-    // IMAGE 2: Content illustration — placed in middle of article
-    // Short prompt to save tokens/cost
-    $contentImgUrl = '';
-    if (!empty($imageVault['api_key'])) {
-        $contentPrompt = "Editorial photo illustrating $keyword. Natural lighting, no text, no logos.";
-        $contentResult = AIProviderClient::image($imageVault, $contentPrompt);
-        if (!empty($contentResult['success']) && !empty($contentResult['url'])) {
-            if (validateImageUrl($contentResult['url'])) {
-                $contentImgUrl = $contentResult['url'];
             }
         }
     }
@@ -569,70 +549,18 @@ function generateArticleHtmlFromCampaignItem($item, $userId, $activeSlot, $db, $
     // Remove any leftover prompt/alt text that Chat API might have put as visible text
     $chatContent = preg_replace('#<p[^>]*>\s*(Image prompt|Image:|Alt:|Prompt:).*?</p>#is', '', $chatContent);
 
-    // IMAGE 1: Featured THUMBNAIL - 9:16 ratio, MANDATORY first image after H1
-    $featuredImgUrl = '';
-    if (!empty($imageVault['api_key'])) {
-        for ($imgAttempt = 1; $imgAttempt <= 3; $imgAttempt++) {
-            $thumbPrompt = "9:16 vertical thumbnail for $keyword blog. Professional, bold visual, no text or logos.";
-            $imgResult = AIProviderClient::image($imageVault, $thumbPrompt);
-            if (!empty($imgResult['success']) && !empty($imgResult['url'])) {
-                if (validateImageUrl($imgResult['url'])) {
-                    $featuredImgUrl = $imgResult['url'];
-                    break;
-                }
-                error_log("[Image Validation] Thumbnail attempt $imgAttempt URL not accessible: " . $imgResult['url']);
-            }
-        }
-    }
-
-    // IMAGE 2: Content illustration - placed AFTER 2nd H2 (ensures content between images)
-    $contentImgUrl = '';
-    if (!empty($imageVault['api_key'])) {
-        $contentPrompt = "Editorial photo illustrating $keyword. Natural lighting, no text, no logos.";
-        $contentResult = AIProviderClient::image($imageVault, $contentPrompt);
-        if (!empty($contentResult['success']) && !empty($contentResult['url'])) {
-            if (validateImageUrl($contentResult['url'])) {
-                $contentImgUrl = $contentResult['url'];
-            }
-        }
-    }
-
-    // Insert 9:16 thumbnail RIGHT AFTER the H1 tag
+    // Insert 9:16 thumbnail RIGHT AFTER the H1 tag in the article content
+    // Build the thumbnail HTML first - NO inline onerror (causes PHP parse errors)
+    // Instead we use class="blog-thumb-img" and add a JS handler at page bottom
     $thumbHtml = '';
     $escKw = escapeHtml($keyword);
     if ($featuredImgUrl) {
         $escImgUrl = escapeHtml($featuredImgUrl);
-        $thumbHtml = "<figure class=\"blog-thumbnail\" style=\"margin:0 0 24px 0;border-radius:12px;overflow:hidden;aspect-ratio:9/16;max-height:520px;\"><img class=\"blog-thumb-img\" data-kw=\"{$escKw}\" src=\"{$escImgUrl}\" alt=\"{$escKw}\" style=\"width:100%;height:100%;display:block;object-fit:cover;\" loading=\"eager\"></figure>";
+        $thumbHtml = "<figure class=\"blog-thumbnail\" style=\"margin:0 0 24px 0;border-radius:12px;overflow:hidden;aspect-ratio:9/16;max-height:520px;\"><img class=\"blog-thumb-img\" data-kw=\"{$escKw}\" src=\"{$escImgUrl}\" alt=\"{$escKw} - Blog Thumbnail\" style=\"width:100%;height:100%;display:block;object-fit:cover;\" loading=\"eager\"></figure>";
     } else {
         $thumbHtml = "<figure class=\"blog-thumbnail\" style=\"margin:0 0 24px 0;border-radius:12px;overflow:hidden;aspect-ratio:9/16;max-height:520px;\"><div style=\"aspect-ratio:9/16;background:linear-gradient(135deg,#1b57f6,#8b5cf6);display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.5rem;font-weight:800;padding:40px;text-align:center;min-height:300px;\">{$escKw}</div></figure>";
     }
     $chatContent = insertThumbnailAfterH1($chatContent, $thumbHtml);
-
-    // Insert content image AFTER the 2nd H2 (ensures content between the two images)
-    if ($contentImgUrl) {
-        $escContentUrl = escapeHtml($contentImgUrl);
-        $contentImgHtml = "\n<figure style=\"margin:36px 0;border-radius:12px;overflow:hidden;\"><img class=\"blog-content-img\" src=\"{$escContentUrl}\" alt=\"{$escKw}\" style=\"width:100%;height:auto;display:block;object-fit:cover;max-height:380px;\" loading=\"lazy\"></figure>\n";
-        // Find the 2nd </h2> tag
-        $h2Count = 0;
-        $secondH2Pos = 0;
-        $searchPos = 0;
-        while (($pos = stripos($chatContent, '</h2>', $searchPos)) !== false) {
-            $h2Count++;
-            if ($h2Count === 2) {
-                $secondH2Pos = $pos;
-                break;
-            }
-            $searchPos = $pos + 5;
-        }
-        if ($secondH2Pos > 0) {
-            $afterH2 = stripos($chatContent, '</p>', $secondH2Pos);
-            if ($afterH2 !== false) {
-                $chatContent = substr($chatContent, 0, $afterH2 + 4) . $contentImgHtml . substr($chatContent, $afterH2 + 4);
-            } else {
-                $chatContent = substr($chatContent, 0, $secondH2Pos + 5) . $contentImgHtml . substr($chatContent, $secondH2Pos + 5);
-            }
-        }
-    }
 
     // Build the full HTML document
     $slug = slugify($title) . '-' . $item['id'];
@@ -733,7 +661,6 @@ function generateArticleHtmlFromCampaignItem($item, $userId, $activeSlot, $db, $
 <body>
     <a href="/index.php" class="nav-back">&larr; Back to Dashboard</a>
     <article>
-        $thumbHtml
         $chatContent
     </article>
     <footer>&copy; $nowYear AutoBlog Autonomous Magazine Network &middot; Published $dateStr</footer>

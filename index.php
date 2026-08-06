@@ -285,19 +285,19 @@ function handleApiRoute($uri) {
         jsonResponse($result, $result['success'] ? 200 : 400);
     }
 
-    // Test Blogger
+    // Test Blogger (API KEY — no OAuth needed)
     if ($uri === '/api/vault/test-blogger' && $method === 'POST') {
         $blogId = $input['blogger_blog_id'] ?? '';
-        $accessToken = $input['access_token'] ?? '';
-        if (!$blogId || !$accessToken) {
+        $apiKey = $input['blogger_api_key'] ?? '';
+        if (!$blogId || !$apiKey) {
             $bloggerVault = SecurityVault::getApiCredentials($userId, 'blogger_api');
             $blogId = $blogId ?: ($bloggerVault['blogger_blog_id'] ?? '');
-            $accessToken = $accessToken ?: ($bloggerVault['access_token'] ?? '');
+            $apiKey = $apiKey ?: ($bloggerVault['blogger_api_key'] ?? '');
         }
-        if (!$blogId || !$accessToken) {
-            jsonResponse(['success' => false, 'error' => 'Blogger Blog ID and Access Token are required.'], 400);
+        if (!$blogId || !$apiKey) {
+            jsonResponse(['success' => false, 'error' => 'Blogger Blog ID and API Key are required.'], 400);
         }
-        $result = curlGet("https://www.googleapis.com/blogger/v3/blogs/" . trim($blogId), ["Authorization: Bearer " . trim($accessToken)], 10);
+        $result = curlGet("https://www.googleapis.com/blogger/v3/blogs/" . trim($blogId) . "?key=" . trim($apiKey), [], 10);
         $data = $result['data'] ?? [];
         if ($result['http_code'] === 200) {
             jsonResponse(['success' => true, 'blog_name' => $data['name'] ?? '', 'url' => $data['url'] ?? '']);
@@ -354,8 +354,8 @@ function handleApiRoute($uri) {
 
         if ($targetPlatform === 'blogger') {
             $blogId = $input['blogger_blog_id'] ?? $bloggerVault['blogger_blog_id'] ?? '';
-            $token = $input['blogger_token'] ?? $bloggerVault['access_token'] ?? '';
-            $res = Publisher::publishBlogger($userId, $blogId, $token, $art['title'], $art['content'], $bloggerVault['client_id'] ?? null, $bloggerVault['client_secret'] ?? null, $bloggerVault['refresh_token'] ?? null);
+            $apiKey = $input['blogger_api_key'] ?? $bloggerVault['blogger_api_key'] ?? '';
+            $res = Publisher::publishBlogger($userId, $blogId, $apiKey, $art['title'], $art['content']);
             $results[] = $res;
             if ($res['success']) { $publishedUrl = $res['url'] ?? ''; }
             else { jsonResponse(['error' => $res['error'] ?? 'Blogger publishing failed.', 'results' => $results], 400); }
@@ -942,24 +942,6 @@ function handleApiRoute($uri) {
                     $previewEmailHtml = buildHtmlPreviewEmailHtml($freshItem, $htmlResult['html_path'], $htmlToken, $htmlResult['used_chat_api']);
                     sendApprovalEmail($tok['user_id'], 'Blog HTML Preview - ' . escapeHtml($freshItem['title']), $previewEmailHtml);
                 }
-
-                // Also generate HTML for ALL other approved items in this campaign missing HTML
-                $stmt = $db->prepare('SELECT * FROM campaign_items WHERE campaign_id = ? AND id != ? AND plan_status = "Approved" AND (article_status IS NULL OR article_status = "" OR article_status = "Not Created" OR html_path IS NULL OR html_path = "")');
-                $stmt->execute([$item['campaign_id'], $item['id']]);
-                $otherItems = $stmt->fetchAll();
-                foreach ($otherItems as $otherItem) {
-                    $otherHtml = generateArticleHtmlFromCampaignItem($otherItem, $tok['user_id'], $activeSlot, $db);
-                    if (!empty($otherHtml['success'])) {
-                        $stmt = $db->prepare("UPDATE campaign_items SET article_status = 'HTML Ready', html_path = ? WHERE id = ?");
-                        $stmt->execute([$otherHtml['html_path'], $otherItem['id']]);
-                        $otherToken = generateToken();
-                        $stmt = $db->prepare('INSERT INTO approval_tokens (user_id, campaign_item_id, approval_type, token, created_at) VALUES (?, ?, ?, ?, ?)');
-                        $stmt->execute([$tok['user_id'], $otherItem['id'], 'html', $otherToken, $now]);
-                        $otherEmail = buildHtmlPreviewEmailHtml($otherItem, $otherHtml['html_path'], $otherToken, $otherHtml['used_chat_api']);
-                        sendApprovalEmail($tok['user_id'], 'Blog HTML Preview - ' . escapeHtml($otherItem['title']), $otherEmail);
-                    }
-                }
-
                 header('Location: ' . APP_BASE_URL . '/api/demo/approval-result?status=approved');
             } else {
                 // Disapprove: IMMEDIATELY create replacement (don't wait)
@@ -1181,7 +1163,7 @@ function handleApiRoute($uri) {
     if (preg_match('#^/api/demo/generate-html/(\d+)$#', $uri, $m) && $method === 'POST') {
         $campaignId = $m[1];
         $db = getDB();
-        $stmt = $db->prepare('SELECT * FROM campaign_items WHERE campaign_id = ? AND plan_status = "Approved" AND (article_status IS NULL OR article_status = "" OR article_status = "Not Created" OR html_path IS NULL OR html_path = "")');
+        $stmt = $db->prepare('SELECT * FROM campaign_items WHERE campaign_id = ? AND plan_status = "Approved" AND article_status != "Final Article Approved"');
         $stmt->execute([$campaignId]);
         $items = $stmt->fetchAll();
         $generated = [];

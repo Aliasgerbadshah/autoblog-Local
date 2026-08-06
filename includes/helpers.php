@@ -74,7 +74,8 @@ function curlGet($url, $headers = [], $timeout = 10) {
         return ['success' => false, 'error' => $error, 'http_code' => $httpCode];
     }
 
-    return ['success' => true, 'data' => $response, 'http_code' => $httpCode];
+    $data = json_decode($response, true);
+    return ['success' => true, 'data' => $data ?: [], 'http_code' => $httpCode, 'raw' => $response];
 }
 
 function curlPostForm($url, $payload, $headers = [], $timeout = 12) {
