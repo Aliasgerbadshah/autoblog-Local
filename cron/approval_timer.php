@@ -11,7 +11,7 @@
  * 4. Auto-schedules items whose HTML has been approved (Final Article Approved)
  */
 
-if (php_sapi_name() !== 'cli' && php_sapi_name() !== 'cgi-fcgi' && isset($_SERVER['HTTP_HOST']) && !isset($_GET['cron_key'])) {
+if (php_sapi_name() !== 'cli' && php_sapi_name() !== 'cgi-fcgi' && isset($_SERVER['HTTP_HOST'])) {
     die('This script can only be run from the command line or cron.');
 }
 

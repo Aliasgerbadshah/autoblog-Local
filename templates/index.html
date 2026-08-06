@@ -634,8 +634,7 @@
 
                 <!-- Google Blogger API Credentials + Connection Tester -->
                 <div style="background:var(--inner-bg); padding:1.25rem; border-radius:12px; border:1px solid var(--border-light); margin-bottom:1.25rem;">
-                    <h3 style="font-size:1rem; margin-bottom:0.75rem; color:#f59e0b;">1. Google Blogger API Integration (API Key — No OAuth!)</h3>
-                    <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:12px;">Use a <strong>Google Cloud API Key</strong> (not OAuth). API keys never expire — no refresh tokens needed! Create one in Google Cloud Console → APIs & Services → Credentials → Create API Key → Restrict to Blogger API v3.</p>
+                    <h3 style="font-size:1rem; margin-bottom:0.75rem; color:#f59e0b;">1. Google Blogger API Integration</h3>
                     <form id="blogger-vault-form" onsubmit="return handleSaveBloggerVault(event)">
                         <div class="form-grid">
                             <div class="form-group"><label>Blogger Account Name</label><input type="text" id="v-blog-alias" value="Primary Blogger Account"></div>
@@ -645,8 +644,11 @@
                             </div>
                             <div class="form-group">
                                 <label>Blogger API Key</label>
-                                <input type="password" id="v-blog-apikey" placeholder="AIzaSy... (Google Cloud API Key)" required>
+                                <input type="password" id="v-blog-apikey" placeholder="AIzaSy... (Google Cloud Console → Credentials → API Key)">
                             </div>
+                        </div>
+                        <div style="background:rgba(245, 158, 11, 0.1); padding:12px 16px; border-radius:8px; border:1px solid rgba(245, 158, 11, 0.2); margin-bottom:12px;">
+                            <p style="font-size:0.8rem; font-weight:700; color:#b45309; margin:0;">🔑 API Key never expires! Create one in Google Cloud Console → APIs & Services → Credentials → Create API Key → Restrict to Blogger API v3</p>
                         </div>
                         <div style="display:flex; gap:12px;">
                             <button type="submit" class="btn btn-purple">💾 Save Blogger Credentials</button>

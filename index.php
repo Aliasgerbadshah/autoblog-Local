@@ -285,7 +285,7 @@ function handleApiRoute($uri) {
         jsonResponse($result, $result['success'] ? 200 : 400);
     }
 
-    // Test Blogger (API KEY — no OAuth needed)
+    // Test Blogger
     if ($uri === '/api/vault/test-blogger' && $method === 'POST') {
         $blogId = $input['blogger_blog_id'] ?? '';
         $apiKey = $input['blogger_api_key'] ?? '';

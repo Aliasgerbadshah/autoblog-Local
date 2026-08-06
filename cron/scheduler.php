@@ -1,15 +1,15 @@
 <?php
 /**
  * AutoBlog SaaS - Scheduler Cron Job
+ * 
+ * */5 * * * * php /home/USERNAME/public_html/cron/scheduler.php
+ *
  * Processes scheduled_queue and publishes articles that are due.
  * Uses pre-generated HTML from campaign_items when available.
- * Uses Blogger API KEY (no OAuth, no token refresh needed).
- * 
- * Hostinger cron command:
- * /usr/local/bin/php /home/u783910899/domains/colorfiind.com/public_html/sub_apps/cron/scheduler.php
+ * Uses Blogger API KEY (not OAuth) for publishing.
  */
 
-if (php_sapi_name() !== 'cli' && php_sapi_name() !== 'cgi-fcgi' && isset($_SERVER['HTTP_HOST']) && !isset($_GET['cron_key'])) {
+if (php_sapi_name() !== 'cli' && php_sapi_name() !== 'cgi-fcgi' && isset($_SERVER['HTTP_HOST'])) {
     die('This script can only be run from the command line or cron.');
 }
 
@@ -20,19 +20,22 @@ require_once __DIR__ . '/../includes/autoblog_engine.php';
 require_once __DIR__ . '/../includes/anti_ai_sanitizer.php';
 require_once __DIR__ . '/../includes/ai_provider.php';
 
-echo "[Scheduler] Starting at " . date('Y-m-d H:i:s') . "\n";
-echo "[Scheduler] Script: " . __FILE__ . "\n";
-echo "[Scheduler] App root: " . dirname(__DIR__) . "\n";
-echo "[Scheduler] Output dir: " . OUTPUT_DIR . "\n";
-
 $db = getDB();
 $now = nowString();
+
+$log = function($msg) {
+    $line = "[" . date('Y-m-d H:i:s') . "][Scheduler] $msg\n";
+    echo $line;
+    error_log($line);
+};
+
+$log("Starting scheduler run at $now");
 
 $stmt = $db->prepare("SELECT * FROM scheduled_queue WHERE status = 'Scheduled' AND scheduled_time <= ? ORDER BY scheduled_time ASC");
 $stmt->execute([$now]);
 $dueItems = $stmt->fetchAll();
 
-echo "[Scheduler] Found " . count($dueItems) . " items due for publishing.\n";
+$log("Found " . count($dueItems) . " items due for publishing");
 
 foreach ($dueItems as $item) {
     $userId = $item['user_id'];
@@ -41,46 +44,56 @@ foreach ($dueItems as $item) {
     $category = $item['category'];
     $targetLink = $item['target_link'];
     $targetAnchor = $item['target_anchor'];
+    $topicTitle = $item['topic_title'];
+    $platform = $item['target_platform'] ?? 'local';
 
-    echo "[Scheduler] Processing item #{$item['id']}: \"{$item['topic_title']}\" (platform: {$item['target_platform']})\n";
+    $log("Processing item ID {$item['id']}: \"$topicTitle\" → $platform");
 
     try {
         // Check for pre-generated HTML
-        $stmt = $db->prepare("SELECT ci.* FROM campaign_items ci JOIN campaigns c ON c.id = ci.campaign_id WHERE c.user_id = ? AND ci.title = ? AND ci.article_status IN ('Final Article Approved', 'HTML Ready') AND ci.html_path IS NOT NULL AND ci.html_path != '' ORDER BY ci.id DESC LIMIT 1");
-        $stmt->execute([$userId, $item['topic_title']]);
+        $stmt = $db->prepare("SELECT ci.* FROM campaign_items ci JOIN campaigns c ON c.id = ci.campaign_id WHERE c.user_id = ? AND ci.title = ? AND ci.article_status = 'Final Article Approved' AND ci.html_path IS NOT NULL AND ci.html_path != '' ORDER BY ci.id DESC LIMIT 1");
+        $stmt->execute([$userId, $topicTitle]);
         $existingItem = $stmt->fetch();
 
         if ($existingItem && !empty($existingItem['html_path'])) {
-            $htmlRelativePath = ltrim($existingItem['html_path'], '/');
-            $appRoot = dirname(__DIR__);
-            $htmlPaths = [
-                $appRoot . '/' . $htmlRelativePath,
-                OUTPUT_DIR . '/demo/' . basename($existingItem['html_path']),
-                $appRoot . '/public_html/' . $htmlRelativePath,
-                $appRoot . '/sub_apps/' . $htmlRelativePath,
-                realpath($appRoot) . '/' . $htmlRelativePath,
-            ];
-
-            echo "[Scheduler] Looking for HTML: {$existingItem['html_path']}\n";
+            $log("Found pre-generated HTML path: {$existingItem['html_path']}");
+            
+            // Try multiple path patterns to find the HTML file
             $htmlFilePath = null;
-            foreach ($htmlPaths as $p) {
-                echo "[Scheduler]   Checking: $p ... ";
-                if (file_exists($p)) { $htmlFilePath = $p; echo "FOUND\n"; break; }
-                echo "not found\n";
+            $pathPatterns = [
+                dirname(__DIR__) . ltrim($existingItem['html_path'], '/'),
+                dirname(__DIR__) . '/../' . ltrim($existingItem['html_path'], '/'),
+                OUTPUT_DIR . '/../' . ltrim($existingItem['html_path'], '/'),
+                OUTPUT_DIR . '/demo/' . basename($existingItem['html_path']),
+                dirname(__DIR__) . '/public_html' . ltrim($existingItem['html_path'], '/'),
+                dirname(__DIR__) . '/published_posts/demo/' . basename($existingItem['html_path']),
+            ];
+            
+            foreach ($pathPatterns as $p) {
+                $log("Checking path: $p");
+                if (file_exists($p)) {
+                    $htmlFilePath = $p;
+                    $log("Found HTML file at: $p");
+                    break;
+                }
             }
 
             if ($htmlFilePath) {
-                $articleContent = file_get_contents($htmlFilePath);
-                // Extract just the <article> content for Blogger (not the full page)
-                if (preg_match('#<article[^>]*>(.*?)</article>#is', $articleContent, $m)) {
-                    $bloggerContent = $m[1];
+                $fullHtml = file_get_contents($htmlFilePath);
+                
+                // Extract only the <article> content for Blogger (not full HTML page)
+                $articleContent = $fullHtml;
+                if (preg_match('#<article[^>]*>(.*?)</article>#is', $fullHtml, $artMatch)) {
+                    $articleContent = trim($artMatch[1]);
+                    $log("Extracted <article> content (" . strlen($articleContent) . " chars)");
                 } else {
-                    $bloggerContent = $articleContent;
+                    $log("No <article> tag found, sending full HTML (" . strlen($fullHtml) . " chars)");
                 }
-                $art = ['title' => $existingItem['title'], 'slug' => slugify($existingItem['title']), 'content' => $bloggerContent, 'keyword' => $existingItem['primary_keyword'], 'category' => $category, 'featured_image' => ''];
-                echo "[Scheduler] Using pre-generated HTML for: {$item['topic_title']}\n";
+                
+                $art = ['title' => $existingItem['title'], 'slug' => slugify($existingItem['title']), 'content' => $articleContent, 'keyword' => $existingItem['primary_keyword'], 'category' => $category, 'featured_image' => ''];
+                $log("Using pre-generated HTML for: $topicTitle");
             } else {
-                echo "[Scheduler] HTML file not found. Regenerating content...\n";
+                $log("HTML file not found at any path, will generate fresh content");
                 $existingItem = null;
             }
         }
@@ -92,7 +105,7 @@ foreach ($dueItems as $item) {
             if (empty($chatVault['api_key'])) throw new RuntimeException('Chat API credentials are required.');
 
             $art = ContentGenerator::generateHumanArticle1000Words($keyword, $category, $targetLink, $targetAnchor, $userId, $slotNumber);
-            $prompt = "Write only researched HTML for an 1800 to 2200 word human-reviewed blog about $keyword. Use the approved internal link target $targetLink with natural anchor text $targetAnchor. Include correct headings, FAQ, schema only when supported, relevant external citations, and varied image alt text. Do NOT include html/head/body tags.";
+            $prompt = "Write only researched HTML for an 1800 to 2200 word human-reviewed blog about $keyword. Use the approved internal link target $targetLink with natural anchor text $targetAnchor. Include correct headings, FAQ, schema only when supported, relevant external citations, and varied image alt text.";
             $aiResult = AIProviderClient::chat($chatVault, $prompt);
             if (!$aiResult['success']) throw new RuntimeException($aiResult['error'] ?? 'Chat API failed');
             $art['content'] = AntiAiSanitizer::sanitizeText($aiResult['content']);
@@ -101,40 +114,43 @@ foreach ($dueItems as $item) {
                 $imageResult = AIProviderClient::image($imageVault, "Relevant editorial image for $keyword; no text or logos.");
                 if (!empty($imageResult['success']) && !empty($imageResult['url'])) {
                     $art['featured_image'] = $imageResult['url'];
+                    $art['content'] = '<figure><img src="' . $imageResult['url'] . '" alt="Relevant image for ' . escapeHtml($keyword) . '" loading="eager"></figure>' . $art['content'];
                 }
             }
         }
 
-        $platform = $item['target_platform'] ?? 'local';
         if ($platform === 'blogger') {
             $vault = SecurityVault::getApiCredentials($userId, 'blogger_api');
             $blogId = $vault['blogger_blog_id'] ?? '';
             $apiKey = $vault['blogger_api_key'] ?? '';
+            $log("Publishing to Blogger - Blog ID: $blogId, API Key: " . (empty($apiKey) ? 'EMPTY' : substr($apiKey, 0, 8) . '...'));
+            
             if (empty($blogId) || empty($apiKey)) {
-                throw new RuntimeException('Blogger Blog ID and API Key are required. Save them in API Vault.');
+                throw new RuntimeException('Blogger Blog ID and API Key are required in the vault.');
             }
-            echo "[Scheduler] Publishing to Blogger with API Key. Blog ID: $blogId\n";
+            
             $result = Publisher::publishBlogger($userId, $blogId, $apiKey, $art['title'], $art['content']);
             if (!$result['success']) throw new RuntimeException($result['error'] ?? 'Blogger publishing failed');
-            echo "[Scheduler] Blogger publish successful! URL: " . ($result['url'] ?? '') . "\n";
+            $log("Blogger publish success: " . ($result['url'] ?? 'no URL returned'));
         } elseif ($platform === 'wordpress') {
             $vault = SecurityVault::getApiCredentials($userId, 'wordpress_api');
             $result = Publisher::publishWordpress($userId, $vault['wp_site_url'] ?? '', $vault['wp_username'] ?? '', $vault['wp_app_password'] ?? '', $art['title'], $art['content']);
             if (!$result['success']) throw new RuntimeException($result['error'] ?? 'WordPress publishing failed');
+            $log("WordPress publish success");
         } else {
             Publisher::publishLocal($userId, $art['title'], $art['slug'] ?? slugify($art['title']), $art['content'], $category, $keyword, $art['featured_image'] ?? '');
-            echo "[Scheduler] Local publish successful!\n";
+            $log("Local publish success");
         }
 
         $stmt2 = $db->prepare("UPDATE scheduled_queue SET status = 'Published' WHERE id = ?");
         $stmt2->execute([$item['id']]);
-        echo "[Scheduler] ✅ Published: {$item['topic_title']} to $platform\n";
+        $log("Published: $topicTitle to $platform");
 
     } catch (Exception $exc) {
         $stmt2 = $db->prepare("UPDATE scheduled_queue SET status = 'Failed', error_message = ? WHERE id = ?");
         $stmt2->execute([strval($exc), $item['id']]);
-        echo "[Scheduler] ❌ Error for item {$item['id']}: {$exc->getMessage()}\n";
+        $log("ERROR item {$item['id']}: " . $exc->getMessage());
     }
 }
 
-echo "[Scheduler] Completed at " . date('Y-m-d H:i:s') . ". Processed " . count($dueItems) . " items.\n";
+$log("Scheduler run complete. Processed " . count($dueItems) . " items");

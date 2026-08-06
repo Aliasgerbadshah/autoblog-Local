@@ -301,10 +301,9 @@ HTML;
 
     public static function publishBlogger($userId, $blogId, $apiKey, $title, $content) {
         if (empty($blogId) || empty($apiKey)) {
-            return ['success' => false, 'error' => 'Missing Blogger Blog ID or API Key. Save them in API Vault.'];
+            return ['success' => false, 'error' => 'Missing Blogger Blog ID or API Key.'];
         }
 
-        // Blogger API v3 with API Key (no OAuth, no token expiry, no refresh needed!)
         $url = "https://www.googleapis.com/blogger/v3/blogs/" . trim($blogId) . "/posts/?key=" . trim($apiKey);
         $payload = [
             'kind' => 'blogger#post',
@@ -315,7 +314,7 @@ HTML;
 
         $result = curlPost($url, $payload, [
             'Content-Type: application/json'
-        ], 15);
+        ], 12);
 
         $data = $result['data'] ?? [];
         if ($result['success'] && in_array($result['http_code'], [200, 201])) {
@@ -542,12 +541,14 @@ function generateArticleHtmlFromCampaignItem($item, $userId, $activeSlot, $db, $
         }
     }
 
-    // Strip ALL images from Chat API content first (we add our own 2 images)
-    // This prevents duplicate images and prompt text leaking into blog
+    // Strip ALL images/figures from Chat API content to prevent duplicates
+    // (we insert our own thumbnail after H1). Also strip prompt/alt text paragraphs.
     $chatContent = preg_replace('#<figure[^>]*>.*?</figure>#is', '', $chatContent);
     $chatContent = preg_replace('#<img[^>]*/?>#is', '', $chatContent);
-    // Remove any leftover prompt/alt text that Chat API might have put as visible text
-    $chatContent = preg_replace('#<p[^>]*>\s*(Image prompt|Image:|Alt:|Prompt:).*?</p>#is', '', $chatContent);
+    $chatContent = preg_replace('#<p[^>]*>\s*(?:Image\s*\d+|Prompt|Alt)[^<]*</p>#is', '', $chatContent);
+
+    // Strip broken images from Chat API content and add onerror handlers to remaining ones
+    $chatContent = stripAndValidateImages($chatContent);
 
     // Insert 9:16 thumbnail RIGHT AFTER the H1 tag in the article content
     // Build the thumbnail HTML first - NO inline onerror (causes PHP parse errors)
