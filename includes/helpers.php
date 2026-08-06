@@ -74,8 +74,10 @@ function curlGet($url, $headers = [], $timeout = 10) {
         return ['success' => false, 'error' => $error, 'http_code' => $httpCode];
     }
 
-    $data = json_decode($response, true);
-    return ['success' => true, 'data' => $data ?: [], 'http_code' => $httpCode, 'raw' => $response];
+    // Return raw response in 'data' (for HTML pages like ResearchAgent crawl),
+    // and also provide JSON-decoded version in 'json' (for API responses like Blogger test)
+    $json = json_decode($response, true);
+    return ['success' => true, 'data' => $response, 'json' => $json ?: [], 'http_code' => $httpCode];
 }
 
 function curlPostForm($url, $payload, $headers = [], $timeout = 12) {

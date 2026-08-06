@@ -69,7 +69,7 @@ class ResearchAgent {
             $url = "https://serpapi.com/search.json?q=" . urlencode($searchQuery) . "&api_key=$serpapiKey&engine=google";
             $result = curlGet($url, [], 10);
             if ($result['success'] && $result['http_code'] === 200) {
-                $data = $result['data'] ?? [];
+                $data = $result['json'] ?? [];
                 $related = [];
                 if (is_array($data)) {
                     foreach ($data['related_searches'] ?? [] as $r) {

@@ -298,11 +298,11 @@ function handleApiRoute($uri) {
             jsonResponse(['success' => false, 'error' => 'Blogger Blog ID and API Key are required.'], 400);
         }
         $result = curlGet("https://www.googleapis.com/blogger/v3/blogs/" . trim($blogId) . "?key=" . trim($apiKey), [], 10);
-        $data = $result['data'] ?? [];
+        $data = $result['json'] ?? [];
         if ($result['http_code'] === 200) {
             jsonResponse(['success' => true, 'blog_name' => $data['name'] ?? '', 'url' => $data['url'] ?? '']);
         }
-        $errorMsg = $data['error']['message'] ?? ($result['raw'] ?? 'Unknown error');
+        $errorMsg = $data['error']['message'] ?? ($result['data'] ?? 'Unknown error');
         jsonResponse(['success' => false, 'error' => "Blogger API Error ({$result['http_code']}): $errorMsg"]);
     }
 
