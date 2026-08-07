@@ -11,17 +11,29 @@ require_once __DIR__ . '/ai_provider.php';
 
 class BloggerOAuthHelper {
     public static function refreshAccessToken($clientId, $clientSecret, $refreshToken) {
+        if (empty($clientId) || empty($clientSecret) || empty($refreshToken)) {
+            return ['success' => false, 'error' => 'Client ID, Client Secret, and Refresh Token are all required.'];
+        }
         $payload = [
             'client_id' => $clientId,
             'client_secret' => $clientSecret,
             'refresh_token' => $refreshToken,
             'grant_type' => 'refresh_token'
         ];
-        $result = curlPostForm('https://oauth2.googleapis.com/token', $payload, [], 10);
-        if ($result['success'] && $result['http_code'] === 200) {
-            return ['success' => true, 'access_token' => $result['data']['access_token'] ?? ''];
+        $result = curlPostForm('https://oauth2.googleapis.com/token', $payload, [], 15);
+        
+        if ($result['success'] && $result['http_code'] === 200 && !empty($result['data']['access_token'])) {
+            return ['success' => true, 'access_token' => $result['data']['access_token']];
         }
-        return ['success' => false, 'error' => "Token Refresh Error ({$result['http_code']}): " . ($result['raw'] ?? 'Unknown')];
+        
+        // Build a clear error message
+        $errData = $result['data'] ?? [];
+        $errMsg = $errData['error'] ?? '';
+        $errDesc = $errData['error_description'] ?? '';
+        if ($errMsg) {
+            return ['success' => false, 'error' => "Google OAuth Error: $errMsg — $errDesc (HTTP {$result['http_code']})"];
+        }
+        return ['success' => false, 'error' => "Token Refresh Failed (HTTP {$result['http_code']}): " . substr($result['raw'] ?? 'Unknown', 0, 500)];
     }
 }
 
