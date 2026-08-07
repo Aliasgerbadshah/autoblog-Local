@@ -299,12 +299,40 @@ HTML;
         return $publishedUrl;
     }
 
-    public static function publishBlogger($userId, $blogId, $apiKey, $title, $content) {
-        if (empty($blogId) || empty($apiKey)) {
-            return ['success' => false, 'error' => 'Missing Blogger Blog ID or API Key.'];
+    public static function publishBlogger($userId, $blogId, $apiKey, $title, $content, $clientId = null, $clientSecret = null, $refreshToken = null) {
+        // Blogger API v3: POST (create post) requires OAuth 2.0 Bearer token.
+        // API Key only works for GET (read). So we need OAuth for publishing.
+        // Strategy: If OAuth refresh credentials are available, refresh the access token
+        // and use it. Otherwise, try API key (will fail for POST but we try anyway).
+        
+        $authHeader = null;
+        $url = "https://www.googleapis.com/blogger/v3/blogs/" . trim($blogId) . "/posts/";
+        
+        // Attempt 1: Use OAuth with auto-refresh (works for POST/write)
+        if ($refreshToken && $clientId && $clientSecret) {
+            $rfRes = BloggerOAuthHelper::refreshAccessToken($clientId, $clientSecret, $refreshToken);
+            if ($rfRes['success'] && !empty($rfRes['access_token'])) {
+                $authHeader = 'Authorization: Bearer ' . trim($rfRes['access_token']);
+                // Save the fresh access token back to vault for next time
+                $vault = SecurityVault::getApiCredentials($userId, 'blogger_api');
+                if (!empty($vault)) {
+                    $vault['access_token'] = $rfRes['access_token'];
+                    $alias = $vault['account_alias'] ?? 'Primary Blogger Account';
+                    unset($vault['account_alias']);
+                    SecurityVault::saveApiCredentials($userId, 'blogger_api', $vault, $alias);
+                }
+            }
+        }
+        
+        // Attempt 2: Use API Key as query param (works for GET/read, usually fails for POST/write)
+        if (!$authHeader && !empty($apiKey)) {
+            $url .= '?key=' . trim($apiKey);
+        }
+        
+        if (empty($blogId)) {
+            return ['success' => false, 'error' => 'Missing Blogger Blog ID.'];
         }
 
-        $url = "https://www.googleapis.com/blogger/v3/blogs/" . trim($blogId) . "/posts/?key=" . trim($apiKey);
         $payload = [
             'kind' => 'blogger#post',
             'blog' => ['id' => trim($blogId)],
@@ -312,9 +340,12 @@ HTML;
             'content' => $content
         ];
 
-        $result = curlPost($url, $payload, [
-            'Content-Type: application/json'
-        ], 12);
+        $headers = ['Content-Type: application/json'];
+        if ($authHeader) {
+            $headers[] = $authHeader;
+        }
+
+        $result = curlPost($url, $payload, $headers, 12);
 
         $data = $result['data'] ?? [];
         if ($result['success'] && in_array($result['http_code'], [200, 201])) {
@@ -327,7 +358,11 @@ HTML;
         }
 
         $errorMsg = $data['error']['message'] ?? ($result['raw'] ?? 'Unknown error');
-        return ['success' => false, 'error' => "Blogger API Error ({$result['http_code']}): $errorMsg"];
+        $hint = '';
+        if (in_array($result['http_code'], [401, 403]) && !$authHeader) {
+            $hint = ' API Key cannot create posts (write). You MUST add OAuth Client ID, Client Secret, and Refresh Token in the Blogger vault for publishing.';
+        }
+        return ['success' => false, 'error' => "Blogger API Error ({$result['http_code']}): $errorMsg$hint"];
     }
 
     public static function publishWordpress($userId, $wpSiteUrl, $username, $appPassword, $title, $content, $status = 'publish') {
@@ -433,6 +468,136 @@ HTML;
 /**
  * Insert thumbnail HTML right after the first H1 tag in the article content.
  */
+/**
+ * Split long paragraphs into shorter ones (max ~42 words per <p>).
+ * Preserves HTML tags, links, and formatting within paragraphs.
+ */
+function splitLongParagraphs($html, $maxWords = 42) {
+    // Match all <p> tags and split their content if too long
+    $result = preg_replace_callback('#<p([^>]*)>(.*?)</p>#is', function($match) use ($maxWords) {
+        $attrs = $match[1];
+        $content = $match[2];
+        
+        // Strip HTML tags to count words in plain text
+        $plainText = strip_tags($content);
+        $words = preg_split('/\s+/', trim($plainText));
+        $wordCount = count($words);
+        
+        if ($wordCount <= $maxWords) {
+            return $match[0]; // Short enough, keep as-is
+        }
+        
+        // For long paragraphs, we need to split the plain text
+        // But preserve inline HTML links. Strategy: split on sentence boundaries.
+        $sentences = preg_split('/(?<=[.!?])\s+/', trim($plainText));
+        
+        $paragraphs = [];
+        $currentPara = '';
+        $currentWords = 0;
+        
+        foreach ($sentences as $sentence) {
+            $sentenceWords = count(preg_split('/\s+/', trim($sentence)));
+            
+            if ($currentWords + $sentenceWords > $maxWords && $currentPara !== '') {
+                $paragraphs[] = trim($currentPara);
+                $currentPara = $sentence;
+                $currentWords = $sentenceWords;
+            } else {
+                $currentPara .= ($currentPara ? ' ' : '') . $sentence;
+                $currentWords += $sentenceWords;
+            }
+        }
+        
+        if (trim($currentPara)) {
+            $paragraphs[] = trim($currentPara);
+        }
+        
+        if (count($paragraphs) <= 1) {
+            return $match[0]; // Couldn't split meaningfully
+        }
+        
+        // Check if the original <p> contained links we should preserve
+        // If it has links, re-build using the original HTML content split by sentences
+        if (stripos($content, '<a ') !== false) {
+            // Has links — split the HTML content at sentence boundaries
+            $htmlSentences = preg_split('/(?<=[.!?])\s+/', trim($content));
+            $htmlParagraphs = [];
+            $currentHtml = '';
+            $currentW = 0;
+            
+            foreach ($htmlSentences as $hSent) {
+                $hWords = count(preg_split('/\s+/', trim(strip_tags($hSent))));
+                if ($currentW + $hWords > $maxWords && $currentHtml !== '') {
+                    $htmlParagraphs[] = '<p' . $attrs . '>' . trim($currentHtml) . '</p>';
+                    $currentHtml = $hSent;
+                    $currentW = $hWords;
+                } else {
+                    $currentHtml .= ($currentHtml ? ' ' : '') . $hSent;
+                    $currentW += $hWords;
+                }
+            }
+            if (trim($currentHtml)) {
+                $htmlParagraphs[] = '<p' . $attrs . '>' . trim($currentHtml) . '</p>';
+            }
+            return implode("\n", $htmlParagraphs);
+        }
+        
+        // No links — safe to rebuild from plain text
+        return implode("\n", array_map(fn($p) => '<p' . $attrs . '>' . escapeHtml($p) . '</p>', $paragraphs));
+    }, $html);
+    
+    return $result;
+}
+
+/**
+ * Validate external links in HTML content.
+ * Replaces broken/unreachable <a> links with plain text.
+ * Only validates external links (http/https), skips internal and anchor links.
+ */
+function validateAndFixExternalLinks($html) {
+    return preg_replace_callback('#<a[^>]*href=["\']?(https?://[^"\'>\s]+)["\']?[^>]*>(.*?)</a>#is', function($match) {
+        $url = $match[1];
+        $linkText = $match[2];
+        $fullTag = $match[0];
+        
+        // Skip known working domains (whitelist)
+        $trustedDomains = ['wikipedia.org', 'developers.google.com', 'developer.mozilla.org', 
+            'schema.org', 'www.w3.org', 'support.google.com', 'moz.com', 'ahrefs.com',
+            'searchengineland.com', 'neilpatel.com', 'hubspot.com', 'backlinko.com',
+            'semrush.com', 'yoast.com', 'google.com', 'github.com', 'stackoverflow.com',
+            'www.nngroup.com', 'opensource.google', 'ai.google'];
+        
+        $host = parse_url($url, PHP_URL_HOST) ?? '';
+        foreach ($trustedDomains as $trusted) {
+            if (str_ends_with($host, $trusted) || $host === $trusted) {
+                return $fullTag; // Trust it, keep the link
+            }
+        }
+        
+        // For non-whitelisted URLs, do a quick HEAD check
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT => 4,
+            CURLOPT_NOBODY => true,
+            CURLOPT_SSL_VERIFYPEER => false,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_USERAGENT => 'Mozilla/5.0 (compatible; AutoBlog/1.0)',
+        ]);
+        curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        
+        // Keep link if it returns 200 or 301/302 (redirect is OK)
+        if (in_array($httpCode, [200, 301, 302, 303, 307, 308])) {
+            return $fullTag;
+        }
+        
+        // Link is broken — replace with plain text + warning
+        return $linkText;
+    }, $html);
+}
+
 function insertThumbnailAfterH1($content, $thumbHtml) {
     if (empty($thumbHtml)) return $content;
     if (preg_match('#(<h1[^>]*>.*?</h1>)#is', $content, $match, PREG_OFFSET_CAPTURE)) {
@@ -506,7 +671,7 @@ function generateArticleHtmlFromCampaignItem($item, $userId, $activeSlot, $db, $
         $h2List = implode(' | ', $h2s);
         $angleNote = $contentAngle ? "\nCONTENT ANGLE: $contentAngle" : '';
 
-        $prompt = "Write a complete, publication-ready HTML blog article about \"$keyword\".\n\nTITLE: $title\nH1: $h1\nH2 SECTIONS: $h2List\nSUPPORTING KEYWORDS: $kwList\nINTERNAL LINKS (weave naturally into the text):\n$intLinkList\nEXTERNAL REFERENCES (cite naturally):\n$extLinkList\nIMAGE PROMPTS: " . implode('; ', $prompts) . "\n$angleNote\n\nREQUIREMENTS:\n- 1,800 to 2,200 words of original, researched content\n- Use semantic HTML: proper H1, H2, H3, H4, p, ul, li, table, figure, blockquote tags\n- Write in a natural, authoritative human voice - no AI cliches or banned phrases\n- Include a FAQ section at the end with 3 real questions and answers about $keyword\n- Include 2-3 internal links with natural anchor text\n- Include 1-2 external authority references\n- Add a comparison data table where relevant\n- Do NOT include html/head/body tags - only the article content\n- Do NOT invent facts, statistics, or quotes\n- Return ONLY the article HTML, no markdown fences";
+        $prompt = "Write a complete, publication-ready HTML blog article about \"$keyword\".\n\nTITLE: $title\nH1: $h1\nH2 SECTIONS: $h2List\nSUPPORTING KEYWORDS: $kwList\nINTERNAL LINKS (weave naturally into the text):\n$intLinkList\nEXTERNAL REFERENCES (cite naturally):\n$extLinkList\nIMAGE PROMPTS: " . implode('; ', $prompts) . "\n$angleNote\n\nREQUIREMENTS:\n- 1,800 to 2,200 words of original, researched content\n- Use semantic HTML: proper H1, H2, H3, H4, p, ul, li, table, figure, blockquote tags\n- CRITICAL: Keep paragraphs SHORT — maximum 40-45 words per paragraph. Break long paragraphs into multiple short <p> tags. Readers skim; short paragraphs improve readability and mobile experience.\n- Write in a natural, authoritative human voice - no AI cliches or banned phrases\n- Include a FAQ section at the end with 3 real questions and answers about $keyword\n- Include 2-3 internal links with natural anchor text\n- Include 2-3 external authority references with REAL working URLs to well-known sites (Wikipedia, official docs, authority blogs). Verify the URLs are correct and related to the topic.\n- Also include 1-2 links to the client website pages listed in internal links\n- Add a comparison data table where relevant\n- Do NOT include html/head/body tags - only the article content\n- Do NOT invent facts, statistics, or quotes\n- Do NOT make up URLs — only use real, verified external URLs\n- Return ONLY the article HTML, no markdown fences";
 
         $chatResult = AIProviderClient::chat($chatVault, $prompt);
         if (!empty($chatResult['success']) && !empty($chatResult['content'])) {
@@ -517,6 +682,13 @@ function generateArticleHtmlFromCampaignItem($item, $userId, $activeSlot, $db, $
             }
             $chatUsed = true;
         }
+    }
+
+    // Post-process: split long paragraphs (max ~42 words) for readability
+    if ($chatUsed && !empty($chatContent)) {
+        $chatContent = splitLongParagraphs($chatContent, 42);
+        // Validate external links (replace broken ones with plain text)
+        $chatContent = validateAndFixExternalLinks($chatContent);
     }
 
     // Fallback: generate structured content if Chat API not available

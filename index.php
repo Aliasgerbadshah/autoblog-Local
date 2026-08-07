@@ -330,7 +330,7 @@ function handleApiRoute($uri) {
         }
 
         $researchContext = $input['research_context'] ?? 'Use the approved website research, keyword plan, internal-link map, external sources, FAQ questions, and image requirements.';
-        $prompt = "Write a researched HTML blog article of 1,800 to 2,200 words about: $keyword. Category: $category.\n$researchContext\nUse one H1, logical H2-H6 headings, natural internal and external links, a real FAQ section, valid Article and FAQ JSON-LD only when supported, varied relevant image positions with descriptive alt text, and no banned AI words or phrases. Do not invent facts. Return only the article HTML.";
+        $prompt = "Write a researched HTML blog article of 1,800 to 2,200 words about: $keyword. Category: $category.\n$researchContext\nUse one H1, logical H2-H6 headings, natural internal and external links, a real FAQ section, valid Article and FAQ JSON-LD only when supported, varied relevant image positions with descriptive alt text, and no banned AI words or phrases. Do not invent facts or URLs. CRITICAL: Keep all paragraphs SHORT — maximum 40-45 words per <p> tag. Break long paragraphs into multiple short ones. Include 2-3 external links to real, verified authority sites (Wikipedia, official docs, etc). Return only the article HTML.";
 
         $chatResult = AIProviderClient::chat($chatVault, $prompt);
         if (!$chatResult['success']) {
@@ -355,7 +355,10 @@ function handleApiRoute($uri) {
         if ($targetPlatform === 'blogger') {
             $blogId = $input['blogger_blog_id'] ?? $bloggerVault['blogger_blog_id'] ?? '';
             $apiKey = $input['blogger_api_key'] ?? $bloggerVault['blogger_api_key'] ?? '';
-            $res = Publisher::publishBlogger($userId, $blogId, $apiKey, $art['title'], $art['content']);
+            $clientId = $bloggerVault['client_id'] ?? '';
+            $clientSecret = $bloggerVault['client_secret'] ?? '';
+            $refreshToken = $bloggerVault['refresh_token'] ?? '';
+            $res = Publisher::publishBlogger($userId, $blogId, $apiKey, $art['title'], $art['content'], $clientId, $clientSecret, $refreshToken);
             $results[] = $res;
             if ($res['success']) { $publishedUrl = $res['url'] ?? ''; }
             else { jsonResponse(['error' => $res['error'] ?? 'Blogger publishing failed.', 'results' => $results], 400); }
@@ -646,7 +649,7 @@ function handleApiRoute($uri) {
         if (empty($chat['api_key'])) jsonResponse(['error' => 'Save and select a Chat API before live research.'], 400);
 
         $pageContext = implode("\n", array_map(fn($p) => "URL: {$p['page_url']} | Page topic: {$p['page_title']}", array_slice($pages, 0, 100)));
-        $prompt = "You are an SEO research strategist. Research the current web for the business website $domain in target country $country, language $language. Create exactly " . ($days * $postsPerDay) . " article plans for a $days-day campaign with $postsPerDay article(s) per day. Return ONLY valid JSON with this shape: {\"articles\":[{\"title\":\"...\",\"primary_keyword\":\"...\",\"keywords\":[{\"keyword\":\"...\",\"volume\":\"AI estimate\",\"difficulty\":\"Low/Medium/High\",\"intent\":\"...\"}],\"internal_links\":[{\"url\":\"...\",\"anchor_text\":\"...\",\"reason\":\"...\"}],\"external_links\":[{\"url\":\"...\",\"anchor_text\":\"...\",\"reason\":\"...\"}],\"headings\":{\"H1\":\"...\",\"H2\":[\"...\"],\"H3\":[\"...\"]},\"image_prompts\":[\"...\"]}]}. Crawled pages:\n$pageContext";
+        $prompt = "You are an SEO research strategist. Research the current web for the business website $domain in target country $country, language $language. Create exactly " . ($days * $postsPerDay) . " article plans for a $days-day campaign with $postsPerDay article(s) per day. Return ONLY valid JSON with this shape: {\"articles\":[{\"title\":\"...\",\"primary_keyword\":\"...\",\"keywords\":[{\"keyword\":\"...\",\"volume\":\"AI estimate\",\"difficulty\":\"Low/Medium/High\",\"intent\":\"...\"}],\"internal_links\":[{\"url\":\"...\",\"anchor_text\":\"...\",\"reason\":\"...\"}],\"external_links\":[{\"url\":\"...\",\"anchor_text\":\"...\",\"reason\":\"...\"}],\"headings\":{\"H1\":\"...\",\"H2\":[\"...\"],\"H3\":[\"...\"]},\"image_prompts\":[\"...\"]}]}. IMPORTANT for external_links: Provide 2-3 REAL working URLs to well-known authority sites (Wikipedia, Google docs, Mozilla MDN, Schema.org, Moz, etc.) that are RELATED to each article topic. Do NOT invent or guess URLs — only use URLs you are certain exist. Also include 1-2 of the client's crawled pages in internal_links. Crawled pages:\n$pageContext";
 
         $result = AIProviderClient::chat($chat, $prompt);
         if (!$result['success']) jsonResponse(['error' => 'Chat research failed: ' . ($result['error'] ?? 'Unknown error')], 400);
@@ -774,7 +777,13 @@ function handleApiRoute($uri) {
                     if (!in_array($candidate['page_url'], array_column($relatedPages, 'page_url'))) $relatedPages[] = $candidate;
                 }
                 $internal = array_map(fn($x) => ['url' => $x['page_url'], 'anchor_text' => $x['page_title'] ?: 'related website page'], $relatedPages) ?: [['url' => $domain, 'anchor_text' => 'customer website']];
-                $external = [['url' => 'https://developers.google.com/search/docs', 'anchor_text' => 'Google Search documentation'], ['url' => 'https://www.nngroup.com/articles/', 'anchor_text' => 'user experience research']];
+                $external = [
+                    ['url' => 'https://en.wikipedia.org/wiki/Search_engine_optimization', 'anchor_text' => 'Wikipedia: Search Engine Optimization'],
+                    ['url' => 'https://developers.google.com/search/docs/fundamentals/seo-starter-guide', 'anchor_text' => 'Google SEO Starter Guide'],
+                    ['url' => 'https://moz.com/beginners-guide-to-seo', 'anchor_text' => 'Moz Beginner Guide to SEO'],
+                    ['url' => 'https://www.nngroup.com/articles/', 'anchor_text' => 'Nielsen Norman Group UX Research'],
+                    ['url' => 'https://schema.org/Article', 'anchor_text' => 'Schema.org Article Structured Data']
+                ];
                 $prompts = ["Editorial photograph illustrating $kw, natural lighting, no text, no logos, professional magazine style.", "Practical real-world scene related to $kw, authentic people and setting, no text or logos."];
 
                 $schedDate = (new DateTime($startDate))->modify(($day - 1) . ' days')->format('Y-m-d');
