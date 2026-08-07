@@ -330,7 +330,7 @@ function handleApiRoute($uri) {
         }
 
         $researchContext = $input['research_context'] ?? 'Use the approved website research, keyword plan, internal-link map, external sources, FAQ questions, and image requirements.';
-        $prompt = "Write a researched HTML blog article of 1,800 to 2,200 words about: $keyword. Category: $category.\n$researchContext\nUse one H1, logical H2-H6 headings, natural internal and external links, a real FAQ section, valid Article and FAQ JSON-LD only when supported, varied relevant image positions with descriptive alt text, and no banned AI words or phrases. Do not invent facts or URLs. CRITICAL: Keep all paragraphs SHORT — maximum 40-45 words per <p> tag. Break long paragraphs into multiple short ones. Include 2-3 external links to real, verified authority sites (Wikipedia, official docs, etc). Return only the article HTML.";
+        $prompt = "Write a researched HTML blog article of 1,800 to 2,200 words about: $keyword. Category: $category.\n$researchContext\nUse one H1, logical H2-H6 headings, natural internal and external links, a real FAQ section, valid Article and FAQ JSON-LD only when supported, varied relevant image positions with descriptive alt text, and no banned AI words or phrases. Do not invent facts or URLs. CRITICAL: Keep all paragraphs SHORT — strictly 45 to 50 words per <p> tag. Every paragraph must have between 45 and 50 words. Break long paragraphs into multiple short ones. Include 2-3 external links to real, verified authority sites (Wikipedia, official docs, etc). Return only the article HTML.";
 
         $chatResult = AIProviderClient::chat($chatVault, $prompt);
         if (!$chatResult['success']) {
@@ -832,6 +832,196 @@ function handleApiRoute($uri) {
             $row['html_approval_token'] = $htmlTok ? $htmlTok['token'] : '';
         }
         jsonResponse(['campaign' => $campaign, 'items' => $rows]);
+    }
+
+    // ========== PUBLISH NOW — Immediately publish an approved HTML article to Blogger ==========
+    if ($uri === '/api/publish-now' && $method === 'POST') {
+        $itemId = intval($input['item_id'] ?? 0);
+        if (!$itemId) jsonResponse(['success' => false, 'error' => 'Item ID required.'], 400);
+        
+        $db = getDB();
+        $stmt = $db->prepare('SELECT * FROM campaign_items WHERE id = ?');
+        $stmt->execute([$itemId]);
+        $item = $stmt->fetch();
+        if (!$item) jsonResponse(['success' => false, 'error' => 'Item not found.'], 404);
+        
+        if ($item['article_status'] !== 'Final Article Approved' && $item['article_status'] !== 'HTML Ready') {
+            jsonResponse(['success' => false, 'error' => 'Article must be HTML Ready or Final Approved before publishing. Current: ' . $item['article_status']], 400);
+        }
+        
+        // Get the campaign for platform info
+        $stmt = $db->prepare('SELECT * FROM campaigns WHERE id = ?');
+        $stmt->execute([$item['campaign_id']]);
+        $camp = $stmt->fetch();
+        $platform = $input['platform'] ?? ($item['target_platform'] ?? ($camp['target_platform'] ?? 'blogger'));
+        
+        // Load the HTML file
+        $htmlFilePath = null;
+        if (!empty($item['html_path'])) {
+            $pathPatterns = [
+                dirname(__DIR__) . ltrim($item['html_path'], '/'),
+                OUTPUT_DIR . '/../' . ltrim($item['html_path'], '/'),
+                OUTPUT_DIR . '/demo/' . basename($item['html_path']),
+                dirname(__DIR__) . '/published_posts/demo/' . basename($item['html_path']),
+            ];
+            foreach ($pathPatterns as $p) {
+                if (file_exists($p)) { $htmlFilePath = $p; break; }
+            }
+        }
+        
+        $articleContent = '';
+        if ($htmlFilePath) {
+            $fullHtml = file_get_contents($htmlFilePath);
+            // Extract <article> content for Blogger
+            if (preg_match('#<article[^>]*>(.*?)</article>#is', $fullHtml, $artMatch)) {
+                $articleContent = trim($artMatch[1]);
+            } else {
+                $articleContent = $fullHtml;
+            }
+        }
+        
+        if (empty($articleContent)) {
+            jsonResponse(['success' => false, 'error' => 'HTML file not found or empty. Path: ' . ($item['html_path'] ?? 'none')], 400);
+        }
+        
+        $title = $item['title'];
+        $result = null;
+        
+        if ($platform === 'blogger') {
+            $vault = SecurityVault::getApiCredentials($userId, 'blogger_api');
+            $blogId = $vault['blogger_blog_id'] ?? '';
+            $apiKey = $vault['blogger_api_key'] ?? '';
+            $clientId = $vault['client_id'] ?? '';
+            $clientSecret = $vault['client_secret'] ?? '';
+            $refreshToken = $vault['refresh_token'] ?? '';
+            
+            if (empty($blogId)) jsonResponse(['success' => false, 'error' => 'Blogger Blog ID is missing. Save it in the Vault first.'], 400);
+            
+            $result = Publisher::publishBlogger($userId, $blogId, $apiKey, $title, $articleContent, $clientId, $clientSecret, $refreshToken);
+        } elseif ($platform === 'wordpress') {
+            $vault = SecurityVault::getApiCredentials($userId, 'wordpress_api');
+            $result = Publisher::publishWordpress($userId, $vault['wp_site_url'] ?? '', $vault['wp_username'] ?? '', $vault['wp_app_password'] ?? '', $title, $articleContent);
+        } else {
+            Publisher::publishLocal($userId, $title, slugify($title), $articleContent, 'General', $item['primary_keyword'] ?? '', '');
+            $result = ['success' => true, 'url' => '/published_posts/' . slugify($title) . '.html', 'message' => 'Published locally.'];
+        }
+        
+        if ($result && !empty($result['success'])) {
+            // Update item status
+            $stmt = $db->prepare("UPDATE campaign_items SET article_status = 'Published' WHERE id = ?");
+            $stmt->execute([$itemId]);
+            // Also update scheduled_queue if exists
+            $stmt = $db->prepare("UPDATE scheduled_queue SET status = 'Published' WHERE topic_title = ? AND user_id = ?");
+            $stmt->execute([$title, $userId]);
+            jsonResponse(['success' => true, 'url' => $result['url'] ?? '', 'message' => $result['message'] ?? 'Published successfully!']);
+        }
+        
+        jsonResponse(['success' => false, 'error' => $result['error'] ?? 'Publishing failed. Check Vault credentials.'], 400);
+    }
+
+    // ========== SCHEDULE POST — Add to scheduled_queue for cron, or schedule in Blogger ==========
+    if ($uri === '/api/schedule-post' && $method === 'POST') {
+        $itemId = intval($input['item_id'] ?? 0);
+        $schedDate = $input['scheduled_date'] ?? '';
+        $schedTime = $input['scheduled_time'] ?? '';
+        $platform = $input['platform'] ?? '';
+        
+        if (!$itemId) jsonResponse(['success' => false, 'error' => 'Item ID required.'], 400);
+        if (!$schedDate || !$schedTime) jsonResponse(['success' => false, 'error' => 'Scheduled date and time required.'], 400);
+        
+        $db = getDB();
+        $stmt = $db->prepare('SELECT * FROM campaign_items WHERE id = ?');
+        $stmt->execute([$itemId]);
+        $item = $stmt->fetch();
+        if (!$item) jsonResponse(['success' => false, 'error' => 'Item not found.'], 404);
+        
+        if ($item['article_status'] !== 'Final Article Approved' && $item['article_status'] !== 'HTML Ready') {
+            jsonResponse(['success' => false, 'error' => 'Article must be HTML Ready or Final Approved. Current: ' . $item['article_status']], 400);
+        }
+        
+        // Get campaign for platform
+        $stmt = $db->prepare('SELECT * FROM campaigns WHERE id = ?');
+        $stmt->execute([$item['campaign_id']]);
+        $camp = $stmt->fetch();
+        if (empty($platform)) $platform = $item['target_platform'] ?? ($camp['target_platform'] ?? 'blogger');
+        
+        // Build scheduled datetime
+        $parts = explode(':', $schedTime);
+        $scheduledDate = new DateTime($schedDate);
+        $scheduledDate->setTime(intval($parts[0] ?? 10), intval($parts[1] ?? 0), 0);
+        $scheduledStr = $scheduledDate->format('Y-m-d H:i:s');
+        
+        // If scheduled time is in the past, publish immediately instead
+        $now = new DateTime();
+        $publishNow = ($scheduledDate <= $now);
+        
+        if ($publishNow) {
+            // Time is now or past — publish immediately
+            $htmlFilePath = null;
+            if (!empty($item['html_path'])) {
+                $pathPatterns = [
+                    dirname(__DIR__) . ltrim($item['html_path'], '/'),
+                    OUTPUT_DIR . '/../' . ltrim($item['html_path'], '/'),
+                    OUTPUT_DIR . '/demo/' . basename($item['html_path']),
+                    dirname(__DIR__) . '/published_posts/demo/' . basename($item['html_path']),
+                ];
+                foreach ($pathPatterns as $p) { if (file_exists($p)) { $htmlFilePath = $p; break; } }
+            }
+            $articleContent = '';
+            if ($htmlFilePath) {
+                $fullHtml = file_get_contents($htmlFilePath);
+                if (preg_match('#<article[^>]*>(.*?)</article>#is', $fullHtml, $artMatch)) {
+                    $articleContent = trim($artMatch[1]);
+                } else { $articleContent = $fullHtml; }
+            }
+            if (empty($articleContent)) jsonResponse(['success' => false, 'error' => 'HTML file not found.'], 400);
+            
+            $title = $item['title'];
+            $result = null;
+            if ($platform === 'blogger') {
+                $vault = SecurityVault::getApiCredentials($userId, 'blogger_api');
+                $blogId = $vault['blogger_blog_id'] ?? '';
+                $apiKey = $vault['blogger_api_key'] ?? '';
+                $clientId = $vault['client_id'] ?? '';
+                $clientSecret = $vault['client_secret'] ?? '';
+                $refreshToken = $vault['refresh_token'] ?? '';
+                if (empty($blogId)) jsonResponse(['success' => false, 'error' => 'Blogger Blog ID missing in Vault.'], 400);
+                $result = Publisher::publishBlogger($userId, $blogId, $apiKey, $title, $articleContent, $clientId, $clientSecret, $refreshToken);
+            } elseif ($platform === 'wordpress') {
+                $vault = SecurityVault::getApiCredentials($userId, 'wordpress_api');
+                $result = Publisher::publishWordpress($userId, $vault['wp_site_url'] ?? '', $vault['wp_username'] ?? '', $vault['wp_app_password'] ?? '', $title, $articleContent);
+            } else {
+                Publisher::publishLocal($userId, $title, slugify($title), $articleContent, 'General', $item['primary_keyword'] ?? '', '');
+                $result = ['success' => true, 'url' => '/published_posts/' . slugify($title) . '.html'];
+            }
+            if ($result && !empty($result['success'])) {
+                $stmt = $db->prepare("UPDATE campaign_items SET article_status = 'Published' WHERE id = ?");
+                $stmt->execute([$itemId]);
+                jsonResponse(['success' => true, 'url' => $result['url'] ?? '', 'message' => 'Published immediately (scheduled time was in the past).']);
+            }
+            jsonResponse(['success' => false, 'error' => $result['error'] ?? 'Publishing failed.'], 400);
+        }
+        
+        // Future schedule — add to scheduled_queue
+        // First check if already scheduled
+        $stmt = $db->prepare("SELECT id FROM scheduled_queue WHERE topic_title = ? AND user_id = ? AND status = 'Scheduled'");
+        $stmt->execute([$item['title'], $userId]);
+        $existing = $stmt->fetch();
+        if ($existing) {
+            // Update existing schedule
+            $stmt = $db->prepare("UPDATE scheduled_queue SET scheduled_time = ?, target_platform = ? WHERE id = ?");
+            $stmt->execute([$scheduledStr, $platform, $existing['id']]);
+        } else {
+            $nowS = nowString();
+            $stmt = $db->prepare('INSERT INTO scheduled_queue (user_id, slot_number, topic_title, keyword, category, scheduled_time, target_platform, status, created_at, target_link, target_anchor) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+            $stmt->execute([$userId, $activeSlot, $item['title'], $item['primary_keyword'] ?? '', 'Approved Article', $scheduledStr, $platform, 'Scheduled', $nowS, '', $item['primary_keyword'] ?? '']);
+        }
+        
+        // Update item status  
+        $stmt = $db->prepare("UPDATE campaign_items SET article_status = 'Final Article Approved', scheduled_date = ?, scheduled_time = ? WHERE id = ?");
+        $stmt->execute([$schedDate, $schedTime, $itemId]);
+        
+        jsonResponse(['success' => true, 'message' => "Scheduled for $scheduledStr on $platform. Cron will publish at that time, or click Publish Now to publish immediately."]);
     }
 
     // Demo review page (HTML)

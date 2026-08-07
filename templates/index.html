@@ -564,7 +564,7 @@
             <div class="card" id="approved-scheduled-card" style="display:none; border-top:4px solid #10b981;">
                 <div class="card-header"><h2 class="card-title">✅ Approved & Scheduled Blogs</h2></div>
                 <p style="color:var(--text-muted); font-size:0.85rem;">These approved blogs are locked and scheduled for posting. They will NOT be removed when you create new campaigns.</p>
-                <table><thead><tr><th>Day</th><th>Title</th><th>Schedule Date</th><th>Time</th><th>Platform</th><th>Article Status</th><th>HTML</th></tr></thead><tbody id="approved-scheduled-tbody"><tr><td colspan="7">No approved items.</td></tr></tbody></table>
+                <table><thead><tr><th>Day</th><th>Title</th><th>Schedule Date</th><th>Time</th><th>Platform</th><th>Article Status</th><th>HTML</th><th>Action</th></tr></thead><tbody id="approved-scheduled-tbody"><tr><td colspan="8">No approved items.</td></tr></tbody></table>
             </div>
             <div id="legacy-writer-card" class="card" style="display:none">
                 <div class="card-header">
@@ -1158,11 +1158,62 @@
         }
         async function dashboardDecision(token,decision) { const res=await fetch('/api/demo/decision/'+token+'/'+decision,{method:'POST'}); if(!res.ok){alert('This approval link is expired or already used.');} loadDemoProgress(); loadStats(); }
         async function htmlDecision(token,decision) { if(!confirm('Are you sure you want to '+(decision==='approve'?'APPROVE this HTML for publishing?':'REJECT and rewrite this HTML?'))) return; const res=await fetch('/api/demo/html-decision/'+token+'/'+decision,{method:'POST'}); if(res.ok){alert(decision==='approve'?'✅ HTML Approved! Article is now scheduled for publishing.':'🔄 HTML Rejected! A rewritten version will be generated shortly.');loadDemoProgress();loadStats();}else{alert('This HTML approval link is expired or already used.');} }
+
+        async function publishNow(itemId, platform) {
+            if(!confirm('Publish this article NOW to ' + (platform||'blogger').toUpperCase() + '?')) return;
+            try {
+                const res = await fetch('/api/publish-now', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({item_id:itemId, platform:platform||'blogger'})});
+                const data = await res.json();
+                if(res.ok && data.success) {
+                    alert('✅ Published successfully! ' + (data.url ? 'URL: ' + data.url : data.message || ''));
+                } else {
+                    alert('🔴 Publishing failed: ' + (data.error || 'Unknown error. Check Vault credentials.'));
+                }
+                loadDemoProgress(); loadStats();
+            } catch(e) { alert('Request error: ' + e.message); }
+        }
+
+        function showScheduleModal(itemId, schedDate, schedTime, platform) {
+            const today = new Date().toISOString().split('T')[0];
+            const dateVal = schedDate || today;
+            const timeVal = schedTime || '10:00';
+            const modalHtml = `<div id="schedule-modal" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;">
+                <div style="background:#fff;border-radius:16px;padding:32px;max-width:420px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+                    <h3 style="margin:0 0 20px 0;color:#0f172a;">📅 Schedule Post</h3>
+                    <div style="margin-bottom:16px;"><label style="font-weight:700;display:block;margin-bottom:6px;">Date</label><input type="date" id="sched-modal-date" value="${dateVal}" min="${today}" style="width:100%;padding:10px;border:1px solid #e2e8f0;border-radius:8px;font-size:1rem;"></div>
+                    <div style="margin-bottom:16px;"><label style="font-weight:700;display:block;margin-bottom:6px;">Time</label><input type="time" id="sched-modal-time" value="${timeVal}" style="width:100%;padding:10px;border:1px solid #e2e8f0;border-radius:8px;font-size:1rem;"></div>
+                    <div style="margin-bottom:20px;"><label style="font-weight:700;display:block;margin-bottom:6px;">Platform</label><select id="sched-modal-platform" style="width:100%;padding:10px;border:1px solid #e2e8f0;border-radius:8px;font-size:1rem;"><option value="blogger" ${platform==='blogger'?'selected':''}>Google Blogger</option><option value="wordpress" ${platform==='wordpress'?'selected':''}>WordPress</option><option value="local" ${platform==='local'?'selected':''}>Local HTML</option></select></div>
+                    <div style="display:flex;gap:12px;">
+                        <button onclick="submitSchedule(${itemId})" style="flex:1;background:#10b981;color:#fff;padding:12px;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-size:1rem;">📅 Schedule</button>
+                        <button onclick="document.getElementById('schedule-modal').remove()" style="flex:1;background:#ef4444;color:#fff;padding:12px;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-size:1rem;">Cancel</button>
+                    </div>
+                </div></div>`;
+            const old = document.getElementById('schedule-modal');
+            if(old) old.remove();
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+        }
+
+        async function submitSchedule(itemId) {
+            const date = document.getElementById('sched-modal-date').value;
+            const time = document.getElementById('sched-modal-time').value;
+            const platform = document.getElementById('sched-modal-platform').value;
+            document.getElementById('schedule-modal').remove();
+            try {
+                const res = await fetch('/api/schedule-post', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({item_id:itemId, scheduled_date:date, scheduled_time:time, platform:platform})});
+                const data = await res.json();
+                if(res.ok && data.success) {
+                    alert('✅ ' + data.message);
+                } else {
+                    alert('🔴 Scheduling failed: ' + (data.error || 'Unknown error.'));
+                }
+                loadDemoProgress(); loadStats();
+            } catch(e) { alert('Request error: ' + e.message); }
+        }
         async function loadDemoProgress() { try { const data=await (await fetch('/api/demo/campaign-status')).json(); const body=document.getElementById('demo-progress-tbody'); const approvedBody=document.getElementById('approved-scheduled-tbody'); const approvedCard=document.getElementById('approved-scheduled-card'); if(!data.items||!data.items.length){body.innerHTML='<tr><td colspan="9">No campaign loaded.</td></tr>';approvedCard.style.display='none';return;} 
             const pendingItems=[];const approvedItems=[];
             data.items.forEach(x=>{if(x.plan_status==='Approved'||x.plan_status==='Provisional Approved'||x.article_status==='HTML Ready'||x.article_status==='Final Article Approved'){approvedItems.push(x);}else{pendingItems.push(x);}});
             body.innerHTML=pendingItems.length?pendingItems.map(x=>`<tr><td>Day ${x.day_number} / Slot ${x.post_number}</td><td>${escapeHtml(x.title)}</td><td><span class="badge badge-purple">${x.plan_status}</span></td><td><span class="badge badge-purple">${x.article_status}</span></td><td>${x.scheduled_date||'—'}</td><td>${x.scheduled_time||'—'}</td><td><span class="badge badge-success">${(x.target_platform||'local').toUpperCase()}</span></td><td>${x.html_path?`<a href="${x.html_path}" target="_blank">View HTML</a>`:'—'}</td><td>${x.approval_token?`<button class="btn btn-purple" onclick="dashboardDecision('${x.approval_token}','approve')">Approve</button> <button class="btn btn-danger" onclick="dashboardDecision('${x.approval_token}','reject')">Disapprove</button>`:''}${x.html_approval_token?` <button class="btn btn-accent" onclick="htmlDecision('${x.html_approval_token}','approve')">✅ Approve HTML</button> <button class="btn btn-danger" onclick="htmlDecision('${x.html_approval_token}','reject')">🔄 Rewrite HTML</button>`:''}${(!x.approval_token&&!x.html_approval_token)?'—':''}</td></tr>`).join(''):'<tr><td colspan="9" style="text-align:center;color:var(--accent-green);font-weight:700;">✅ All items approved! Check Approved & Scheduled section below.</td></tr>';
-            if(approvedItems.length){approvedCard.style.display='block';approvedBody.innerHTML=approvedItems.map(x=>`<tr><td>Day ${x.day_number}</td><td><strong>${escapeHtml(x.title)}</strong></td><td>${x.scheduled_date||'—'}</td><td>${x.scheduled_time||'—'}</td><td><span class="badge badge-success">${(x.target_platform||'local').toUpperCase()}</span></td><td><span class="badge badge-success">${x.article_status}</span></td><td>${x.html_path?`<a href="${x.html_path}" target="_blank">View HTML</a>`:'—'}</td></tr>`).join('');}else{approvedCard.style.display='none';}
+            if(approvedItems.length){approvedCard.style.display='block';approvedBody.innerHTML=approvedItems.map(x=>`<tr><td>Day ${x.day_number}</td><td><strong>${escapeHtml(x.title)}</strong></td><td>${x.scheduled_date||'—'}</td><td>${x.scheduled_time||'—'}</td><td><span class="badge badge-success">${(x.target_platform||'local').toUpperCase()}</span></td><td><span class="badge badge-success">${x.article_status}</span></td><td>${x.html_path?`<a href="${x.html_path}" target="_blank">View HTML</a>`:'—'}</td><td style="white-space:nowrap;">${x.article_status!=='Published'?`<button class="btn btn-accent" style="font-size:0.8rem;padding:6px 12px;" onclick="publishNow(${x.id},'${x.target_platform||'blogger'}')">🚀 Publish Now</button> <button class="btn btn-purple" style="font-size:0.8rem;padding:6px 12px;" onclick="showScheduleModal(${x.id},'${x.scheduled_date||''}','${x.scheduled_time||''}','${x.target_platform||'blogger'}')">📅 Schedule</button>`:'<span style="color:#10b981;font-weight:700;">✅ Published</span>'}</td></tr>`).join('');}else{approvedCard.style.display='none';}
         } catch(e){} }
         async function createDemoCampaign() {
             const status=document.getElementById('project-research-status'); status.innerText='Creating local demo roadmap without paid SEO, Chat, or Image requests...';

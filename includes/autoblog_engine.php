@@ -469,12 +469,12 @@ HTML;
  * Insert thumbnail HTML right after the first H1 tag in the article content.
  */
 /**
- * Split long paragraphs into shorter ones (max ~42 words per <p>).
+ * Split long paragraphs into shorter ones (strictly 45-50 words per <p>).
  * Preserves HTML tags, links, and formatting within paragraphs.
  */
-function splitLongParagraphs($html, $maxWords = 42) {
+function splitLongParagraphs($html, $minWords = 45, $maxWords = 50) {
     // Match all <p> tags and split their content if too long
-    $result = preg_replace_callback('#<p([^>]*)>(.*?)</p>#is', function($match) use ($maxWords) {
+    $result = preg_replace_callback('#<p([^>]*)>(.*?)</p>#is', function($match) use ($minWords, $maxWords) {
         $attrs = $match[1];
         $content = $match[2];
         
@@ -487,8 +487,7 @@ function splitLongParagraphs($html, $maxWords = 42) {
             return $match[0]; // Short enough, keep as-is
         }
         
-        // For long paragraphs, we need to split the plain text
-        // But preserve inline HTML links. Strategy: split on sentence boundaries.
+        // For long paragraphs, split at sentence boundaries targeting 45-50 words
         $sentences = preg_split('/(?<=[.!?])\s+/', trim($plainText));
         
         $paragraphs = [];
@@ -517,7 +516,6 @@ function splitLongParagraphs($html, $maxWords = 42) {
         }
         
         // Check if the original <p> contained links we should preserve
-        // If it has links, re-build using the original HTML content split by sentences
         if (stripos($content, '<a ') !== false) {
             // Has links — split the HTML content at sentence boundaries
             $htmlSentences = preg_split('/(?<=[.!?])\s+/', trim($content));
@@ -671,7 +669,7 @@ function generateArticleHtmlFromCampaignItem($item, $userId, $activeSlot, $db, $
         $h2List = implode(' | ', $h2s);
         $angleNote = $contentAngle ? "\nCONTENT ANGLE: $contentAngle" : '';
 
-        $prompt = "Write a complete, publication-ready HTML blog article about \"$keyword\".\n\nTITLE: $title\nH1: $h1\nH2 SECTIONS: $h2List\nSUPPORTING KEYWORDS: $kwList\nINTERNAL LINKS (weave naturally into the text):\n$intLinkList\nEXTERNAL REFERENCES (cite naturally):\n$extLinkList\nIMAGE PROMPTS: " . implode('; ', $prompts) . "\n$angleNote\n\nREQUIREMENTS:\n- 1,800 to 2,200 words of original, researched content\n- Use semantic HTML: proper H1, H2, H3, H4, p, ul, li, table, figure, blockquote tags\n- CRITICAL: Keep paragraphs SHORT — maximum 40-45 words per paragraph. Break long paragraphs into multiple short <p> tags. Readers skim; short paragraphs improve readability and mobile experience.\n- Write in a natural, authoritative human voice - no AI cliches or banned phrases\n- Include a FAQ section at the end with 3 real questions and answers about $keyword\n- Include 2-3 internal links with natural anchor text\n- Include 2-3 external authority references with REAL working URLs to well-known sites (Wikipedia, official docs, authority blogs). Verify the URLs are correct and related to the topic.\n- Also include 1-2 links to the client website pages listed in internal links\n- Add a comparison data table where relevant\n- Do NOT include html/head/body tags - only the article content\n- Do NOT invent facts, statistics, or quotes\n- Do NOT make up URLs — only use real, verified external URLs\n- Return ONLY the article HTML, no markdown fences";
+        $prompt = "Write a complete, publication-ready HTML blog article about \"$keyword\".\n\nTITLE: $title\nH1: $h1\nH2 SECTIONS: $h2List\nSUPPORTING KEYWORDS: $kwList\nINTERNAL LINKS (weave naturally into the text):\n$intLinkList\nEXTERNAL REFERENCES (cite naturally):\n$extLinkList\nIMAGE PROMPTS: " . implode('; ', $prompts) . "\n$angleNote\n\nREQUIREMENTS:\n- 1,800 to 2,200 words of original, researched content\n- Use semantic HTML: proper H1, H2, H3, H4, p, ul, li, table, figure, blockquote tags\n- CRITICAL: Keep paragraphs SHORT — strictly 45 to 50 words per paragraph. Every <p> tag must have between 45 and 50 words. Break long paragraphs into multiple short <p> tags. Readers skim; short paragraphs improve readability and mobile experience.\n- Write in a natural, authoritative human voice - no AI cliches or banned phrases\n- Include a FAQ section at the end with 3 real questions and answers about $keyword\n- Include 2-3 internal links with natural anchor text\n- Include 2-3 external authority references with REAL working URLs to well-known sites (Wikipedia, official docs, authority blogs). Verify the URLs are correct and related to the topic.\n- Also include 1-2 links to the client website pages listed in internal links\n- Add a comparison data table where relevant\n- Do NOT include html/head/body tags - only the article content\n- Do NOT invent facts, statistics, or quotes\n- Do NOT make up URLs — only use real, verified external URLs\n- Return ONLY the article HTML, no markdown fences";
 
         $chatResult = AIProviderClient::chat($chatVault, $prompt);
         if (!empty($chatResult['success']) && !empty($chatResult['content'])) {
@@ -684,9 +682,9 @@ function generateArticleHtmlFromCampaignItem($item, $userId, $activeSlot, $db, $
         }
     }
 
-    // Post-process: split long paragraphs (max ~42 words) for readability
+    // Post-process: split long paragraphs (strictly 45-50 words) for readability
     if ($chatUsed && !empty($chatContent)) {
-        $chatContent = splitLongParagraphs($chatContent, 42);
+        $chatContent = splitLongParagraphs($chatContent, 45, 50);
         // Validate external links (replace broken ones with plain text)
         $chatContent = validateAndFixExternalLinks($chatContent);
     }
