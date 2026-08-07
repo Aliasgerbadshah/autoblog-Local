@@ -122,17 +122,19 @@ foreach ($dueItems as $item) {
         if ($platform === 'blogger') {
             $vault = SecurityVault::getApiCredentials($userId, 'blogger_api');
             $blogId = $vault['blogger_blog_id'] ?? '';
-            $apiKey = $vault['blogger_api_key'] ?? '';
             $clientId = $vault['client_id'] ?? '';
             $clientSecret = $vault['client_secret'] ?? '';
             $refreshToken = $vault['refresh_token'] ?? '';
-            $log("Publishing to Blogger - Blog ID: $blogId, API Key: " . (empty($apiKey) ? 'EMPTY' : substr($apiKey, 0, 8) . '...') . ", OAuth: " . (empty($refreshToken) ? 'NONE' : 'configured'));
+            $log("Publishing to Blogger - Blog ID: $blogId, OAuth: " . (empty($refreshToken) ? 'NONE' : 'configured'));
             
             if (empty($blogId)) {
                 throw new RuntimeException('Blogger Blog ID is required in the vault.');
             }
+            if (empty($refreshToken)) {
+                throw new RuntimeException('Blogger OAuth Refresh Token is required in the vault for publishing.');
+            }
             
-            $result = Publisher::publishBlogger($userId, $blogId, $apiKey, $art['title'], $art['content'], $clientId, $clientSecret, $refreshToken);
+            $result = Publisher::publishBlogger($userId, $blogId, $art['title'], $art['content'], $clientId, $clientSecret, $refreshToken);
             if (!$result['success']) throw new RuntimeException($result['error'] ?? 'Blogger publishing failed');
             $log("Blogger publish success: " . ($result['url'] ?? 'no URL returned'));
         } elseif ($platform === 'wordpress') {

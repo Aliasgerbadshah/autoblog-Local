@@ -285,22 +285,50 @@ function handleApiRoute($uri) {
         jsonResponse($result, $result['success'] ? 200 : 400);
     }
 
-    // Test Blogger
+    // Test Blogger — uses OAuth (refresh token → access token → Bearer header)
     if ($uri === '/api/vault/test-blogger' && $method === 'POST') {
         $blogId = $input['blogger_blog_id'] ?? '';
-        $apiKey = $input['blogger_api_key'] ?? '';
-        if (!$blogId || !$apiKey) {
+        $clientId = $input['client_id'] ?? '';
+        $clientSecret = $input['client_secret'] ?? '';
+        $refreshToken = $input['refresh_token'] ?? '';
+        
+        // Fall back to vault if not provided in request
+        if (!$blogId || !$clientId || !$clientSecret || !$refreshToken) {
             $bloggerVault = SecurityVault::getApiCredentials($userId, 'blogger_api');
             $blogId = $blogId ?: ($bloggerVault['blogger_blog_id'] ?? '');
-            $apiKey = $apiKey ?: ($bloggerVault['blogger_api_key'] ?? '');
+            $clientId = $clientId ?: ($bloggerVault['client_id'] ?? '');
+            $clientSecret = $clientSecret ?: ($bloggerVault['client_secret'] ?? '');
+            $refreshToken = $refreshToken ?: ($bloggerVault['refresh_token'] ?? '');
         }
-        if (!$blogId || !$apiKey) {
-            jsonResponse(['success' => false, 'error' => 'Blogger Blog ID and API Key are required.'], 400);
+        
+        if (!$blogId) {
+            jsonResponse(['success' => false, 'error' => 'Blogger Blog ID is required.'], 400);
         }
-        $result = curlGet("https://www.googleapis.com/blogger/v3/blogs/" . trim($blogId) . "?key=" . trim($apiKey), [], 10);
+        if (!$clientId || !$clientSecret || !$refreshToken) {
+            jsonResponse(['success' => false, 'error' => 'OAuth Client ID, Client Secret, and Refresh Token are required to connect to Blogger.'], 400);
+        }
+        
+        // Refresh the access token using OAuth
+        $rfRes = BloggerOAuthHelper::refreshAccessToken($clientId, $clientSecret, $refreshToken);
+        if (!$rfRes['success']) {
+            jsonResponse(['success' => false, 'error' => 'OAuth Token Refresh Failed: ' . ($rfRes['error'] ?? 'Check Client ID, Secret, and Refresh Token.')], 400);
+        }
+        $accessToken = $rfRes['access_token'];
+        
+        // Use the fresh access token to GET blog info
+        $result = curlGet("https://www.googleapis.com/blogger/v3/blogs/" . trim($blogId), ["Authorization: Bearer " . trim($accessToken)], 10);
         $data = $result['json'] ?? [];
+        
         if ($result['http_code'] === 200) {
-            jsonResponse(['success' => true, 'blog_name' => $data['name'] ?? '', 'url' => $data['url'] ?? '']);
+            // Save the fresh access token back to vault
+            $vault = SecurityVault::getApiCredentials($userId, 'blogger_api');
+            if (!empty($vault)) {
+                $vault['access_token'] = $accessToken;
+                $alias = $vault['account_alias'] ?? 'Primary Blogger Account';
+                unset($vault['account_alias']);
+                SecurityVault::saveApiCredentials($userId, 'blogger_api', $vault, $alias);
+            }
+            jsonResponse(['success' => true, 'blog_name' => $data['name'] ?? '', 'url' => $data['url'] ?? '', 'message' => 'OAuth connected and access token refreshed.']);
         }
         $errorMsg = $data['error']['message'] ?? ($result['data'] ?? 'Unknown error');
         jsonResponse(['success' => false, 'error' => "Blogger API Error ({$result['http_code']}): $errorMsg"]);
@@ -354,11 +382,10 @@ function handleApiRoute($uri) {
 
         if ($targetPlatform === 'blogger') {
             $blogId = $input['blogger_blog_id'] ?? $bloggerVault['blogger_blog_id'] ?? '';
-            $apiKey = $input['blogger_api_key'] ?? $bloggerVault['blogger_api_key'] ?? '';
             $clientId = $bloggerVault['client_id'] ?? '';
             $clientSecret = $bloggerVault['client_secret'] ?? '';
             $refreshToken = $bloggerVault['refresh_token'] ?? '';
-            $res = Publisher::publishBlogger($userId, $blogId, $apiKey, $art['title'], $art['content'], $clientId, $clientSecret, $refreshToken);
+            $res = Publisher::publishBlogger($userId, $blogId, $art['title'], $art['content'], $clientId, $clientSecret, $refreshToken);
             $results[] = $res;
             if ($res['success']) { $publishedUrl = $res['url'] ?? ''; }
             else { jsonResponse(['error' => $res['error'] ?? 'Blogger publishing failed.', 'results' => $results], 400); }
@@ -890,14 +917,13 @@ function handleApiRoute($uri) {
         if ($platform === 'blogger') {
             $vault = SecurityVault::getApiCredentials($userId, 'blogger_api');
             $blogId = $vault['blogger_blog_id'] ?? '';
-            $apiKey = $vault['blogger_api_key'] ?? '';
             $clientId = $vault['client_id'] ?? '';
             $clientSecret = $vault['client_secret'] ?? '';
             $refreshToken = $vault['refresh_token'] ?? '';
             
             if (empty($blogId)) jsonResponse(['success' => false, 'error' => 'Blogger Blog ID is missing. Save it in the Vault first.'], 400);
             
-            $result = Publisher::publishBlogger($userId, $blogId, $apiKey, $title, $articleContent, $clientId, $clientSecret, $refreshToken);
+            $result = Publisher::publishBlogger($userId, $blogId, $title, $articleContent, $clientId, $clientSecret, $refreshToken);
         } elseif ($platform === 'wordpress') {
             $vault = SecurityVault::getApiCredentials($userId, 'wordpress_api');
             $result = Publisher::publishWordpress($userId, $vault['wp_site_url'] ?? '', $vault['wp_username'] ?? '', $vault['wp_app_password'] ?? '', $title, $articleContent);
@@ -981,12 +1007,11 @@ function handleApiRoute($uri) {
             if ($platform === 'blogger') {
                 $vault = SecurityVault::getApiCredentials($userId, 'blogger_api');
                 $blogId = $vault['blogger_blog_id'] ?? '';
-                $apiKey = $vault['blogger_api_key'] ?? '';
                 $clientId = $vault['client_id'] ?? '';
                 $clientSecret = $vault['client_secret'] ?? '';
                 $refreshToken = $vault['refresh_token'] ?? '';
                 if (empty($blogId)) jsonResponse(['success' => false, 'error' => 'Blogger Blog ID missing in Vault.'], 400);
-                $result = Publisher::publishBlogger($userId, $blogId, $apiKey, $title, $articleContent, $clientId, $clientSecret, $refreshToken);
+                $result = Publisher::publishBlogger($userId, $blogId, $title, $articleContent, $clientId, $clientSecret, $refreshToken);
             } elseif ($platform === 'wordpress') {
                 $vault = SecurityVault::getApiCredentials($userId, 'wordpress_api');
                 $result = Publisher::publishWordpress($userId, $vault['wp_site_url'] ?? '', $vault['wp_username'] ?? '', $vault['wp_app_password'] ?? '', $title, $articleContent);

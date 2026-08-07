@@ -642,14 +642,10 @@
                                 <label>Blogger Blog ID</label>
                                 <input type="text" id="v-blog-id" placeholder="e.g. 810293810238190" required>
                             </div>
-                            <div class="form-group">
-                                <label>Blogger API Key <span style="font-size:0.75rem;color:#64748b;">(for Test Connection only)</span></label>
-                                <input type="password" id="v-blog-apikey" placeholder="AIzaSy... (Google Cloud Console → API Key)">
-                            </div>
                         </div>
                         <div style="background:rgba(245, 158, 11, 0.1); padding:12px 16px; border-radius:8px; border:1px solid rgba(245, 158, 11, 0.2); margin-bottom:12px;">
-                            <p style="font-size:0.8rem; font-weight:700; color:#b45309; margin-bottom:6px;">🔑 OAuth Credentials (REQUIRED for publishing posts to Blogger):</p>
-                            <p style="font-size:0.75rem; color:#64748b; margin-bottom:8px;">Google requires OAuth 2.0 to create posts. The refresh token auto-renews so you only set it once.</p>
+                            <p style="font-size:0.8rem; font-weight:700; color:#b45309; margin-bottom:6px;">🔑 OAuth 2.0 Credentials (Required for Test & Publishing):</p>
+                            <p style="font-size:0.75rem; color:#64748b; margin-bottom:8px;">Google requires OAuth 2.0 for Blogger. The refresh token auto-renews — you only set it once.</p>
                             <div class="form-grid">
                                 <div class="form-group">
                                     <label>OAuth Client ID</label>
@@ -950,7 +946,6 @@
                 alert('Credential removed from Vault!');
                 if (serviceName === 'blogger_api') {
                     document.getElementById('v-blog-id').value = '';
-                    document.getElementById('v-blog-apikey').value = '';
                     document.getElementById('v-blog-cid').value = '';
                     document.getElementById('v-blog-secret').value = '';
                     document.getElementById('v-blog-refresh').value = '';
@@ -975,7 +970,6 @@
 
                 if (services.blogger_api) {
                     if (services.blogger_api.blogger_blog_id) document.getElementById('v-blog-id').value = services.blogger_api.blogger_blog_id;
-                    if (services.blogger_api.blogger_api_key) document.getElementById('v-blog-apikey').value = services.blogger_api.blogger_api_key;
                     if (services.blogger_api.client_id) document.getElementById('v-blog-cid').value = services.blogger_api.client_id;
                     if (services.blogger_api.client_secret) document.getElementById('v-blog-secret').value = services.blogger_api.client_secret;
                     if (services.blogger_api.refresh_token) document.getElementById('v-blog-refresh').value = services.blogger_api.refresh_token;
@@ -1023,7 +1017,6 @@
             const creds = {
                 account_alias: document.getElementById('v-blog-alias').value || 'Primary Blogger Account',
                 blogger_blog_id: document.getElementById('v-blog-id').value,
-                blogger_api_key: document.getElementById('v-blog-apikey').value,
                 client_id: document.getElementById('v-blog-cid').value,
                 client_secret: document.getElementById('v-blog-secret').value,
                 refresh_token: document.getElementById('v-blog-refresh').value
@@ -1132,14 +1125,16 @@
 
         async function testBloggerConnection() {
             const statusDiv = document.getElementById('blogger-test-status');
-            statusDiv.innerHTML = '<span style="color:#2563eb;">🔍 Querying Google Blogger API...</span>';
+            statusDiv.innerHTML = '<span style="color:#2563eb;">🔍 Connecting to Google Blogger via OAuth...</span>';
 
             const res = await fetch('/api/vault/test-blogger', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     blogger_blog_id: document.getElementById('v-blog-id').value,
-                    blogger_api_key: document.getElementById('v-blog-apikey').value
+                    client_id: document.getElementById('v-blog-cid').value,
+                    client_secret: document.getElementById('v-blog-secret').value,
+                    refresh_token: document.getElementById('v-blog-refresh').value
                 })
             });
 

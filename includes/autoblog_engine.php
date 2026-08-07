@@ -299,16 +299,18 @@ HTML;
         return $publishedUrl;
     }
 
-    public static function publishBlogger($userId, $blogId, $apiKey, $title, $content, $clientId = null, $clientSecret = null, $refreshToken = null) {
+    public static function publishBlogger($userId, $blogId, $title, $content, $clientId = null, $clientSecret = null, $refreshToken = null) {
         // Blogger API v3: POST (create post) requires OAuth 2.0 Bearer token.
-        // API Key only works for GET (read). So we need OAuth for publishing.
-        // Strategy: If OAuth refresh credentials are available, refresh the access token
-        // and use it. Otherwise, try API key (will fail for POST but we try anyway).
+        // We must have OAuth refresh credentials to publish.
         
-        $authHeader = null;
+        if (empty($blogId)) {
+            return ['success' => false, 'error' => 'Missing Blogger Blog ID.'];
+        }
+        
         $url = "https://www.googleapis.com/blogger/v3/blogs/" . trim($blogId) . "/posts/";
+        $authHeader = null;
         
-        // Attempt 1: Use OAuth with auto-refresh (works for POST/write)
+        // Use OAuth with auto-refresh
         if ($refreshToken && $clientId && $clientSecret) {
             $rfRes = BloggerOAuthHelper::refreshAccessToken($clientId, $clientSecret, $refreshToken);
             if ($rfRes['success'] && !empty($rfRes['access_token'])) {
@@ -321,16 +323,13 @@ HTML;
                     unset($vault['account_alias']);
                     SecurityVault::saveApiCredentials($userId, 'blogger_api', $vault, $alias);
                 }
+            } else {
+                return ['success' => false, 'error' => 'OAuth token refresh failed: ' . ($rfRes['error'] ?? 'Check Client ID, Secret, and Refresh Token.')];
             }
         }
         
-        // Attempt 2: Use API Key as query param (works for GET/read, usually fails for POST/write)
-        if (!$authHeader && !empty($apiKey)) {
-            $url .= '?key=' . trim($apiKey);
-        }
-        
-        if (empty($blogId)) {
-            return ['success' => false, 'error' => 'Missing Blogger Blog ID.'];
+        if (!$authHeader) {
+            return ['success' => false, 'error' => 'OAuth credentials required. Save Client ID, Client Secret, and Refresh Token in the Blogger vault.'];
         }
 
         $payload = [
@@ -340,12 +339,7 @@ HTML;
             'content' => $content
         ];
 
-        $headers = ['Content-Type: application/json'];
-        if ($authHeader) {
-            $headers[] = $authHeader;
-        }
-
-        $result = curlPost($url, $payload, $headers, 12);
+        $result = curlPost($url, $payload, ['Content-Type: application/json', $authHeader], 12);
 
         $data = $result['data'] ?? [];
         if ($result['success'] && in_array($result['http_code'], [200, 201])) {
@@ -358,11 +352,7 @@ HTML;
         }
 
         $errorMsg = $data['error']['message'] ?? ($result['raw'] ?? 'Unknown error');
-        $hint = '';
-        if (in_array($result['http_code'], [401, 403]) && !$authHeader) {
-            $hint = ' API Key cannot create posts (write). You MUST add OAuth Client ID, Client Secret, and Refresh Token in the Blogger vault for publishing.';
-        }
-        return ['success' => false, 'error' => "Blogger API Error ({$result['http_code']}): $errorMsg$hint"];
+        return ['success' => false, 'error' => "Blogger API Error ({$result['http_code']}): $errorMsg"];
     }
 
     public static function publishWordpress($userId, $wpSiteUrl, $username, $appPassword, $title, $content, $status = 'publish') {
