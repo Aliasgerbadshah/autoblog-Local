@@ -1375,12 +1375,13 @@ function handleApiRoute($uri) {
         $stmt->execute([$tok['campaign_item_id']]);
         $item = $stmt->fetch();
 
-        $stmt = $db->prepare("SELECT id FROM campaigns WHERE user_id = ? AND status = 'Roadmap Review' ORDER BY id DESC LIMIT 1");
-        $stmt->execute([$tok['user_id']]);
+        // Get the campaign this item belongs to (ANY campaign, not just latest)
+        $stmt = $db->prepare('SELECT * FROM campaigns WHERE id = ?');
+        $stmt->execute([$item['campaign_id']]);
         $active = $stmt->fetch();
-        if (!$item || !$active || $item['campaign_id'] != $active['id']) {
+        if (!$item || !$active) {
             header('Content-Type: text/html; charset=utf-8');
-            echo '<h2>This approval email belongs to an older campaign and is no longer active.</h2>';
+            echo '<h2>This approval link is invalid or the campaign no longer exists.</h2>';
             exit;
         }
 
@@ -1635,30 +1636,64 @@ function handleApiRoute($uri) {
     }
 
     // Generate demo HTML
-    // Generate HTML for all approved items (manual trigger)
+    // Generate HTML for all approved items missing HTML (manual trigger)
     if (preg_match('#^/api/demo/generate-html/(\d+)$#', $uri, $m) && $method === 'POST') {
         $campaignId = $m[1];
         $db = getDB();
-        $stmt = $db->prepare('SELECT * FROM campaign_items WHERE campaign_id = ? AND plan_status = "Approved" AND article_status != "Final Article Approved"');
+        // Get ALL approved items that don't have HTML yet (any article_status except Published)
+        $stmt = $db->prepare('SELECT * FROM campaign_items WHERE campaign_id = ? AND plan_status IN ("Approved","Provisional Approved") AND (article_status = "Not Created" OR article_status = "HTML Ready" AND (html_path IS NULL OR html_path = ""))');
         $stmt->execute([$campaignId]);
         $items = $stmt->fetchAll();
         $generated = [];
+        $errors = [];
 
         foreach ($items as $item) {
-            $htmlResult = generateArticleHtmlFromCampaignItem($item, $userId, $activeSlot, $db);
-            if (!empty($htmlResult['success'])) {
-                $stmt = $db->prepare("UPDATE campaign_items SET article_status = 'HTML Ready', html_path = ? WHERE id = ?");
-                $stmt->execute([$htmlResult['html_path'], $item['id']]);
-                $htmlToken = generateToken();
-                $nowG = nowString();
-                $stmt = $db->prepare('INSERT INTO approval_tokens (user_id, campaign_item_id, approval_type, token, created_at) VALUES (?, ?, ?, ?, ?)');
-                $stmt->execute([$userId, $item['id'], 'html', $htmlToken, $nowG]);
-                $previewEmailHtml = buildHtmlPreviewEmailHtml($item, $htmlResult['html_path'], $htmlToken, $htmlResult['used_chat_api']);
-                sendApprovalEmail($userId, 'Blog HTML Preview - ' . escapeHtml($item['title']), $previewEmailHtml);
-                $generated[] = ['id' => $item['id'], 'url' => $htmlResult['html_path'], 'title' => $item['title']];
+            try {
+                $htmlResult = generateArticleHtmlFromCampaignItem($item, $userId, $activeSlot, $db);
+                if (!empty($htmlResult['success'])) {
+                    $stmt = $db->prepare("UPDATE campaign_items SET article_status = 'HTML Ready', html_path = ? WHERE id = ?");
+                    $stmt->execute([$htmlResult['html_path'], $item['id']]);
+                    $htmlToken = generateToken();
+                    $nowG = nowString();
+                    $stmt = $db->prepare('INSERT INTO approval_tokens (user_id, campaign_item_id, approval_type, token, created_at) VALUES (?, ?, ?, ?, ?)');
+                    $stmt->execute([$userId, $item['id'], 'html', $htmlToken, $nowG]);
+                    $previewEmailHtml = buildHtmlPreviewEmailHtml($item, $htmlResult['html_path'], $htmlToken, $htmlResult['used_chat_api']);
+                    sendApprovalEmail($userId, 'Blog HTML Preview - ' . escapeHtml($item['title']), $previewEmailHtml);
+                    $generated[] = ['id' => $item['id'], 'url' => $htmlResult['html_path'], 'title' => $item['title']];
+                } else {
+                    $errors[] = ['id' => $item['id'], 'title' => $item['title'], 'error' => $htmlResult['error'] ?? 'Unknown error'];
+                }
+            } catch (Exception $e) {
+                $errors[] = ['id' => $item['id'], 'title' => $item['title'], 'error' => $e->getMessage()];
             }
         }
-        jsonResponse(['success' => true, 'articles' => $generated, 'message' => count($generated) . ' articles generated with preview emails sent.']);
+        jsonResponse(['success' => true, 'articles' => $generated, 'errors' => $errors, 'message' => count($generated) . ' articles generated.' . (count($errors) ? ' ' . count($errors) . ' errors.' : '')]);
+    }
+
+    // Generate HTML for ALL approved items across ALL campaigns (bulk trigger)
+    if ($uri === '/api/generate-all-html' && $method === 'POST') {
+        $db = getDB();
+        $stmt = $db->prepare('SELECT ci.* FROM campaign_items ci JOIN campaigns c ON c.id = ci.campaign_id WHERE c.user_id = ? AND ci.plan_status IN ("Approved","Provisional Approved") AND (ci.article_status = "Not Created" OR (ci.article_status = "HTML Ready" AND (ci.html_path IS NULL OR ci.html_path = ""))) ORDER BY ci.id');
+        $stmt->execute([$userId]);
+        $items = $stmt->fetchAll();
+        $generated = [];
+        $errors = [];
+
+        foreach ($items as $item) {
+            try {
+                $htmlResult = generateArticleHtmlFromCampaignItem($item, $userId, $activeSlot, $db);
+                if (!empty($htmlResult['success'])) {
+                    $stmt = $db->prepare("UPDATE campaign_items SET article_status = 'HTML Ready', html_path = ? WHERE id = ?");
+                    $stmt->execute([$htmlResult['html_path'], $item['id']]);
+                    $generated[] = ['id' => $item['id'], 'url' => $htmlResult['html_path'], 'title' => $item['title']];
+                } else {
+                    $errors[] = ['id' => $item['id'], 'title' => $item['title'], 'error' => $htmlResult['error'] ?? 'Unknown error'];
+                }
+            } catch (Exception $e) {
+                $errors[] = ['id' => $item['id'], 'title' => $item['title'], 'error' => $e->getMessage()];
+            }
+        }
+        jsonResponse(['success' => true, 'articles' => $generated, 'errors' => $errors, 'total_found' => count($items), 'message' => count($generated) . ' of ' . count($items) . ' articles generated.' . (count($errors) ? ' ' . count($errors) . ' errors.' : '')]);
     }
 
     // Content plans

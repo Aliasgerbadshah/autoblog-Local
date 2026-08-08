@@ -347,8 +347,13 @@ HTML;
 
         // KEEP our H1 from content — it's styled and center-aligned, looks great.
         // Instead, add CSS to HIDE Blogger's default title heading (it's small and ugly).
-        // Blogger theme title selectors vary, so we hide common ones.
-        $hideBloggerTitle = '<style>.post-title,.entry-title,h3.post-title,h2.post-title,.post h3,.post-title.entry-title,.blog-post h3,.Blog .post h3{display:none!important;}</style>';
+        // Also add Blogger theme overrides to ensure content is full-width and visible on desktop.
+        $hideBloggerTitle = '<style>' .
+            '.post-title,.entry-title,h3.post-title,h2.post-title,.post h3,.post-title.entry-title,.blog-post h3,.Blog .post h3,.post-title.entry-title.item,.Blog .post .post-title{display:none!important;}' .
+            '.post-outer,.post,.Blog,.blog-posts,.post-body,.entry-content{width:100%!important;max-width:100%!important;overflow:visible!important;}' .
+            '.post-body,.entry-content{padding:0!important;margin:0!important;}' .
+            '.column-left-outer,.column-right-outer{display:none!important;}' .
+            '</style>';
         // Prepend the hiding CSS at the very top of content (before our <style> block if any)
         $content = $hideBloggerTitle . $content;
 
@@ -837,35 +842,53 @@ function generateArticleHtmlFromCampaignItem($item, $userId, $activeSlot, $db, $
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-        * { box-sizing: border-box; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
         html { scroll-behavior: smooth; }
-        body { font-family: 'Montserrat', sans-serif; line-height: 1.8; max-width: 880px; margin: 0 auto; padding: 36px 20px; color: #0f172a; background: #fafafa; }
+        body { font-family: 'Montserrat', sans-serif; line-height: 1.8; max-width: 880px; margin: 0 auto; padding: 36px 20px; color: #0f172a; background: #fafafa; width: 100%; }
         .nav-back { margin-bottom: 24px; display: inline-block; color: #0f172a; font-weight: 800; text-decoration: underline; font-size: 0.9rem; }
-        article { background: #ffffff; padding: 48px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.04); border: 1px solid #e2e8f0; }
+        article { background: #ffffff; padding: 48px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.04); border: 1px solid #e2e8f0; width: 100%; max-width: 100%; overflow-wrap: break-word; word-wrap: break-word; }
         .blog-thumbnail { width: 100%; }
         h1 { font-size: 2.2rem; font-weight: 800; color: #0f172a; margin-bottom: 12px; line-height: 1.2; text-align: center; }
         h2 { font-size: 1.5rem; font-weight: 800; color: #0f172a; margin-top: 36px; margin-bottom: 16px; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; }
         h3 { font-size: 1.15rem; font-weight: 700; color: #0f172a; margin-top: 24px; margin-bottom: 12px; }
-        p { margin-bottom: 18px; }
+        h4 { font-size: 1rem; font-weight: 700; color: #0f172a; margin-top: 20px; margin-bottom: 10px; }
+        p { margin-bottom: 18px; text-align: justify; }
         a { color: #1b57f6; font-weight: 600; text-decoration: none; }
         a:hover { text-decoration: underline; }
-        ul, ol { margin: 16px 0; padding-left: 22px; line-height: 2; }
-        blockquote { border-left: 4px solid #1b57f6; padding: 16px 20px; margin: 24px 0; background: #f8fafc; border-radius: 0 8px 8px 0; }
+        ul, ol { margin: 16px 0; padding-left: 22px; line-height: 2; text-align: justify; }
+        li { margin-bottom: 6px; }
+        blockquote { border-left: 4px solid #1b57f6; padding: 16px 20px; margin: 24px 0; background: #f8fafc; border-radius: 0 8px 8px 0; text-align: justify; }
         table { width: 100%; border-collapse: collapse; margin: 20px 0; display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
         thead { display: table-header-group; }
         tbody { display: table-row-group; }
         tr { display: table-row; }
         td, th { border: 1px solid #e2e8f0; padding: 12px 14px; text-align: left; display: table-cell; }
         th { background: #f1f5f9; font-weight: 700; }
-        figure { margin: 24px 0; }
-        img { max-width: 100%; height: auto; border-radius: 12px; display: block; }
+        figure { margin: 24px 0; width: 100%; max-width: 100%; }
+        img { max-width: 100%; height: auto; border-radius: 12px; display: block; margin: 0 auto; }
         footer { margin-top: 48px; font-size: 0.85rem; text-align: center; color: #64748b; font-weight: 600; }
+        /* Desktop: ensure full-width content visible */
+        @media (min-width: 769px) {
+            body { padding: 40px 30px; max-width: 900px; }
+            article { padding: 48px 52px; }
+            h1 { font-size: 2.4rem; }
+            h2 { font-size: 1.6rem; }
+            p { font-size: 1.05rem; }
+        }
+        /* Tablet */
+        @media (min-width: 481px) and (max-width: 768px) {
+            body { padding: 24px 16px; }
+            article { padding: 32px 24px; border-radius: 16px; }
+            h1 { font-size: 1.8rem; }
+            h2 { font-size: 1.35rem; }
+            p { font-size: 1rem; }
+        }
         /* Mobile optimization */
-        @media (max-width: 768px) {
+        @media (max-width: 480px) {
             body { padding: 16px 12px; }
             article { padding: 24px 16px; border-radius: 14px; }
-            h1 { font-size: 1.6rem; }
-            h2 { font-size: 1.25rem; margin-top: 24px; }
+            h1 { font-size: 1.5rem; }
+            h2 { font-size: 1.2rem; margin-top: 24px; }
             h3 { font-size: 1.05rem; }
             p { font-size: 0.95rem; margin-bottom: 14px; }
             ul, ol { padding-left: 18px; font-size: 0.95rem; }
@@ -875,9 +898,9 @@ function generateArticleHtmlFromCampaignItem($item, $userId, $activeSlot, $db, $
             figure { margin: 16px 0; }
             img { border-radius: 8px; }
         }
-        @media (max-width: 480px) {
-            h1 { font-size: 1.4rem; }
-            h2 { font-size: 1.15rem; }
+        @media (max-width: 360px) {
+            h1 { font-size: 1.3rem; }
+            h2 { font-size: 1.1rem; }
             article { padding: 16px 12px; }
             .blog-thumbnail { max-height: 280px; }
         }

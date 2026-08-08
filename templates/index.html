@@ -562,8 +562,9 @@
             </div>
             <!-- APPROVED & SCHEDULED ITEMS (separate from pending) -->
             <div class="card" id="approved-scheduled-card" style="display:none; border-top:4px solid #10b981;">
-                <div class="card-header"><h2 class="card-title">✅ Approved & Scheduled Blogs</h2></div>
+                <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;"><h2 class="card-title" style="margin:0;">✅ Approved & Scheduled Blogs</h2><button class="btn btn-accent" style="font-size:0.8rem;padding:8px 16px;" onclick="generateAllHTML()">⚡ Generate All HTML</button></div>
                 <p style="color:var(--text-muted); font-size:0.85rem;">These approved blogs are locked and scheduled for posting. They will NOT be removed when you create new campaigns.</p>
+                <div id="generate-all-status" style="display:none;margin-bottom:12px;padding:10px;border-radius:8px;background:#f0fdf4;color:#166534;font-weight:600;font-size:0.9rem;"></div>
                 <table><thead><tr><th>Day</th><th>Title</th><th>Schedule Date</th><th>Time</th><th>Platform</th><th>Article Status</th><th>HTML</th><th>Action</th></tr></thead><tbody id="approved-scheduled-tbody"><tr><td colspan="8">No approved items.</td></tr></tbody></table>
             </div>
             <div id="legacy-writer-card" class="card" style="display:none">
@@ -1175,6 +1176,32 @@
                 }
                 loadDemoProgress(); loadStats();
             } catch(e) { alert('Request error: ' + e.message); }
+        }
+
+        async function generateAllHTML() {
+            const statusDiv = document.getElementById('generate-all-status');
+            statusDiv.style.display = 'block';
+            statusDiv.style.background = '#fef3c7';
+            statusDiv.style.color = '#92400e';
+            statusDiv.innerText = '⏳ Generating HTML for all approved items... This may take a few minutes.';
+            try {
+                const res = await fetch('/api/generate-all-html', {method:'POST', headers:{'Content-Type':'application/json'}});
+                const data = await res.json();
+                if(data.success) {
+                    statusDiv.style.background = '#f0fdf4';
+                    statusDiv.style.color = '#166534';
+                    statusDiv.innerText = '✅ ' + data.message + (data.articles ? ' (' + data.articles.map(a => a.title).join(', ') + ')' : '');
+                    loadDemoProgress(); loadStats();
+                } else {
+                    statusDiv.style.background = '#fef2f2';
+                    statusDiv.style.color = '#991b1b';
+                    statusDiv.innerText = '🔴 Error: ' + (data.error || 'Unknown error');
+                }
+            } catch(e) {
+                statusDiv.style.background = '#fef2f2';
+                statusDiv.style.color = '#991b1b';
+                statusDiv.innerText = '🔴 Request error: ' + e.message;
+            }
         }
 
         function showScheduleModal(itemId, schedDate, schedTime, platform) {
