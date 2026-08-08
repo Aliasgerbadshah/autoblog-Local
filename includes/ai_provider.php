@@ -58,6 +58,7 @@ class AIProviderClient {
                 'zenmux' => 'https://zenmux.ai/api/v1/chat/completions',
                 'anthropic' => 'https://api.anthropic.com/v1/messages',
                 'openai' => 'https://api.openai.com/v1/chat/completions',
+                'pollinations' => 'https://gen.pollinations.ai/v1/chat/completions',
             ];
             $endpoint = $credentials['endpoint'] ?: ($defaultEndpoints[$provider] ?? 'https://api.openai.com/v1/chat/completions');
 
@@ -93,11 +94,9 @@ class AIProviderClient {
     }
 
     public static function image($credentials, $prompt) {
-        $provider = $credentials['provider'] ?? 'openai';
+        $provider = $credentials['provider'] ?? 'custom';
         $key = $credentials['api_key'] ?? '';
-        // Auto-select cheapest OpenAI model for cost savings
-        // gpt-image-1-mini = cheapest (~$0.01/image), gpt-image-1 = standard (~$0.04/image)
-        $model = $credentials['model'] ?? ($provider === 'huggingface' ? 'black-forest-labs/FLUX.1-schnell' : ($provider === 'gemini' ? 'gemini-2.5-flash-preview-image-generation' : 'gpt-image-1-mini'));
+        $model = $credentials['model'] ?? ($provider === 'huggingface' ? 'black-forest-labs/FLUX.1-schnell' : 'gpt-image-1');
 
         if (empty($key)) {
             return ['success' => false, 'error' => 'Image API key is missing.'];
@@ -105,7 +104,7 @@ class AIProviderClient {
 
         try {
             if ($provider === 'huggingface') {
-                // Hugging Face Inference API (FREE)
+                // Hugging Face Inference API
                 $endpoint = "https://api-inference.huggingface.co/models/$model";
                 $headers = ['Authorization: Bearer ' . $key, 'Content-Type: application/json'];
                 $payload = ['inputs' => $prompt];
@@ -137,11 +136,7 @@ class AIProviderClient {
             }
 
             if ($provider === 'gemini') {
-                if (empty($credentials['endpoint'])) {
-                    $endpoint = "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent";
-                } else {
-                    $endpoint = $credentials['endpoint'];
-                }
+                $endpoint = $credentials['endpoint'] ?: "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent";
                 $payload = [
                     'contents' => [['parts' => [['text' => $prompt]]]],
                     'generationConfig' => ['responseModalities' => ['TEXT', 'IMAGE']]
@@ -150,8 +145,7 @@ class AIProviderClient {
                 $data = $result['data'] ?? [];
 
                 if ($result['http_code'] >= 400) {
-                    $errMsg = $data['error']['message'] ?? json_encode($data);
-                    return ['success' => false, 'error' => "Gemini API Error ({$result['http_code']}): $errMsg"];
+                    return ['success' => false, 'error' => json_encode($data)];
                 }
 
                 $parts = $data['candidates'][0]['content']['parts'] ?? [];
@@ -166,29 +160,32 @@ class AIProviderClient {
                     $mimeType = $inline['mimeType'] ?? 'image/png';
                     return ['success' => true, 'url' => "data:$mimeType;base64,{$inline['data']}", 'error' => ''];
                 }
-                return ['success' => false, 'error' => 'Gemini returned no image. Model "' . $model . '" may not support image output.'];
+                return ['success' => false, 'error' => 'Gemini returned no image. Select a Gemini image model with image generation enabled.'];
             }
 
-            // OpenAI-compatible (gpt-image-1-mini, gpt-image-1, gpt-image-1.5)
+            if ($provider === 'pollinations') {
+                // Pollinations.ai image generation — GET request with prompt in URL
+                $imgModel = $model ?: 'flux';
+                $width = 1024;
+                $height = 1024;
+                $seed = rand(1000, 9999);
+                $imageUrl = "https://gen.pollinations.ai/image/" . urlencode($prompt) . "?model={$imgModel}&width={$width}&height={$height}&seed={$seed}&nologo=true";
+                if (!empty($key)) {
+                    $imageUrl .= "&key=" . urlencode($key);
+                }
+                // Pollinations returns the image directly at this URL
+                // We return the URL itself — the browser will fetch it
+                return ['success' => true, 'url' => $imageUrl, 'error' => ''];
+            }
             $endpoint = $credentials['endpoint'] ?: 'https://api.openai.com/v1/images/generations';
             $headers = ['Authorization: Bearer ' . $key, 'Content-Type: application/json'];
-            // Use smaller size for cost savings: 1024x1024 is cheapest
-            // gpt-image-1-mini + 1024x1024 = ~$0.01/image
-            $size = $credentials['size'] ?? '1024x1024';
-            $payload = ['model' => $model, 'prompt' => $prompt, 'size' => $size, 'n' => 1, 'quality' => 'low'];
+            $payload = ['model' => $model, 'prompt' => $prompt, 'size' => $credentials['size'] ?? '1536x1024', 'n' => 1];
 
             $result = curlPost($endpoint, $payload, $headers, 120);
             $data = $result['data'] ?? [];
 
             if ($result['http_code'] >= 400) {
-                $errMsg = 'Unknown error';
-                if (is_array($data) && isset($data['error']['message'])) {
-                    $errMsg = $data['error']['message'];
-                } elseif (is_string($result['raw'])) {
-                    $errDecoded = json_decode($result['raw'], true);
-                    $errMsg = $errDecoded['error']['message'] ?? $result['raw'];
-                }
-                return ['success' => false, 'error' => "OpenAI Image Error ({$result['http_code']}): $errMsg"];
+                return ['success' => false, 'error' => $data['error']['message'] ?? $result['raw'] ?? 'Unknown error'];
             }
 
             $url = $data['data'][0]['url'] ?? ($data['data'][0]['b64_json'] ?? '');

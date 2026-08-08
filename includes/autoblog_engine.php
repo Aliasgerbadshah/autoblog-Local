@@ -344,6 +344,14 @@ HTML;
             return ['success' => false, 'error' => 'OAuth credentials required. Save Client ID, Client Secret, and Refresh Token in the Blogger vault.'];
         }
 
+        // Blogger has a content size limit — warn if content is very large
+        $contentLength = strlen($content);
+        if ($contentLength > 1000000) {
+            // Truncate to 1MB max (Blogger limit)
+            $content = substr($content, 0, 1000000);
+            error_log("[Blogger] Content truncated from $contentLength to 1000000 bytes");
+        }
+
         $payload = [
             'kind' => 'blogger#post',
             'blog' => ['id' => trim($blogId)],
@@ -364,7 +372,14 @@ HTML;
         }
 
         $errorMsg = $data['error']['message'] ?? ($result['raw'] ?? 'Unknown error');
-        return ['success' => false, 'error' => "Blogger API Error ({$result['http_code']}): $errorMsg"];
+        $hint = '';
+        if ($result['http_code'] === 403) {
+            $hint = ' — Ensure Blogger API v3 is enabled AND your OAuth scope includes "https://www.googleapis.com/auth/blogger" (not just read-only). Get a new Refresh Token from OAuth Playground with the full Blogger scope.';
+        }
+        if ($result['http_code'] === 401) {
+            $hint = ' — Access token may be invalid. The refresh token may have been created with wrong scope. Get a new one from OAuth Playground.';
+        }
+        return ['success' => false, 'error' => "Blogger API Error ({$result['http_code']}): $errorMsg$hint"];
     }
 
     public static function publishWordpress($userId, $wpSiteUrl, $username, $appPassword, $title, $content, $status = 'publish') {
@@ -671,7 +686,9 @@ function generateArticleHtmlFromCampaignItem($item, $userId, $activeSlot, $db, $
         $h2List = implode(' | ', $h2s);
         $angleNote = $contentAngle ? "\nCONTENT ANGLE: $contentAngle" : '';
 
-        $prompt = "Write a complete, publication-ready HTML blog article about \"$keyword\".\n\nTITLE: $title\nH1: $h1\nH2 SECTIONS: $h2List\nSUPPORTING KEYWORDS: $kwList\nINTERNAL LINKS (weave naturally into the text):\n$intLinkList\nEXTERNAL REFERENCES (cite naturally):\n$extLinkList\nIMAGE PROMPTS: " . implode('; ', $prompts) . "\n$angleNote\n\nREQUIREMENTS:\n- 1,800 to 2,200 words of original, researched content\n- Use semantic HTML: proper H1, H2, H3, H4, p, ul, li, table, figure, blockquote tags\n- CRITICAL: Keep paragraphs SHORT — strictly 45 to 50 words per paragraph. Every <p> tag must have between 45 and 50 words. Break long paragraphs into multiple short <p> tags. Readers skim; short paragraphs improve readability and mobile experience.\n- Write in a natural, authoritative human voice - no AI cliches or banned phrases\n- Include a FAQ section at the end with 3 real questions and answers about $keyword\n- Include 2-3 internal links with natural anchor text\n- Include 2-3 external authority references with REAL working URLs to well-known sites (Wikipedia, official docs, authority blogs). Verify the URLs are correct and related to the topic.\n- Also include 1-2 links to the client website pages listed in internal links\n- Add a comparison data table where relevant\n- Do NOT include html/head/body tags - only the article content\n- Do NOT invent facts, statistics, or quotes\n- Do NOT make up URLs — only use real, verified external URLs\n- Return ONLY the article HTML, no markdown fences";
+        $nowYear = date('Y');
+        $nowMonth = date('F');
+        $prompt = "Write a complete, publication-ready HTML blog article about \"$keyword\".\n\nTITLE: $title\nH1: $h1\nH2 SECTIONS: $h2List\nSUPPORTING KEYWORDS: $kwList\nINTERNAL LINKS (weave naturally into the text):\n$intLinkList\nEXTERNAL REFERENCES (cite naturally):\n$extLinkList\nIMAGE PROMPTS: " . implode('; ', $prompts) . "\n$angleNote\n\nREQUIREMENTS:\n- 1,800 to 2,200 words of original, researched content\n- Use semantic HTML: proper H1, H2, H3, H4, p, ul, li, table, figure, blockquote tags\n- CRITICAL: Keep paragraphs SHORT — strictly 45 to 50 words per paragraph. Every <p> tag must have between 45 and 50 words. Break long paragraphs into multiple short <p> tags. Readers skim; short paragraphs improve readability and mobile experience.\n- Write in a natural, authoritative human voice - no AI cliches or banned phrases\n- Include a FAQ section at the end with 3 real questions and answers about $keyword\n- Include at least 2 internal links with natural anchor text to client website pages\n- Include at least 4 external authority references with REAL working URLs to well-known sites (Wikipedia, Google docs, Mozilla MDN, Schema.org, Moz, Ahrefs, etc.). These must be RELATED to the topic. Verify the URLs are correct.\n- Also include up to 2 links to the client website pages listed in internal links\n- Include at least 2 <figure><img> tags with descriptive alt text at different points in the article (not consecutive — spread them out after different sections)\n- Add a comparison data table where relevant\n- Write about CURRENT trends in $nowMonth $nowYear — not outdated 2023 or older information. Reference the latest year ($nowYear) naturally.\n- Do NOT include html/head/body tags - only the article content\n- Do NOT invent facts, statistics, or quotes\n- Do NOT make up URLs — only use real, verified external URLs\n- Return ONLY the article HTML, no markdown fences";
 
         $chatResult = AIProviderClient::chat($chatVault, $prompt);
         if (!empty($chatResult['success']) && !empty($chatResult['content'])) {
@@ -697,7 +714,6 @@ function generateArticleHtmlFromCampaignItem($item, $userId, $activeSlot, $db, $
     }
 
     // Featured THUMBNAIL image via Image API — 9:16 ratio, MANDATORY first image
-    // This is the ONLY image we generate. Retries up to 3 times.
     $featuredImgUrl = '';
     if (!empty($imageVault['api_key'])) {
         for ($imgAttempt = 1; $imgAttempt <= 3; $imgAttempt++) {
@@ -709,6 +725,21 @@ function generateArticleHtmlFromCampaignItem($item, $userId, $activeSlot, $db, $
                     break;
                 }
                 error_log("[Image Validation] Thumbnail attempt $imgAttempt URL not accessible: " . $imgResult['url']);
+            }
+        }
+    }
+
+    // SECOND content image — landscape, inserted after the 2nd H2 section
+    $contentImgUrl = '';
+    if (!empty($imageVault['api_key'])) {
+        for ($imgAttempt = 1; $imgAttempt <= 3; $imgAttempt++) {
+            $contentImgPrompt = "Professional editorial photograph illustrating $keyword in practice. Landscape 16:9, 1024x576. Natural lighting, real-world setting, authentic people or objects. No text, no logos, no watermarks. Magazine quality.";
+            $imgResult2 = AIProviderClient::image($imageVault, $contentImgPrompt);
+            if (!empty($imgResult2['success']) && !empty($imgResult2['url'])) {
+                if (validateImageUrl($imgResult2['url'])) {
+                    $contentImgUrl = $imgResult2['url'];
+                    break;
+                }
             }
         }
     }
@@ -734,6 +765,21 @@ function generateArticleHtmlFromCampaignItem($item, $userId, $activeSlot, $db, $
         $thumbHtml = "<figure class=\"blog-thumbnail\" style=\"margin:0 0 24px 0;border-radius:12px;overflow:hidden;aspect-ratio:9/16;max-height:520px;\"><div style=\"aspect-ratio:9/16;background:linear-gradient(135deg,#1b57f6,#8b5cf6);display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.5rem;font-weight:800;padding:40px;text-align:center;min-height:300px;\">{$escKw}</div></figure>";
     }
     $chatContent = insertThumbnailAfterH1($chatContent, $thumbHtml);
+
+    // Insert second content image after the 2nd H2 heading
+    if ($contentImgUrl) {
+        $escContentImgUrl = escapeHtml($contentImgUrl);
+        $contentImgHtml = "<figure class=\"blog-content-img\" style=\"margin:36px 0;border-radius:12px;overflow:hidden;\"><img src=\"{$escContentImgUrl}\" alt=\"Practical illustration of {$escKw}\" style=\"width:100%;height:auto;display:block;object-fit:cover;max-height:420px;border-radius:12px;\" loading=\"lazy\"></figure>";
+        // Find the 2nd H2 and insert after it
+        $h2Count = 0;
+        $chatContent = preg_replace_callback('#<h2[^>]*>.*?</h2>#is', function($m) use (&$h2Count, $contentImgHtml) {
+            $h2Count++;
+            if ($h2Count === 2) {
+                return $m[0] . "\n" . $contentImgHtml . "\n";
+            }
+            return $m[0];
+        }, $chatContent);
+    }
 
     // Build the full HTML document
     $slug = slugify($title) . '-' . $item['id'];

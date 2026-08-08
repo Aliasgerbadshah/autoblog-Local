@@ -786,6 +786,70 @@ function handleApiRoute($uri) {
         if (empty($base)) $base = [$seed];
         $base = array_merge($base, ["$seed seasonal ideas", "best $seed combinations", "$seed buying guide", "$seed common mistakes"]);
 
+        // Avoid duplicate topics: check what topics were already created for this user/domain
+        $db = getDB();
+        $usedTopics = [];
+        $stmt = $db->prepare('SELECT title, primary_keyword FROM created_blog_topics WHERE user_id = ? AND domain_url = ?');
+        $stmt->execute([$userId, $domain]);
+        foreach ($stmt->fetchAll() as $ut) {
+            $usedTopics[strtolower(trim($ut['title']))] = true;
+            $usedTopics[strtolower(trim($ut['primary_keyword']))] = true;
+        }
+        // Also check current campaign_items
+        $stmt = $db->prepare('SELECT title, primary_keyword FROM campaign_items ci JOIN campaigns c ON c.id = ci.campaign_id WHERE c.user_id = ? AND c.domain_url = ?');
+        $stmt->execute([$userId, $domain]);
+        foreach ($stmt->fetchAll() as $ut) {
+            $usedTopics[strtolower(trim($ut['title']))] = true;
+            $usedTopics[strtolower(trim($ut['primary_keyword']))] = true;
+        }
+        // Filter out already-used topics
+        $nowYear = date('Y');
+        $nowMonth = date('F');
+        $freshTopics = [];
+        foreach ($base as $b) {
+            $bLower = strtolower(trim($b));
+            $isUsed = false;
+            foreach ($usedTopics as $used => $_) {
+                if (levenshtein($bLower, $used) < 8 || strpos($used, $bLower) !== false || strpos($bLower, $used) !== false) {
+                    $isUsed = true;
+                    break;
+                }
+            }
+            if (!$isUsed) {
+                $freshTopics[] = $b;
+            }
+        }
+        // If we filtered too many, add trending/current topics
+        if (count($freshTopics) < $days * $perDay) {
+            $trendingAdditions = [
+                "$seed trends $nowMonth $nowYear",
+                "$seed latest updates $nowYear",
+                "$seed new strategies $nowYear",
+                "how $seed is evolving in $nowYear",
+                "$seed best practices $nowMonth $nowYear",
+                "$seed innovations $nowYear",
+                "top $seed tips for $nowMonth $nowYear",
+                "$seed future outlook $nowYear",
+                "$seed case studies $nowYear",
+                "$seed comparison guide $nowYear",
+                "$seed vs alternatives $nowYear",
+                "why $seed matters in $nowYear"
+            ];
+            foreach ($trendingAdditions as $ta) {
+                $taLower = strtolower(trim($ta));
+                $isUsed = false;
+                foreach ($usedTopics as $used => $_) {
+                    if (levenshtein($taLower, $used) < 8) { $isUsed = true; break; }
+                }
+                if (!$isUsed && !in_array($ta, $freshTopics)) {
+                    $freshTopics[] = $ta;
+                }
+            }
+        }
+        if (!empty($freshTopics)) {
+            $base = $freshTopics;
+        }
+
         $db = getDB();
         $now = nowString();
         // PRESERVE APPROVED ITEMS: Only archive campaigns with no approved/finalized items
@@ -822,8 +886,8 @@ function handleApiRoute($uri) {
                     ['url' => 'https://en.wikipedia.org/wiki/Search_engine_optimization', 'anchor_text' => 'Wikipedia: Search Engine Optimization'],
                     ['url' => 'https://developers.google.com/search/docs/fundamentals/seo-starter-guide', 'anchor_text' => 'Google SEO Starter Guide'],
                     ['url' => 'https://moz.com/beginners-guide-to-seo', 'anchor_text' => 'Moz Beginner Guide to SEO'],
-                    ['url' => 'https://www.nngroup.com/articles/', 'anchor_text' => 'Nielsen Norman Group UX Research'],
-                    ['url' => 'https://schema.org/Article', 'anchor_text' => 'Schema.org Article Structured Data']
+                    ['url' => 'https://schema.org/Article', 'anchor_text' => 'Schema.org Article Structured Data'],
+                    ['url' => 'https://www.nngroup.com/articles/', 'anchor_text' => 'Nielsen Norman Group UX Research']
                 ];
                 $prompts = ["Editorial photograph illustrating $kw, natural lighting, no text, no logos, professional magazine style.", "Practical real-world scene related to $kw, authentic people and setting, no text or logos."];
 
@@ -833,6 +897,9 @@ function handleApiRoute($uri) {
                 $stmt = $db->prepare('INSERT INTO campaign_items (campaign_id, day_number, post_number, title, primary_keyword, keyword_data, internal_links, external_links, headings, image_prompts, video_url, plan_status, article_status, scheduled_date, scheduled_time, target_platform, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
                 $stmt->execute([$campaignId, $day, $post, ucwords($kw), $kw, json_encode($kws), json_encode($internal), json_encode($external), json_encode($headings), json_encode($prompts), '', 'Pending', 'Not Created', $schedDate, $schedTime, $targetPlatform, $now]);
                 $itemId = $db->lastInsertId();
+                // Track this topic to avoid duplicates in future campaigns
+                $stmt = $db->prepare('INSERT OR IGNORE INTO created_blog_topics (user_id, campaign_id, title, primary_keyword, domain_url, created_at) VALUES (?, ?, ?, ?, ?, ?)');
+                $stmt->execute([$userId, $campaignId, ucwords($kw), $kw, $domain, $now]);
                 $token = generateToken();
                 $stmt = $db->prepare('INSERT INTO approval_tokens (user_id, campaign_item_id, approval_type, token, created_at) VALUES (?, ?, ?, ?, ?)');
                 $stmt->execute([$userId, $itemId, 'roadmap', $token, $now]);

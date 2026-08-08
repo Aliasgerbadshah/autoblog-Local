@@ -128,6 +128,17 @@ function initAutoblogDB() {
     try { $db->exec('ALTER TABLE campaign_items ADD COLUMN scheduled_date TEXT'); } catch (Exception $e) {}
     try { $db->exec('ALTER TABLE campaign_items ADD COLUMN target_platform TEXT DEFAULT \'local\''); } catch (Exception $e) {}
 
+    // Track created blog topics to avoid duplicates
+    $db->exec('CREATE TABLE IF NOT EXISTS created_blog_topics (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        campaign_id INTEGER,
+        title TEXT NOT NULL,
+        primary_keyword TEXT NOT NULL,
+        domain_url TEXT,
+        created_at TEXT NOT NULL
+    )');
+
     $db->exec('CREATE TABLE IF NOT EXISTS approval_tokens (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER NOT NULL,
