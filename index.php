@@ -1250,9 +1250,26 @@ function handleApiRoute($uri) {
             jsonResponse(['success' => false, 'error' => $result['error'] ?? 'Publishing failed.'], 400);
         }
         
-        // Future schedule — use Blogger's built-in scheduler (no cron needed!)
+        // Future schedule — ALWAYS add to scheduled_queue first (as backup for cron)
+        // Then also try Blogger's built-in scheduler if platform is blogger
+        $stmt = $db->prepare("SELECT id FROM scheduled_queue WHERE topic_title = ? AND user_id = ? AND status = 'Scheduled'");
+        $stmt->execute([$item['title'], $userId]);
+        $existing = $stmt->fetch();
+        if ($existing) {
+            $stmt = $db->prepare("UPDATE scheduled_queue SET scheduled_time = ?, target_platform = ? WHERE id = ?");
+            $stmt->execute([$scheduledStr, $platform, $existing['id']]);
+        } else {
+            $nowS = nowString();
+            $stmt = $db->prepare('INSERT INTO scheduled_queue (user_id, slot_number, topic_title, keyword, category, scheduled_time, target_platform, status, created_at, target_link, target_anchor) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+            $stmt->execute([$userId, $activeSlot, $item['title'], $item['primary_keyword'] ?? '', 'Approved Article', $scheduledStr, $platform, 'Scheduled', $nowS, '', $item['primary_keyword'] ?? '']);
+        }
+
+        // Update item status
+        $stmt = $db->prepare("UPDATE campaign_items SET article_status = 'Scheduled', scheduled_date = ?, scheduled_time = ? WHERE id = ?");
+        $stmt->execute([$schedDate, $schedTime, $itemId]);
+
+        // If Blogger, also schedule directly on Blogger (Blogger auto-publishes at that time)
         if ($platform === 'blogger') {
-            // Load HTML content for Blogger scheduling
             $htmlFilePath = null;
             if (!empty($item['html_path'])) {
                 $pathPatterns = [
@@ -1263,7 +1280,6 @@ function handleApiRoute($uri) {
                 ];
                 foreach ($pathPatterns as $p) { if (file_exists($p)) { $htmlFilePath = $p; break; } }
             }
-            $articleContent = '';
             $bloggerReadyContent = '';
             if ($htmlFilePath) {
                 $fullHtml = file_get_contents($htmlFilePath);
@@ -1282,50 +1298,28 @@ function handleApiRoute($uri) {
                     $articleBody = trim($bodyMatch[1]);
                 } else { $articleBody = $fullHtml; }
                 $bloggerReadyContent = $styleBlock . "\n<article>\n" . $articleBody . "\n</article>\n" . $scriptBlock;
-                $articleContent = $articleBody;
             }
-            if (empty($articleContent)) jsonResponse(['success' => false, 'error' => 'HTML file not found.'], 400);
-
-            $vault = SecurityVault::getApiCredentials($userId, 'blogger_api');
-            $blogId = $vault['blogger_blog_id'] ?? '';
-            $clientId = $vault['client_id'] ?? '';
-            $clientSecret = $vault['client_secret'] ?? '';
-            $refreshToken = $vault['refresh_token'] ?? '';
-            if (empty($blogId)) jsonResponse(['success' => false, 'error' => 'Blogger Blog ID missing in Vault.'], 400);
-
-            // Convert scheduled date to RFC 3339 format (required by Blogger API)
-            $rfc3339Date = $scheduledDate->format('Y-m-d\TH:i:sP');
-
-            $contentForBlogger = !empty($bloggerReadyContent) ? $bloggerReadyContent : $articleContent;
-            $result = Publisher::publishBlogger($userId, $blogId, $item['title'], $contentForBlogger, $clientId, $clientSecret, $refreshToken, $rfc3339Date);
-            if ($result && !empty($result['success'])) {
-                $stmt = $db->prepare("UPDATE campaign_items SET article_status = 'Scheduled', scheduled_date = ?, scheduled_time = ? WHERE id = ?");
-                $stmt->execute([$schedDate, $schedTime, $itemId]);
-                // Also track in scheduled_queue for dashboard visibility
-                $stmt = $db->prepare("SELECT id FROM scheduled_queue WHERE topic_title = ? AND user_id = ? AND status = 'Scheduled'");
-                $stmt->execute([$item['title'], $userId]);
-                $existing = $stmt->fetch();
-                if (!$existing) {
-                    $nowS = nowString();
-                    $stmt = $db->prepare('INSERT INTO scheduled_queue (user_id, slot_number, topic_title, keyword, category, scheduled_time, target_platform, status, created_at, target_link, target_anchor) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
-                    $stmt->execute([$userId, $activeSlot, $item['title'], $item['primary_keyword'] ?? '', 'Approved Article', $scheduledStr, $platform, 'Scheduled', $nowS, '', $item['primary_keyword'] ?? '']);
+            if (!empty($bloggerReadyContent)) {
+                $vault = SecurityVault::getApiCredentials($userId, 'blogger_api');
+                $blogId = $vault['blogger_blog_id'] ?? '';
+                $clientId = $vault['client_id'] ?? '';
+                $clientSecret = $vault['client_secret'] ?? '';
+                $refreshToken = $vault['refresh_token'] ?? '';
+                if (!empty($blogId) && !empty($refreshToken)) {
+                    $rfc3339Date = $scheduledDate->format('Y-m-d\TH:i:sP');
+                    $result = Publisher::publishBlogger($userId, $blogId, $item['title'], $bloggerReadyContent, $clientId, $clientSecret, $refreshToken, $rfc3339Date);
+                    if ($result && !empty($result['success'])) {
+                        $stmt = $db->prepare("UPDATE scheduled_queue SET status = 'Published' WHERE topic_title = ? AND user_id = ?");
+                        $stmt->execute([$item['title'], $userId]);
+                        $stmt = $db->prepare("UPDATE campaign_items SET article_status = 'Published' WHERE id = ?");
+                        $stmt->execute([$itemId]);
+                        jsonResponse(['success' => true, 'url' => $result['url'] ?? '', 'message' => "Scheduled on Blogger for $scheduledStr. Blogger will auto-publish at that time!"]);
+                    }
+                    // If Blogger scheduling failed, item stays in scheduled_queue — cron will pick it up
                 }
-                jsonResponse(['success' => true, 'url' => $result['url'] ?? '', 'message' => "Scheduled on Blogger for $scheduledStr. Blogger will auto-publish at that time — no cron needed!"]);
             }
-            jsonResponse(['success' => false, 'error' => $result['error'] ?? 'Blogger scheduling failed.'], 400);
-        }
-
-        // For non-Blogger platforms, add to scheduled_queue (cron-based)
-        $stmt = $db->prepare("SELECT id FROM scheduled_queue WHERE topic_title = ? AND user_id = ? AND status = 'Scheduled'");
-        $stmt->execute([$item['title'], $userId]);
-        $existing = $stmt->fetch();
-        if ($existing) {
-            $stmt = $db->prepare("UPDATE scheduled_queue SET scheduled_time = ?, target_platform = ? WHERE id = ?");
-            $stmt->execute([$scheduledStr, $platform, $existing['id']]);
-        } else {
-            $nowS = nowString();
-            $stmt = $db->prepare('INSERT INTO scheduled_queue (user_id, slot_number, topic_title, keyword, category, scheduled_time, target_platform, status, created_at, target_link, target_anchor) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
-            $stmt->execute([$userId, $activeSlot, $item['title'], $item['primary_keyword'] ?? '', 'Approved Article', $scheduledStr, $platform, 'Scheduled', $nowS, '', $item['primary_keyword'] ?? '']);
+            // Blogger scheduling attempted but not confirmed — cron is backup
+            jsonResponse(['success' => true, 'message' => "Scheduled for $scheduledStr on $platform. Added to queue — cron will publish, or Blogger will auto-publish."]);
         }
         
         // Update item status  
@@ -1456,6 +1450,20 @@ function handleApiRoute($uri) {
         header('Content-Length: ' . filesize($htmlFilePath));
         readfile($htmlFilePath);
         exit;
+    }
+
+    // ========== RUN SCHEDULER — Web-accessible cron trigger ==========
+    if ($uri === '/api/run-scheduler' && $method === 'POST') {
+        // This runs the scheduler directly from the web — no cron needed
+        ob_start();
+        try {
+            require_once dirname(__DIR__) . '/cron/scheduler.php';
+        } catch (Exception $e) {
+            ob_end_clean();
+            jsonResponse(['success' => false, 'error' => $e->getMessage()]);
+        }
+        $output = ob_get_clean();
+        jsonResponse(['success' => true, 'output' => $output, 'message' => 'Scheduler run completed. Check output for details.']);
     }
 
     if ($uri === '/api/cron-test' && $method === 'GET') {

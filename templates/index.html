@@ -562,7 +562,7 @@
             </div>
             <!-- APPROVED & SCHEDULED ITEMS (separate from pending) -->
             <div class="card" id="approved-scheduled-card" style="display:none; border-top:4px solid #10b981;">
-                <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;"><h2 class="card-title" style="margin:0;">✅ Approved & Scheduled Blogs</h2><button class="btn btn-accent" style="font-size:0.8rem;padding:8px 16px;" onclick="generateAllHTML()">⚡ Generate All HTML</button></div>
+                <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;"><h2 class="card-title" style="margin:0;">✅ Approved & Scheduled Blogs</h2><div style="display:flex;gap:8px;"><button class="btn btn-accent" style="font-size:0.8rem;padding:8px 16px;" onclick="runCronNow()">🔄 Run Cron Now</button><button class="btn btn-accent" style="font-size:0.8rem;padding:8px 16px;" onclick="generateAllHTML()">⚡ Generate All HTML</button></div></div>
                 <p style="color:var(--text-muted); font-size:0.85rem;">These approved blogs are locked and scheduled for posting. They will NOT be removed when you create new campaigns.</p>
                 <div id="generate-all-status" style="display:none;margin-bottom:12px;padding:10px;border-radius:8px;background:#f0fdf4;color:#166534;font-weight:600;font-size:0.9rem;"></div>
                 <table><thead><tr><th>Day</th><th>Title</th><th>Schedule Date</th><th>Time</th><th>Platform</th><th>Article Status</th><th>HTML</th><th>Action</th></tr></thead><tbody id="approved-scheduled-tbody"><tr><td colspan="8">No approved items.</td></tr></tbody></table>
@@ -1184,6 +1184,16 @@
                 const res = await fetch('/api/delete-item', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({item_id:itemId})});
                 const data = await res.json();
                 if(res.ok && data.success) { alert('✅ Deleted.'); } else { alert('🔴 ' + (data.error||'Delete failed.')); }
+                loadDemoProgress(); loadStats();
+            } catch(e) { alert('Error: ' + e.message); }
+        }
+
+        async function runCronNow() {
+            if(!confirm('Run the scheduler cron job now? This will publish any scheduled items that are due.')) return;
+            try {
+                const res = await fetch('/api/run-scheduler', {method:'POST', headers:{'Content-Type':'application/json'}});
+                const data = await res.json();
+                if(data.success) { alert('✅ Cron ran!\n\n' + (data.output || data.message || '')); } else { alert('🔴 ' + (data.error||'Cron failed.')); }
                 loadDemoProgress(); loadStats();
             } catch(e) { alert('Error: ' + e.message); }
         }

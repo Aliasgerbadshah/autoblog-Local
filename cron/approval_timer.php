@@ -11,8 +11,8 @@
  * 4. Auto-schedules items whose HTML has been approved (Final Article Approved)
  */
 
-if (php_sapi_name() !== 'cli' && php_sapi_name() !== 'cgi-fcgi' && isset($_SERVER['HTTP_HOST'])) {
-    die('This script can only be run from the command line or cron.');
+if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'GET' && !empty($_SERVER['HTTP_HOST'])) {
+    header('Content-Type: text/plain; charset=utf-8');
 }
 
 require_once __DIR__ . '/../includes/database.php';
