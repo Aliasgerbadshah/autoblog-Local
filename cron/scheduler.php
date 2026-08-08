@@ -81,14 +81,28 @@ foreach ($dueItems as $item) {
             if ($htmlFilePath) {
                 $fullHtml = file_get_contents($htmlFilePath);
                 
-                // Extract only the <article> content for Blogger (not full HTML page)
-                $articleContent = $fullHtml;
-                if (preg_match('#<article[^>]*>(.*?)</article>#is', $fullHtml, $artMatch)) {
-                    $articleContent = trim($artMatch[1]);
-                    $log("Extracted <article> content (" . strlen($articleContent) . " chars)");
-                } else {
-                    $log("No <article> tag found, sending full HTML (" . strlen($fullHtml) . " chars)");
+                // Build Blogger-ready content: <style> + <article> + <script>
+                // This makes the blog look same-to-same on Blogger
+                $styleBlock = '';
+                if (preg_match('#<style[^>]*>(.*?)</style>#is', $fullHtml, $styleMatch)) {
+                    $styleBlock = '<style>' . $styleMatch[1] . '</style>';
                 }
+                $scriptBlock = '';
+                if (preg_match('#<script[^>]*>(.*?)</script>#is', $fullHtml, $scriptMatch)) {
+                    $scriptBlock = '<script>' . $scriptMatch[1] . '</script>';
+                }
+                $articleBody = '';
+                if (preg_match('#<article[^>]*>(.*?)</article>#is', $fullHtml, $artMatch)) {
+                    $articleBody = trim($artMatch[1]);
+                    $log("Extracted <article> content (" . strlen($articleBody) . " chars)");
+                } elseif (preg_match('#<body[^>]*>(.*?)</body>#is', $fullHtml, $bodyMatch)) {
+                    $articleBody = trim($bodyMatch[1]);
+                    $log("Extracted <body> content (" . strlen($articleBody) . " chars)");
+                } else {
+                    $articleBody = $fullHtml;
+                    $log("No <article> or <body> tag found, using full HTML (" . strlen($fullHtml) . " chars)");
+                }
+                $articleContent = $styleBlock . "\n<article>\n" . $articleBody . "\n</article>\n" . $scriptBlock;
                 
                 $art = ['title' => $existingItem['title'], 'slug' => slugify($existingItem['title']), 'content' => $articleContent, 'keyword' => $existingItem['primary_keyword'], 'category' => $category, 'featured_image' => ''];
                 $log("Using pre-generated HTML for: $topicTitle");
@@ -159,3 +173,6 @@ foreach ($dueItems as $item) {
 }
 
 $log("Scheduler run complete. Processed " . count($dueItems) . " items");
+
+// Write last-run marker for the cron-test endpoint
+file_put_contents(__DIR__ . '/.last_run', date('Y-m-d H:i:s'));

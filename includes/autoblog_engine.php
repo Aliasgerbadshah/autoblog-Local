@@ -135,7 +135,7 @@ class ContentGenerator {
     $faqSchemaHtml
     
     <header style="margin-bottom:28px;">
-        <h1 style="font-size:2.5rem; font-weight:800; color:#0f172a; margin-bottom:12px; line-height:1.2; letter-spacing:-0.02em;">$title</h1>
+        <h1 style="font-size:2.5rem; font-weight:800; color:#0f172a; margin-bottom:12px; line-height:1.2; letter-spacing:-0.02em; text-align:center;">$title</h1>
         <p style="font-size:1.1rem; color:#475569; font-weight:500; margin-bottom:20px; line-height:1.6;">Learn key operational strategies for $keywordCap ($nowYear update). Understand core frameworks, compare performance data, and implement best practices.</p>
         <div style="display:flex; align-items:center; justify-content:space-between; border-top:1px solid #e2e8f0; border-bottom:1px solid #e2e8f0; padding:12px 0; font-size:0.85rem; color:#64748b; font-weight:600; flex-wrap:wrap; gap:12px;">
             <div style="display:flex; align-items:center; gap:12px;">
@@ -311,9 +311,10 @@ HTML;
         return $publishedUrl;
     }
 
-    public static function publishBlogger($userId, $blogId, $title, $content, $clientId = null, $clientSecret = null, $refreshToken = null) {
+    public static function publishBlogger($userId, $blogId, $title, $content, $clientId = null, $clientSecret = null, $refreshToken = null, $publishDate = null) {
         // Blogger API v3: POST (create post) requires OAuth 2.0 Bearer token.
         // We must have OAuth refresh credentials to publish.
+        // If $publishDate is set (RFC 3339), Blogger schedules the post for that date.
         
         if (empty($blogId)) {
             return ['success' => false, 'error' => 'Missing Blogger Blog ID.'];
@@ -344,6 +345,13 @@ HTML;
             return ['success' => false, 'error' => 'OAuth credentials required. Save Client ID, Client Secret, and Refresh Token in the Blogger vault.'];
         }
 
+        // KEEP our H1 from content — it's styled and center-aligned, looks great.
+        // Instead, add CSS to HIDE Blogger's default title heading (it's small and ugly).
+        // Blogger theme title selectors vary, so we hide common ones.
+        $hideBloggerTitle = '<style>.post-title,.entry-title,h3.post-title,h2.post-title,.post h3,.post-title.entry-title,.blog-post h3,.Blog .post h3{display:none!important;}</style>';
+        // Prepend the hiding CSS at the very top of content (before our <style> block if any)
+        $content = $hideBloggerTitle . $content;
+
         // Blogger has a content size limit — warn if content is very large
         $contentLength = strlen($content);
         if ($contentLength > 1000000) {
@@ -358,6 +366,13 @@ HTML;
             'title' => $title,
             'content' => $content
         ];
+
+        // If publishDate is provided and is in the future, schedule via Blogger
+        // Blogger API: set isDraft=false + published = RFC 3339 date to schedule
+        if (!empty($publishDate)) {
+            $payload['published'] = $publishDate;
+            $payload['status'] = 'SCHEDULED';
+        }
 
         $result = curlPost($url, $payload, ['Content-Type: application/json', $authHeader], 12);
 
@@ -568,6 +583,7 @@ function splitLongParagraphs($html, $minWords = 45, $maxWords = 50) {
  * Validate external links in HTML content.
  * Replaces broken/unreachable <a> links with plain text.
  * Only validates external links (http/https), skips internal and anchor links.
+ * Checks ALL links including trusted domains — only skips internal/relative links.
  */
 function validateAndFixExternalLinks($html) {
     return preg_replace_callback('#<a[^>]*href=["\']?(https?://[^"\'>\s]+)["\']?[^>]*>(.*?)</a>#is', function($match) {
@@ -575,32 +591,50 @@ function validateAndFixExternalLinks($html) {
         $linkText = $match[2];
         $fullTag = $match[0];
         
-        // Skip known working domains (whitelist)
+        // Skip relative/anchor/internal links (shouldn't match due to regex, but safety check)
+        if (strpos($url, '://') === false) return $fullTag;
+        
+        // Trusted domains that are KNOWN to work — skip HTTP check for speed
         $trustedDomains = ['wikipedia.org', 'developers.google.com', 'developer.mozilla.org', 
             'schema.org', 'www.w3.org', 'support.google.com', 'moz.com', 'ahrefs.com',
             'searchengineland.com', 'neilpatel.com', 'hubspot.com', 'backlinko.com',
             'semrush.com', 'yoast.com', 'google.com', 'github.com', 'stackoverflow.com',
-            'www.nngroup.com', 'opensource.google', 'ai.google'];
+            'www.nngroup.com', 'opensource.google', 'ai.google', 'platform.openai.com',
+            'cloud.google.com', 'youtube.com', 'www.youtube.com', 'linkedin.com',
+            'www.linkedin.com', 'medium.com', 'dev.to', 'hbr.org'];
         
         $host = parse_url($url, PHP_URL_HOST) ?? '';
+        $isTrusted = false;
         foreach ($trustedDomains as $trusted) {
             if (str_ends_with($host, $trusted) || $host === $trusted) {
-                return $fullTag; // Trust it, keep the link
+                $isTrusted = true;
+                break;
             }
         }
         
-        // For non-whitelisted URLs, do a quick HEAD check
+        // Even for trusted domains, verify the specific URL path exists
+        // (e.g. wikipedia.org/wiki/RandomNonexistentPage should be caught)
+        // But skip for homepage-level URLs on trusted domains
+        $path = parse_url($url, PHP_URL_PATH) ?? '';
+        if ($isTrusted && (empty($path) || $path === '/' || strlen($path) <= 2)) {
+            return $fullTag; // Trusted domain homepage — always works
+        }
+        
+        // For ALL URLs (trusted or not), do a quick HEAD/GET check
+        // This catches: non-existent wiki pages, moved Google docs, 404s on any domain
         $ch = curl_init($url);
         curl_setopt_array($ch, [
             CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_TIMEOUT => 4,
+            CURLOPT_TIMEOUT => 5,
             CURLOPT_NOBODY => true,
             CURLOPT_SSL_VERIFYPEER => false,
             CURLOPT_FOLLOWLOCATION => true,
-            CURLOPT_USERAGENT => 'Mozilla/5.0 (compatible; AutoBlog/1.0)',
+            CURLOPT_MAXREDIRS => 3,
+            CURLOPT_USERAGENT => 'Mozilla/5.0 (compatible; AutoBlog/1.0; +https://autoblog.app)',
         ]);
         curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $error = curl_error($ch);
         curl_close($ch);
         
         // Keep link if it returns 200 or 301/302 (redirect is OK)
@@ -608,7 +642,8 @@ function validateAndFixExternalLinks($html) {
             return $fullTag;
         }
         
-        // Link is broken — replace with plain text + warning
+        // Link is broken or unreachable — replace with just the text (remove link)
+        error_log("[AutoBlog] Broken external link removed: $url (HTTP $httpCode, error: $error)");
         return $linkText;
     }, $html);
 }
@@ -688,7 +723,7 @@ function generateArticleHtmlFromCampaignItem($item, $userId, $activeSlot, $db, $
 
         $nowYear = date('Y');
         $nowMonth = date('F');
-        $prompt = "Write a complete, publication-ready HTML blog article about \"$keyword\".\n\nTITLE: $title\nH1: $h1\nH2 SECTIONS: $h2List\nSUPPORTING KEYWORDS: $kwList\nINTERNAL LINKS (weave naturally into the text):\n$intLinkList\nEXTERNAL REFERENCES (cite naturally):\n$extLinkList\nIMAGE PROMPTS: " . implode('; ', $prompts) . "\n$angleNote\n\nREQUIREMENTS:\n- 1,800 to 2,200 words of original, researched content\n- Use semantic HTML: proper H1, H2, H3, H4, p, ul, li, table, figure, blockquote tags\n- CRITICAL: Keep paragraphs SHORT — strictly 45 to 50 words per paragraph. Every <p> tag must have between 45 and 50 words. Break long paragraphs into multiple short <p> tags. Readers skim; short paragraphs improve readability and mobile experience.\n- Write in a natural, authoritative human voice - no AI cliches or banned phrases\n- Include a FAQ section at the end with 3 real questions and answers about $keyword\n- Include at least 2 internal links with natural anchor text to client website pages\n- Include at least 4 external authority references with REAL working URLs to well-known sites (Wikipedia, Google docs, Mozilla MDN, Schema.org, Moz, Ahrefs, etc.). These must be RELATED to the topic. Verify the URLs are correct.\n- Also include up to 2 links to the client website pages listed in internal links\n- Include at least 2 <figure><img> tags with descriptive alt text at different points in the article (not consecutive — spread them out after different sections)\n- Add a comparison data table where relevant\n- Write about CURRENT trends in $nowMonth $nowYear — not outdated 2023 or older information. Reference the latest year ($nowYear) naturally.\n- Do NOT include html/head/body tags - only the article content\n- Do NOT invent facts, statistics, or quotes\n- Do NOT make up URLs — only use real, verified external URLs\n- Return ONLY the article HTML, no markdown fences";
+        $prompt = "Write a complete, publication-ready HTML blog article about \"$keyword\".\n\nTITLE: $title\nH1: $h1\nH2 SECTIONS: $h2List\nSUPPORTING KEYWORDS: $kwList\nINTERNAL LINKS (weave naturally into the text):\n$intLinkList\nEXTERNAL REFERENCES (cite naturally):\n$extLinkList\nIMAGE PROMPTS: " . implode('; ', $prompts) . "\n$angleNote\n\nREQUIREMENTS:\n- 1,800 to 2,200 words of original, researched content\n- Use semantic HTML: proper H1, H2, H3, H4, p, ul, li, table, figure, blockquote tags\n- CRITICAL: Keep paragraphs SHORT — strictly 45 to 50 words per paragraph. Every <p> tag must have between 45 and 50 words. Break long paragraphs into multiple short <p> tags. Readers skim; short paragraphs improve readability and mobile experience.\n- Write in a natural, authoritative human voice - no AI cliches or banned phrases\n- Include a FAQ section at the end with 3 real questions and answers about $keyword\n- Include at least 2 internal links with natural anchor text to client website pages\n- Include at least 4 external authority references — ONLY use the URLs provided in EXTERNAL REFERENCES above. Do NOT invent or make up any URLs. If you need more, use Wikipedia (en.wikipedia.org/wiki/...) or Google developer docs that you are CERTAIN exist.\n- Also include up to 2 links to the client website pages listed in internal links\n- Include at least 2 <figure><img> tags with descriptive alt text at different points in the article (not consecutive — spread them out after different sections)\n- Add a comparison data table where relevant\n- Write about CURRENT trends in $nowMonth $nowYear — not outdated 2023 or older information. Reference the latest year ($nowYear) naturally.\n- Do NOT include html/head/body tags - only the article content\n- Do NOT invent facts, statistics, or quotes\n- Do NOT make up URLs — only use real, verified external URLs\n- Return ONLY the article HTML, no markdown fences";
 
         $chatResult = AIProviderClient::chat($chatVault, $prompt);
         if (!empty($chatResult['success']) && !empty($chatResult['content'])) {
@@ -808,7 +843,7 @@ function generateArticleHtmlFromCampaignItem($item, $userId, $activeSlot, $db, $
         .nav-back { margin-bottom: 24px; display: inline-block; color: #0f172a; font-weight: 800; text-decoration: underline; font-size: 0.9rem; }
         article { background: #ffffff; padding: 48px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.04); border: 1px solid #e2e8f0; }
         .blog-thumbnail { width: 100%; }
-        h1 { font-size: 2.2rem; font-weight: 800; color: #0f172a; margin-bottom: 12px; line-height: 1.2; }
+        h1 { font-size: 2.2rem; font-weight: 800; color: #0f172a; margin-bottom: 12px; line-height: 1.2; text-align: center; }
         h2 { font-size: 1.5rem; font-weight: 800; color: #0f172a; margin-top: 36px; margin-bottom: 16px; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; }
         h3 { font-size: 1.15rem; font-weight: 700; color: #0f172a; margin-top: 24px; margin-bottom: 12px; }
         p { margin-bottom: 18px; }
@@ -942,7 +977,7 @@ function generateFallbackArticleHtml($title, $keyword, $h1, $h2s, $h3s, $kws, $l
 
     $html = <<<ARTICLE
 <header style="margin-bottom:28px;">
-    <h1>$escH1</h1>
+    <h1 style="text-align:center;">$escH1</h1>
     <p style="font-size:1.1rem;color:#475569;font-weight:500;margin-bottom:16px;">Comprehensive analysis and practical strategies for $escKw - updated $dateStr.</p>
     <div style="display:flex;align-items:center;gap:12px;border-top:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0;padding:12px 0;font-size:0.85rem;color:#64748b;font-weight:600;">
         <div style="background:#0f172a;color:#fff;font-weight:800;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.85rem;">ED</div>

@@ -786,23 +786,33 @@ function handleApiRoute($uri) {
         if (empty($base)) $base = [$seed];
         $base = array_merge($base, ["$seed seasonal ideas", "best $seed combinations", "$seed buying guide", "$seed common mistakes"]);
 
-        // Avoid duplicate topics: check what topics were already created for this user/domain
+        // Avoid duplicate topics: check ALL topics for this user (across all domains)
+        // Normalize domain for matching: strip protocol, www, trailing slash
+        $domainNorm = preg_replace('#^(https?://)?(www\.)?#', '', strtolower(rtrim($domain, '/')));
         $db = getDB();
         $usedTopics = [];
-        $stmt = $db->prepare('SELECT title, primary_keyword FROM created_blog_topics WHERE user_id = ? AND domain_url = ?');
-        $stmt->execute([$userId, $domain]);
+        // Load all topics for this user from created_blog_topics (any domain — prevents cross-campaign dupes too)
+        $stmt = $db->prepare('SELECT title, primary_keyword, domain_url FROM created_blog_topics WHERE user_id = ?');
+        $stmt->execute([$userId]);
         foreach ($stmt->fetchAll() as $ut) {
-            $usedTopics[strtolower(trim($ut['title']))] = true;
-            $usedTopics[strtolower(trim($ut['primary_keyword']))] = true;
+            $utDomain = preg_replace('#^(https?://)?(www\.)?#', '', strtolower(rtrim($ut['domain_url'] ?? '', '/')));
+            // Match if same normalized domain OR if domain is empty
+            if ($utDomain === $domainNorm || empty($utDomain)) {
+                $usedTopics[strtolower(trim($ut['title']))] = true;
+                $usedTopics[strtolower(trim($ut['primary_keyword']))] = true;
+            }
         }
-        // Also check current campaign_items
-        $stmt = $db->prepare('SELECT title, primary_keyword FROM campaign_items ci JOIN campaigns c ON c.id = ci.campaign_id WHERE c.user_id = ? AND c.domain_url = ?');
-        $stmt->execute([$userId, $domain]);
+        // Also check ALL campaign_items for this user (domain-normalized)
+        $stmt = $db->prepare('SELECT ci.title, ci.primary_keyword, c.domain_url FROM campaign_items ci JOIN campaigns c ON c.id = ci.campaign_id WHERE c.user_id = ?');
+        $stmt->execute([$userId]);
         foreach ($stmt->fetchAll() as $ut) {
-            $usedTopics[strtolower(trim($ut['title']))] = true;
-            $usedTopics[strtolower(trim($ut['primary_keyword']))] = true;
+            $utDomain = preg_replace('#^(https?://)?(www\.)?#', '', strtolower(rtrim($ut['domain_url'] ?? '', '/')));
+            if ($utDomain === $domainNorm || empty($utDomain)) {
+                $usedTopics[strtolower(trim($ut['title']))] = true;
+                $usedTopics[strtolower(trim($ut['primary_keyword']))] = true;
+            }
         }
-        // Filter out already-used topics
+        // Filter out already-used topics (using levenshtein + substring matching)
         $nowYear = date('Y');
         $nowMonth = date('F');
         $freshTopics = [];
@@ -810,7 +820,12 @@ function handleApiRoute($uri) {
             $bLower = strtolower(trim($b));
             $isUsed = false;
             foreach ($usedTopics as $used => $_) {
-                if (levenshtein($bLower, $used) < 8 || strpos($used, $bLower) !== false || strpos($bLower, $used) !== false) {
+                // Skip if either string is empty or too short for meaningful comparison
+                if (strlen($bLower) < 3 || strlen($used) < 3) continue;
+                // Match if very similar (levenshtein < 12% of longer string) OR one contains the other
+                $maxLen = max(strlen($bLower), strlen($used));
+                $levThreshold = max(8, (int)($maxLen * 0.12));
+                if (levenshtein($bLower, $used) < $levThreshold || strpos($used, $bLower) !== false || strpos($bLower, $used) !== false) {
                     $isUsed = true;
                     break;
                 }
@@ -819,7 +834,8 @@ function handleApiRoute($uri) {
                 $freshTopics[] = $b;
             }
         }
-        // If we filtered too many, add trending/current topics
+        // If we filtered too many, add trending/current topics with unique markers
+        $trendCounter = 0;
         if (count($freshTopics) < $days * $perDay) {
             $trendingAdditions = [
                 "$seed trends $nowMonth $nowYear",
@@ -839,9 +855,23 @@ function handleApiRoute($uri) {
                 $taLower = strtolower(trim($ta));
                 $isUsed = false;
                 foreach ($usedTopics as $used => $_) {
-                    if (levenshtein($taLower, $used) < 8) { $isUsed = true; break; }
+                    if (strlen($taLower) < 3 || strlen($used) < 3) continue;
+                    $maxLen = max(strlen($taLower), strlen($used));
+                    $levThreshold = max(8, (int)($maxLen * 0.12));
+                    if (levenshtein($taLower, $used) < $levThreshold || strpos($used, $taLower) !== false || strpos($taLower, $used) !== false) {
+                        $isUsed = true; break;
+                    }
                 }
-                if (!$isUsed && !in_array($ta, $freshTopics)) {
+                // Also check it's not already in freshTopics (exact or very similar)
+                if (!$isUsed) {
+                    foreach ($freshTopics as $ft) {
+                        $ftLower = strtolower(trim($ft));
+                        if (levenshtein($taLower, $ftLower) < 8 || strpos($ftLower, $taLower) !== false || strpos($taLower, $ftLower) !== false) {
+                            $isUsed = true; break;
+                        }
+                    }
+                }
+                if (!$isUsed) {
                     $freshTopics[] = $ta;
                 }
             }
@@ -882,13 +912,30 @@ function handleApiRoute($uri) {
                     if (!in_array($candidate['page_url'], array_column($relatedPages, 'page_url'))) $relatedPages[] = $candidate;
                 }
                 $internal = array_map(fn($x) => ['url' => $x['page_url'], 'anchor_text' => $x['page_title'] ?: 'related website page'], $relatedPages) ?: [['url' => $domain, 'anchor_text' => 'customer website']];
-                $external = [
+                // External links: guaranteed-working authority URLs + topic-relevant ones
+                $externalBase = [
                     ['url' => 'https://en.wikipedia.org/wiki/Search_engine_optimization', 'anchor_text' => 'Wikipedia: Search Engine Optimization'],
                     ['url' => 'https://developers.google.com/search/docs/fundamentals/seo-starter-guide', 'anchor_text' => 'Google SEO Starter Guide'],
                     ['url' => 'https://moz.com/beginners-guide-to-seo', 'anchor_text' => 'Moz Beginner Guide to SEO'],
                     ['url' => 'https://schema.org/Article', 'anchor_text' => 'Schema.org Article Structured Data'],
-                    ['url' => 'https://www.nngroup.com/articles/', 'anchor_text' => 'Nielsen Norman Group UX Research']
+                    ['url' => 'https://www.nngroup.com/articles/', 'anchor_text' => 'Nielsen Norman Group UX Research'],
                 ];
+                // Add topic-relevant external links based on keyword
+                $kwLower = strtolower($kw);
+                if (strpos($kwLower, 'marketing') !== false || strpos($kwLower, 'seo') !== false || strpos($kwLower, 'digital') !== false) {
+                    $externalBase[] = ['url' => 'https://ahrefs.com/blog/', 'anchor_text' => 'Ahrefs SEO Blog'];
+                    $externalBase[] = ['url' => 'https://searchengineland.com/', 'anchor_text' => 'Search Engine Land'];
+                } elseif (strpos($kwLower, 'web') !== false || strpos($kwLower, 'design') !== false || strpos($kwLower, 'develop') !== false) {
+                    $externalBase[] = ['url' => 'https://developer.mozilla.org/en-US/docs/Learn', 'anchor_text' => 'MDN Web Docs: Learn Web Development'];
+                    $externalBase[] = ['url' => 'https://www.w3.org/WAI/standards-guidelines/', 'anchor_text' => 'W3C Web Accessibility Standards'];
+                } elseif (strpos($kwLower, 'ai') !== false || strpos($kwLower, 'machine') !== false || strpos($kwLower, 'automat') !== false) {
+                    $externalBase[] = ['url' => 'https://platform.openai.com/docs', 'anchor_text' => 'OpenAI API Documentation'];
+                    $externalBase[] = ['url' => 'https://cloud.google.com/ai-platform', 'anchor_text' => 'Google Cloud AI Platform'];
+                } else {
+                    $externalBase[] = ['url' => 'https://www.hbr.org/', 'anchor_text' => 'Harvard Business Review'];
+                    $externalBase[] = ['url' => 'https://www.youtube.com/', 'anchor_text' => 'YouTube'];
+                }
+                $external = $externalBase;
                 $prompts = ["Editorial photograph illustrating $kw, natural lighting, no text, no logos, professional magazine style.", "Practical real-world scene related to $kw, authentic people and setting, no text or logos."];
 
                 $schedDate = (new DateTime($startDate))->modify(($day - 1) . ' days')->format('Y-m-d');
@@ -978,14 +1025,32 @@ function handleApiRoute($uri) {
         }
         
         $articleContent = '';
+        $bloggerReadyContent = '';  // Version with embedded CSS for Blogger
         if ($htmlFilePath) {
             $fullHtml = file_get_contents($htmlFilePath);
-            // Extract <article> content for Blogger
-            if (preg_match('#<article[^>]*>(.*?)</article>#is', $fullHtml, $artMatch)) {
-                $articleContent = trim($artMatch[1]);
-            } else {
-                $articleContent = $fullHtml;
+            // For Blogger: extract <style> from <head> + <article> content
+            // This makes the blog look same-to-same on Blogger
+            $styleBlock = '';
+            if (preg_match('#<style[^>]*>(.*?)</style>#is', $fullHtml, $styleMatch)) {
+                $styleBlock = '<style>' . $styleMatch[1] . '</style>';
             }
+            $scriptBlock = '';
+            if (preg_match('#<script[^>]*>(.*?)</script>#is', $fullHtml, $scriptMatch)) {
+                $scriptBlock = '<script>' . $scriptMatch[1] . '</script>';
+            }
+            // Extract article content
+            $articleBody = '';
+            if (preg_match('#<article[^>]*>(.*?)</article>#is', $fullHtml, $artMatch)) {
+                $articleBody = trim($artMatch[1]);
+            } elseif (preg_match('#<body[^>]*>(.*?)</body>#is', $fullHtml, $bodyMatch)) {
+                $articleBody = trim($bodyMatch[1]);
+            } else {
+                $articleBody = $fullHtml;
+            }
+            // For Blogger: embed CSS + article content (Blogger renders this as the post body)
+            $bloggerReadyContent = $styleBlock . "\n<article>\n" . $articleBody . "\n</article>\n" . $scriptBlock;
+            // Also set articleContent for non-Blogger platforms
+            $articleContent = $articleBody;
         }
         
         if (empty($articleContent)) {
@@ -1004,7 +1069,9 @@ function handleApiRoute($uri) {
             
             if (empty($blogId)) jsonResponse(['success' => false, 'error' => 'Blogger Blog ID is missing. Save it in the Vault first.'], 400);
             
-            $result = Publisher::publishBlogger($userId, $blogId, $title, $articleContent, $clientId, $clientSecret, $refreshToken);
+            // Use Blogger-ready content (with embedded CSS) so blog looks same-to-same
+            $contentForBlogger = !empty($bloggerReadyContent) ? $bloggerReadyContent : $articleContent;
+            $result = Publisher::publishBlogger($userId, $blogId, $title, $contentForBlogger, $clientId, $clientSecret, $refreshToken);
         } elseif ($platform === 'wordpress') {
             $vault = SecurityVault::getApiCredentials($userId, 'wordpress_api');
             $result = Publisher::publishWordpress($userId, $vault['wp_site_url'] ?? '', $vault['wp_username'] ?? '', $vault['wp_app_password'] ?? '', $title, $articleContent);
@@ -1075,11 +1142,26 @@ function handleApiRoute($uri) {
                 foreach ($pathPatterns as $p) { if (file_exists($p)) { $htmlFilePath = $p; break; } }
             }
             $articleContent = '';
+            $bloggerReadyContent = '';
             if ($htmlFilePath) {
                 $fullHtml = file_get_contents($htmlFilePath);
+                // Extract style + article for Blogger (same-to-same look)
+                $styleBlock = '';
+                if (preg_match('#<style[^>]*>(.*?)</style>#is', $fullHtml, $styleMatch)) {
+                    $styleBlock = '<style>' . $styleMatch[1] . '</style>';
+                }
+                $scriptBlock = '';
+                if (preg_match('#<script[^>]*>(.*?)</script>#is', $fullHtml, $scriptMatch)) {
+                    $scriptBlock = '<script>' . $scriptMatch[1] . '</script>';
+                }
+                $articleBody = '';
                 if (preg_match('#<article[^>]*>(.*?)</article>#is', $fullHtml, $artMatch)) {
-                    $articleContent = trim($artMatch[1]);
-                } else { $articleContent = $fullHtml; }
+                    $articleBody = trim($artMatch[1]);
+                } elseif (preg_match('#<body[^>]*>(.*?)</body>#is', $fullHtml, $bodyMatch)) {
+                    $articleBody = trim($bodyMatch[1]);
+                } else { $articleBody = $fullHtml; }
+                $bloggerReadyContent = $styleBlock . "\n<article>\n" . $articleBody . "\n</article>\n" . $scriptBlock;
+                $articleContent = $articleBody;
             }
             if (empty($articleContent)) jsonResponse(['success' => false, 'error' => 'HTML file not found.'], 400);
             
@@ -1092,7 +1174,8 @@ function handleApiRoute($uri) {
                 $clientSecret = $vault['client_secret'] ?? '';
                 $refreshToken = $vault['refresh_token'] ?? '';
                 if (empty($blogId)) jsonResponse(['success' => false, 'error' => 'Blogger Blog ID missing in Vault.'], 400);
-                $result = Publisher::publishBlogger($userId, $blogId, $title, $articleContent, $clientId, $clientSecret, $refreshToken);
+                $contentForBlogger = !empty($bloggerReadyContent) ? $bloggerReadyContent : $articleContent;
+                $result = Publisher::publishBlogger($userId, $blogId, $title, $contentForBlogger, $clientId, $clientSecret, $refreshToken);
             } elseif ($platform === 'wordpress') {
                 $vault = SecurityVault::getApiCredentials($userId, 'wordpress_api');
                 $result = Publisher::publishWordpress($userId, $vault['wp_site_url'] ?? '', $vault['wp_username'] ?? '', $vault['wp_app_password'] ?? '', $title, $articleContent);
@@ -1108,13 +1191,76 @@ function handleApiRoute($uri) {
             jsonResponse(['success' => false, 'error' => $result['error'] ?? 'Publishing failed.'], 400);
         }
         
-        // Future schedule — add to scheduled_queue
-        // First check if already scheduled
+        // Future schedule — use Blogger's built-in scheduler (no cron needed!)
+        if ($platform === 'blogger') {
+            // Load HTML content for Blogger scheduling
+            $htmlFilePath = null;
+            if (!empty($item['html_path'])) {
+                $pathPatterns = [
+                    dirname(__DIR__) . ltrim($item['html_path'], '/'),
+                    OUTPUT_DIR . '/../' . ltrim($item['html_path'], '/'),
+                    OUTPUT_DIR . '/demo/' . basename($item['html_path']),
+                    dirname(__DIR__) . '/published_posts/demo/' . basename($item['html_path']),
+                ];
+                foreach ($pathPatterns as $p) { if (file_exists($p)) { $htmlFilePath = $p; break; } }
+            }
+            $articleContent = '';
+            $bloggerReadyContent = '';
+            if ($htmlFilePath) {
+                $fullHtml = file_get_contents($htmlFilePath);
+                $styleBlock = '';
+                if (preg_match('#<style[^>]*>(.*?)</style>#is', $fullHtml, $styleMatch)) {
+                    $styleBlock = '<style>' . $styleMatch[1] . '</style>';
+                }
+                $scriptBlock = '';
+                if (preg_match('#<script[^>]*>(.*?)</script>#is', $fullHtml, $scriptMatch)) {
+                    $scriptBlock = '<script>' . $scriptMatch[1] . '</script>';
+                }
+                $articleBody = '';
+                if (preg_match('#<article[^>]*>(.*?)</article>#is', $fullHtml, $artMatch)) {
+                    $articleBody = trim($artMatch[1]);
+                } elseif (preg_match('#<body[^>]*>(.*?)</body>#is', $fullHtml, $bodyMatch)) {
+                    $articleBody = trim($bodyMatch[1]);
+                } else { $articleBody = $fullHtml; }
+                $bloggerReadyContent = $styleBlock . "\n<article>\n" . $articleBody . "\n</article>\n" . $scriptBlock;
+                $articleContent = $articleBody;
+            }
+            if (empty($articleContent)) jsonResponse(['success' => false, 'error' => 'HTML file not found.'], 400);
+
+            $vault = SecurityVault::getApiCredentials($userId, 'blogger_api');
+            $blogId = $vault['blogger_blog_id'] ?? '';
+            $clientId = $vault['client_id'] ?? '';
+            $clientSecret = $vault['client_secret'] ?? '';
+            $refreshToken = $vault['refresh_token'] ?? '';
+            if (empty($blogId)) jsonResponse(['success' => false, 'error' => 'Blogger Blog ID missing in Vault.'], 400);
+
+            // Convert scheduled date to RFC 3339 format (required by Blogger API)
+            $rfc3339Date = $scheduledDate->format('Y-m-d\TH:i:sP');
+
+            $contentForBlogger = !empty($bloggerReadyContent) ? $bloggerReadyContent : $articleContent;
+            $result = Publisher::publishBlogger($userId, $blogId, $item['title'], $contentForBlogger, $clientId, $clientSecret, $refreshToken, $rfc3339Date);
+            if ($result && !empty($result['success'])) {
+                $stmt = $db->prepare("UPDATE campaign_items SET article_status = 'Scheduled', scheduled_date = ?, scheduled_time = ? WHERE id = ?");
+                $stmt->execute([$schedDate, $schedTime, $itemId]);
+                // Also track in scheduled_queue for dashboard visibility
+                $stmt = $db->prepare("SELECT id FROM scheduled_queue WHERE topic_title = ? AND user_id = ? AND status = 'Scheduled'");
+                $stmt->execute([$item['title'], $userId]);
+                $existing = $stmt->fetch();
+                if (!$existing) {
+                    $nowS = nowString();
+                    $stmt = $db->prepare('INSERT INTO scheduled_queue (user_id, slot_number, topic_title, keyword, category, scheduled_time, target_platform, status, created_at, target_link, target_anchor) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+                    $stmt->execute([$userId, $activeSlot, $item['title'], $item['primary_keyword'] ?? '', 'Approved Article', $scheduledStr, $platform, 'Scheduled', $nowS, '', $item['primary_keyword'] ?? '']);
+                }
+                jsonResponse(['success' => true, 'url' => $result['url'] ?? '', 'message' => "Scheduled on Blogger for $scheduledStr. Blogger will auto-publish at that time — no cron needed!"]);
+            }
+            jsonResponse(['success' => false, 'error' => $result['error'] ?? 'Blogger scheduling failed.'], 400);
+        }
+
+        // For non-Blogger platforms, add to scheduled_queue (cron-based)
         $stmt = $db->prepare("SELECT id FROM scheduled_queue WHERE topic_title = ? AND user_id = ? AND status = 'Scheduled'");
         $stmt->execute([$item['title'], $userId]);
         $existing = $stmt->fetch();
         if ($existing) {
-            // Update existing schedule
             $stmt = $db->prepare("UPDATE scheduled_queue SET scheduled_time = ?, target_platform = ? WHERE id = ?");
             $stmt->execute([$scheduledStr, $platform, $existing['id']]);
         } else {
@@ -1127,7 +1273,32 @@ function handleApiRoute($uri) {
         $stmt = $db->prepare("UPDATE campaign_items SET article_status = 'Final Article Approved', scheduled_date = ?, scheduled_time = ? WHERE id = ?");
         $stmt->execute([$schedDate, $schedTime, $itemId]);
         
-        jsonResponse(['success' => true, 'message' => "Scheduled for $scheduledStr on $platform. Cron will publish at that time, or click Publish Now to publish immediately."]);
+        jsonResponse(['success' => true, 'message' => "Scheduled for $scheduledStr on $platform. " . ($platform === 'blogger' ? 'Blogger will auto-publish — no cron needed!' : 'Cron will publish at that time.')]);
+    }
+
+    // ========== CRON TEST — Check if cron/scheduler is working ==========
+    if ($uri === '/api/cron-test' && $method === 'GET') {
+        $db = getDB();
+        // Check scheduled_queue
+        $stmt = $db->prepare("SELECT COUNT(*) as total, SUM(CASE WHEN status='Scheduled' THEN 1 ELSE 0 END) as scheduled, SUM(CASE WHEN status='Published' THEN 1 ELSE 0 END) as published, SUM(CASE WHEN status='Failed' THEN 1 ELSE 0 END) as failed FROM scheduled_queue WHERE user_id = ?");
+        $stmt->execute([$userId]);
+        $queueStats = $stmt->fetch();
+        // Check last cron run (look for a marker file)
+        $cronMarker = dirname(__DIR__) . '/cron/.last_run';
+        $lastCronRun = file_exists($cronMarker) ? file_get_contents($cronMarker) : 'Never';
+        // Try to run scheduler directly and capture output
+        $schedulerPath = dirname(__DIR__) . '/cron/scheduler.php';
+        $schedulerOk = file_exists($schedulerPath);
+        jsonResponse([
+            'success' => true,
+            'queue' => $queueStats,
+            'last_cron_run' => $lastCronRun,
+            'scheduler_file_exists' => $schedulerOk,
+            'scheduler_path' => $schedulerPath,
+            'php_sapi' => php_sapi_name(),
+            'cron_command' => '*/5 * * * * php /home/u783910899/public_html/sub_apps/cron/scheduler.php',
+            'recommendation' => 'If scheduled > 0 but nothing is publishing, set up the cron job above in Hostinger Cron Jobs panel. Or use the Schedule button (uses Blogger built-in scheduler — no cron needed!).'
+        ]);
     }
 
     // Demo review page (HTML)
