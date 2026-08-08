@@ -702,9 +702,10 @@ function handleApiRoute($uri) {
 
         $db = getDB();
         $now = nowString();
-        // PRESERVE APPROVED ITEMS: Only archive campaigns with NO approved/finalized items
-        $db->exec("UPDATE approval_tokens SET decision = 'Expired' WHERE user_id = $userId AND decision IN ('Pending','Provisional') AND campaign_item_id NOT IN (SELECT id FROM campaign_items WHERE plan_status IN ('Approved','Provisional Approved') OR article_status IN ('HTML Ready','Final Article Approved'))");
-        $db->exec("UPDATE campaigns SET status = 'Archived' WHERE user_id = $userId AND status = 'Roadmap Review' AND id NOT IN (SELECT DISTINCT campaign_id FROM campaign_items WHERE plan_status IN ('Approved','Provisional Approved') OR article_status IN ('HTML Ready','Final Article Approved'))");
+        // CLEAN UP: Delete old unapproved items, keep approved/published
+        $db->exec("DELETE FROM campaign_items WHERE user_id = $userId AND plan_status NOT IN ('Approved','Provisional Approved') AND article_status NOT IN ('HTML Ready','Final Article Approved','Published','Scheduled') AND campaign_id IN (SELECT id FROM campaigns WHERE user_id = $userId AND status != 'Archived')");
+        $db->exec("DELETE FROM approval_tokens WHERE user_id = $userId AND campaign_item_id NOT IN (SELECT id FROM campaign_items)");
+        $db->exec("UPDATE campaigns SET status = 'Archived' WHERE user_id = $userId AND status = 'Roadmap Review' AND id NOT IN (SELECT DISTINCT campaign_id FROM campaign_items WHERE plan_status IN ('Approved','Provisional Approved') OR article_status IN ('HTML Ready','Final Article Approved','Published'))");
 
         $startDate = $input['start_date'] ?? date('Y-m-d');
         $postingTimes = $input['posting_times'] ?? ['10:00'];
@@ -906,9 +907,13 @@ function handleApiRoute($uri) {
 
         $db = getDB();
         $now = nowString();
-        // PRESERVE APPROVED ITEMS: Only archive campaigns with no approved/finalized items
-        $db->exec("UPDATE approval_tokens SET decision = 'Expired' WHERE user_id = $userId AND decision IN ('Pending','Provisional') AND campaign_item_id NOT IN (SELECT id FROM campaign_items WHERE plan_status IN ('Approved','Provisional Approved') OR article_status IN ('HTML Ready','Final Article Approved'))");
-        $db->exec("UPDATE campaigns SET status = 'Archived' WHERE user_id = $userId AND status = 'Roadmap Review' AND id NOT IN (SELECT DISTINCT campaign_id FROM campaign_items WHERE plan_status IN ('Approved','Provisional Approved') OR article_status IN ('HTML Ready','Final Article Approved'))");
+        // CLEAN UP: Delete old unapproved items from previous campaigns
+        // Keep approved/published items, delete everything else from old campaigns
+        $db->exec("DELETE FROM campaign_items WHERE user_id = $userId AND plan_status NOT IN ('Approved','Provisional Approved') AND article_status NOT IN ('HTML Ready','Final Article Approved','Published','Scheduled') AND campaign_id IN (SELECT id FROM campaigns WHERE user_id = $userId AND status != 'Archived')");
+        // Delete orphaned approval tokens for removed items
+        $db->exec("DELETE FROM approval_tokens WHERE user_id = $userId AND campaign_item_id NOT IN (SELECT id FROM campaign_items)");
+        // Archive old campaigns that now have no items
+        $db->exec("UPDATE campaigns SET status = 'Archived' WHERE user_id = $userId AND status = 'Roadmap Review' AND id NOT IN (SELECT DISTINCT campaign_id FROM campaign_items WHERE plan_status IN ('Approved','Provisional Approved') OR article_status IN ('HTML Ready','Final Article Approved','Published'))");
 
         $startDate = $input['start_date'] ?? date('Y-m-d');
         $postingTimes = $input['posting_times'] ?? ['10:00'];
@@ -998,32 +1003,49 @@ function handleApiRoute($uri) {
     // Demo campaign status
     if ($uri === '/api/demo/campaign-status') {
         $db = getDB();
-        // Get ALL non-archived campaigns for this user
-        $stmt = $db->prepare('SELECT id, domain_url, days, posts_per_day, status FROM campaigns WHERE user_id = ? AND status != ? ORDER BY id DESC');
-        $stmt->execute([$userId, 'Archived']);
-        $allCampaigns = $stmt->fetchAll();
+        // Get the LATEST campaign for pending items
+        $stmt = $db->prepare('SELECT id, domain_url, days, posts_per_day, status FROM campaigns WHERE user_id = ? ORDER BY id DESC LIMIT 1');
+        $stmt->execute([$userId]);
+        $latestCampaign = $stmt->fetch();
         
         $allRows = [];
-        foreach ($allCampaigns as $campaign) {
+        
+        if ($latestCampaign) {
+            // Get pending items from ONLY the latest campaign (exclude cancelled/rejected)
             $stmt = $db->prepare('SELECT id, day_number, post_number, title, primary_keyword, plan_status, article_status, html_path, scheduled_date, scheduled_time, target_platform, campaign_id FROM campaign_items WHERE campaign_id = ? AND plan_status NOT IN ("Provisional Disapproved","Rejected","Replacement Pending") ORDER BY day_number, post_number');
-            $stmt->execute([$campaign['id']]);
+            $stmt->execute([$latestCampaign['id']]);
             $rows = $stmt->fetchAll();
             foreach ($rows as &$row) {
                 $stmt2 = $db->prepare("SELECT token FROM approval_tokens WHERE campaign_item_id = ? AND approval_type = 'roadmap' AND decision IN ('Pending','Provisional') ORDER BY id DESC LIMIT 1");
                 $stmt2->execute([$row['id']]);
                 $tok = $stmt2->fetch();
                 $row['approval_token'] = $tok ? $tok['token'] : '';
-
-                // HTML approval token for in-dashboard HTML approve/disapprove
                 $stmt3 = $db->prepare("SELECT token FROM approval_tokens WHERE campaign_item_id = ? AND approval_type = 'html' AND decision = 'Pending' ORDER BY id DESC LIMIT 1");
                 $stmt3->execute([$row['id']]);
                 $htmlTok = $stmt3->fetch();
                 $row['html_approval_token'] = $htmlTok ? $htmlTok['token'] : '';
-                $row['campaign_domain'] = $campaign['domain_url'] ?? '';
+                $row['campaign_domain'] = $latestCampaign['domain_url'] ?? '';
             }
-            $allRows = array_merge($allRows, $rows);
+            $allRows = $rows;
         }
-        jsonResponse(['campaigns' => $allCampaigns, 'items' => $allRows]);
+        
+        // Also get PUBLISHED items from ALL campaigns (so user can see what's live)
+        $stmt = $db->prepare('SELECT ci.id, ci.day_number, ci.post_number, ci.title, ci.primary_keyword, ci.plan_status, ci.article_status, ci.html_path, ci.scheduled_date, ci.scheduled_time, ci.target_platform, ci.campaign_id FROM campaign_items ci JOIN campaigns c ON c.id = ci.campaign_id WHERE c.user_id = ? AND ci.article_status = "Published" ORDER BY ci.id DESC');
+        $stmt->execute([$userId]);
+        $publishedRows = $stmt->fetchAll();
+        
+        // Merge: remove duplicates (published items that are also in latest campaign)
+        $latestIds = array_column($allRows, 'id');
+        foreach ($publishedRows as $pr) {
+            if (!in_array($pr['id'], $latestIds)) {
+                $pr['approval_token'] = '';
+                $pr['html_approval_token'] = '';
+                $pr['campaign_domain'] = '';
+                $allRows[] = $pr;
+            }
+        }
+        
+        jsonResponse(['campaign' => $latestCampaign, 'items' => $allRows]);
     }
 
     // ========== PUBLISH NOW — Immediately publish an approved HTML article to Blogger ==========
@@ -1369,6 +1391,71 @@ function handleApiRoute($uri) {
         $topicFileData['_last_updated'] = date('Y-m-d H:i:s');
         file_put_contents($topicFilePath, json_encode($topicFileData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
         jsonResponse(['success' => true, 'added' => $added, 'total_in_file' => count($topicFileData['topics']), 'total_in_db' => count($dbTopics), 'message' => "Synced $added new topics from database to file. File total: " . count($topicFileData['topics'])]);
+    }
+
+    // ========== DELETE ITEM — Remove a campaign item ==========
+    if ($uri === '/api/delete-item' && $method === 'POST') {
+        $itemId = intval($input['item_id'] ?? 0);
+        if (!$itemId) jsonResponse(['success' => false, 'error' => 'Item ID required.'], 400);
+        $db = getDB();
+        $stmt = $db->prepare('SELECT * FROM campaign_items WHERE id = ?');
+        $stmt->execute([$itemId]);
+        $item = $stmt->fetch();
+        if (!$item) jsonResponse(['success' => false, 'error' => 'Item not found.'], 404);
+        // Don't allow deleting published items
+        if ($item['article_status'] === 'Published') jsonResponse(['success' => false, 'error' => 'Cannot delete a published item.'], 400);
+        // Delete approval tokens, scheduled queue entries, then the item
+        $stmt = $db->prepare('DELETE FROM approval_tokens WHERE campaign_item_id = ?');
+        $stmt->execute([$itemId]);
+        $stmt = $db->prepare("DELETE FROM scheduled_queue WHERE topic_title = ? AND user_id = ?");
+        $stmt->execute([$item['title'], $userId]);
+        $stmt = $db->prepare('DELETE FROM campaign_items WHERE id = ?');
+        $stmt->execute([$itemId]);
+        // Also remove from topic history file
+        $topicFilePath = dirname(__DIR__) . '/data/used_topics.json';
+        if (file_exists($topicFilePath)) {
+            $topicFileData = json_decode(file_get_contents($topicFilePath), true);
+            if (!empty($topicFileData['topics'])) {
+                $titleLower = strtolower(trim($item['title']));
+                $topicFileData['topics'] = array_values(array_filter($topicFileData['topics'], function($t) use ($titleLower) {
+                    return strtolower(trim($t['topic'] ?? '')) !== $titleLower;
+                }));
+                $topicFileData['_last_updated'] = date('Y-m-d H:i:s');
+                file_put_contents($topicFilePath, json_encode($topicFileData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+            }
+        }
+        jsonResponse(['success' => true, 'message' => 'Item deleted.']);
+    }
+
+    // ========== DOWNLOAD HTML — Download the HTML file for an item ==========
+    if (preg_match('#^/api/download-html/(\d+)$#', $uri, $m) && $method === 'GET') {
+        $itemId = intval($m[1]);
+        $db = getDB();
+        $stmt = $db->prepare('SELECT * FROM campaign_items WHERE id = ?');
+        $stmt->execute([$itemId]);
+        $item = $stmt->fetch();
+        if (!$item) jsonResponse(['success' => false, 'error' => 'Item not found.'], 404);
+        if (empty($item['html_path'])) jsonResponse(['success' => false, 'error' => 'No HTML generated yet.'], 400);
+        
+        // Find the HTML file
+        $htmlFilePath = null;
+        $pathPatterns = [
+            dirname(__DIR__) . ltrim($item['html_path'], '/'),
+            OUTPUT_DIR . '/../' . ltrim($item['html_path'], '/'),
+            OUTPUT_DIR . '/demo/' . basename($item['html_path']),
+            dirname(__DIR__) . '/published_posts/demo/' . basename($item['html_path']),
+        ];
+        foreach ($pathPatterns as $p) { if (file_exists($p)) { $htmlFilePath = $p; break; } }
+        
+        if (!$htmlFilePath) jsonResponse(['success' => false, 'error' => 'HTML file not found on disk.'], 404);
+        
+        // Send as downloadable file
+        $filename = slugify($item['title']) . '.html';
+        header('Content-Type: text/html; charset=utf-8');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Content-Length: ' . filesize($htmlFilePath));
+        readfile($htmlFilePath);
+        exit;
     }
 
     if ($uri === '/api/cron-test' && $method === 'GET') {
