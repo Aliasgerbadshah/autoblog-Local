@@ -89,7 +89,8 @@ class ContentGenerator {
     public static function generateHumanArticle1000Words($keyword, $category = 'General', $targetLink = null, $targetAnchor = null, $userId = 1, $slotNumber = 1, $enableYoutube = true, $enableFaqSchema = true) {
         $keywordCap = ucwords($keyword);
         $nowYear = date('Y');
-        $title = "How to Master $keywordCap: Practical Strategies for $nowYear";
+        $nowMonth = date('F');
+        $title = "How to Master $keywordCap: Practical Strategies for $nowMonth $nowYear";
         $slug = slugify($title);
 
         $numImages = [2, 3, 4][array_rand([2, 3, 4])];
