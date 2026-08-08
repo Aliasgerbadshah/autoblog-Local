@@ -835,13 +835,17 @@ function generateArticleHtmlFromCampaignItem($item, $userId, $activeSlot, $db, $
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-        /* BLOGGER-SAFE CSS: All styles scoped to article with !important */
-        /* Blogger themes override body/html — so we style inside article */
+        /* BLOGGER DESKTOP FIX: Force Blogger containers to full width */
         .post-title,.entry-title,h3.post-title,h2.post-title,.post h3,.post-title.entry-title,.blog-post h3,.Blog .post h3,.post-title.entry-title.item,.Blog .post .post-title,.post-title.entry-title.sticky {display:none!important;}
-        .post-outer,.post,.Blog,.blog-posts{width:100%!important;max-width:100%!important;}
-        .post-body,.entry-content{width:100%!important;max-width:100%!important;padding:0!important;margin:0!important;overflow:visible!important;background:none!important;border:none!important;}
-        .column-left-outer,.column-right-outer,.sidebar,.blog-sidebar{display:none!important;}
-        article { font-family: 'Montserrat', sans-serif!important; line-height: 1.8!important; background: #ffffff!important; padding: 48px 52px!important; border-radius: 20px!important; box-shadow: 0 10px 30px rgba(0,0,0,0.04)!important; border: 1px solid #e2e8f0!important; width: 100%!important; max-width: 100%!important; overflow-wrap: break-word!important; word-wrap: break-word!important; color: #0f172a!important; box-sizing: border-box!important; }
+        /* Remove Blogger's narrow content restriction on desktop */
+        body {width:100%!important;max-width:none!important;margin:0!important;}
+        /* Force ALL Blogger wrapper containers to use available desktop width */
+        .content-outer,.content-inner,.main-outer,.main-inner,.main,.Blog,.blog-posts,.post-outer,.post,.post-body,.entry-content {width:100%!important;max-width:none!important;}
+        .post-body,.entry-content {padding:0!important;margin:0!important;overflow:visible!important;background:none!important;border:none!important;}
+        /* Hide Blogger sidebars to give article full width */
+        .column-left-outer,.column-right-outer,.sidebar,.blog-sidebar,#sidebar-wrapper,.sidebar-wrapper {display:none!important;}
+        /* Article: comfortable reading width, centered */
+        article { font-family: 'Montserrat', sans-serif!important; line-height: 1.8!important; background: #ffffff!important; padding: 48px 52px!important; border-radius: 20px!important; box-shadow: 0 10px 30px rgba(0,0,0,0.04)!important; border: 1px solid #e2e8f0!important; width: 100%!important; max-width: 960px!important; margin-left: auto!important; margin-right: auto!important; overflow-wrap: break-word!important; word-wrap: break-word!important; color: #0f172a!important; box-sizing: border-box!important; }
         article * { box-sizing: border-box!important; }
         article .blog-thumbnail { width: 100%!important; }
         article h1 { font-size: 2.4rem!important; font-weight: 800!important; color: #0f172a!important; margin: 0 0 12px 0!important; line-height: 1.2!important; text-align: center!important; }
@@ -862,16 +866,26 @@ function generateArticleHtmlFromCampaignItem($item, $userId, $activeSlot, $db, $
         article .nav-back { display: none!important; }
         article footer { margin-top: 48px!important; font-size: 0.85rem!important; text-align: center!important; color: #64748b!important; font-weight: 600!important; }
         article .thumb-placeholder { aspect-ratio: 9/16!important; background: linear-gradient(135deg, #1b57f6, #8b5cf6)!important; display: flex!important; align-items: center!important; justify-content: center!important; color: #fff!important; font-size: 1.5rem!important; font-weight: 800!important; padding: 40px!important; text-align: center!important; min-height: 300px!important; border-radius: 12px!important; }
+        /* Desktop Blogger layout fix */
+        @media (min-width: 769px) {
+            body {width:100%!important;max-width:none!important;margin:0!important;padding:40px 30px!important;}
+            .content-outer,.content-inner,.main-outer,.main-inner,.main,.Blog,.blog-posts,.post-outer,.post,.post-body,.entry-content {width:100%!important;max-width:none!important;}
+            article {width:100%!important;max-width:960px!important;margin-left:auto!important;margin-right:auto!important;padding:48px 52px!important;}
+            article h1 {font-size:2.4rem!important;}
+            article h2 {font-size:1.6rem!important;}
+            article p {font-size:1.05rem!important;}
+        }
         /* Tablet */
-        @media (max-width: 768px) {
-            article { padding: 32px 24px!important; }
+        @media (min-width: 481px) and (max-width: 768px) {
+            article { padding: 32px 24px!important; max-width: 100%!important; }
             article h1 { font-size: 1.8rem!important; }
             article h2 { font-size: 1.35rem!important; }
             article p { font-size: 1rem!important; }
         }
         /* Mobile */
         @media (max-width: 480px) {
-            article { padding: 20px 16px!important; border-radius: 14px!important; }
+            body {padding:16px 12px!important;}
+            article { padding: 20px 16px!important; border-radius: 14px!important; max-width: 100%!important; }
             article h1 { font-size: 1.5rem!important; }
             article h2 { font-size: 1.2rem!important; margin-top: 24px!important; }
             article h3 { font-size: 1.05rem!important; }
