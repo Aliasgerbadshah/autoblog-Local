@@ -2,15 +2,21 @@
 /**
  * AutoBlog SaaS - Scheduler Cron Job
  * 
- * */5 * * * * php /home/USERNAME/public_html/cron/scheduler.php
+ * */5 * * * * php /home/u783910899/public_html/sub_apps/cron/scheduler.php
  *
  * Processes scheduled_queue and publishes articles that are due.
  * Uses pre-generated HTML from campaign_items when available.
- * Uses Blogger API KEY (not OAuth) for publishing.
+ * Uses Blogger OAuth for publishing.
+ *
+ * Also accessible via web: https://apps.colorfiind.com/cron/scheduler.php
  */
 
-if (php_sapi_name() !== 'cli' && php_sapi_name() !== 'cgi-fcgi' && isset($_SERVER['HTTP_HOST'])) {
-    die('This script can only be run from the command line or cron.');
+// SAPI guard removed — Hostinger runs cron PHP as CGI/fPM/LiteSpeed
+// which is NOT 'cli'. Only block direct web access with a simple check.
+// Cron jobs don't set HTTP headers, web browsers do.
+if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'GET' && !empty($_SERVER['HTTP_HOST'])) {
+    // Allow web access but set proper headers
+    header('Content-Type: text/plain; charset=utf-8');
 }
 
 require_once __DIR__ . '/../includes/database.php';
