@@ -347,16 +347,8 @@ HTML;
         }
 
         // KEEP our H1 from content — it's styled and center-aligned, looks great.
-        // Instead, add CSS to HIDE Blogger's default title heading (it's small and ugly).
-        // Also add Blogger theme overrides to ensure content is full-width and visible on desktop.
-        $hideBloggerTitle = '<style>' .
-            '.post-title,.entry-title,h3.post-title,h2.post-title,.post h3,.post-title.entry-title,.blog-post h3,.Blog .post h3,.post-title.entry-title.item,.Blog .post .post-title{display:none!important;}' .
-            '.post-outer,.post,.Blog,.blog-posts,.post-body,.entry-content{width:100%!important;max-width:100%!important;overflow:visible!important;}' .
-            '.post-body,.entry-content{padding:0!important;margin:0!important;}' .
-            '.column-left-outer,.column-right-outer{display:none!important;}' .
-            '</style>';
-        // Prepend the hiding CSS at the very top of content (before our <style> block if any)
-        $content = $hideBloggerTitle . $content;
+        // Blogger title hiding CSS is now included directly in the <style> block above.
+        // No need to add separate hide rules here.
 
         // Blogger has a content size limit — warn if content is very large
         $contentLength = strlen($content);
@@ -843,70 +835,54 @@ function generateArticleHtmlFromCampaignItem($item, $userId, $activeSlot, $db, $
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        html { scroll-behavior: smooth; }
-        body { font-family: 'Montserrat', sans-serif; line-height: 1.8; max-width: 880px; margin: 0 auto; padding: 36px 20px; color: #0f172a; background: #fafafa; width: 100%; }
-        .nav-back { margin-bottom: 24px; display: inline-block; color: #0f172a; font-weight: 800; text-decoration: underline; font-size: 0.9rem; }
-        article { background: #ffffff; padding: 48px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.04); border: 1px solid #e2e8f0; width: 100%; max-width: 100%; overflow-wrap: break-word; word-wrap: break-word; }
-        .blog-thumbnail { width: 100%; }
-        h1 { font-size: 2.2rem; font-weight: 800; color: #0f172a; margin-bottom: 12px; line-height: 1.2; text-align: center; }
-        h2 { font-size: 1.5rem; font-weight: 800; color: #0f172a; margin-top: 36px; margin-bottom: 16px; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; }
-        h3 { font-size: 1.15rem; font-weight: 700; color: #0f172a; margin-top: 24px; margin-bottom: 12px; }
-        h4 { font-size: 1rem; font-weight: 700; color: #0f172a; margin-top: 20px; margin-bottom: 10px; }
-        p { margin-bottom: 18px; text-align: justify; }
-        a { color: #1b57f6; font-weight: 600; text-decoration: none; }
-        a:hover { text-decoration: underline; }
-        ul, ol { margin: 16px 0; padding-left: 22px; line-height: 2; text-align: justify; }
-        li { margin-bottom: 6px; }
-        blockquote { border-left: 4px solid #1b57f6; padding: 16px 20px; margin: 24px 0; background: #f8fafc; border-radius: 0 8px 8px 0; text-align: justify; }
-        table { width: 100%; border-collapse: collapse; margin: 20px 0; display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
-        thead { display: table-header-group; }
-        tbody { display: table-row-group; }
-        tr { display: table-row; }
-        td, th { border: 1px solid #e2e8f0; padding: 12px 14px; text-align: left; display: table-cell; }
-        th { background: #f1f5f9; font-weight: 700; }
-        figure { margin: 24px 0; width: 100%; max-width: 100%; }
-        img { max-width: 100%; height: auto; border-radius: 12px; display: block; margin: 0 auto; }
-        footer { margin-top: 48px; font-size: 0.85rem; text-align: center; color: #64748b; font-weight: 600; }
-        /* Desktop: ensure full-width content visible */
-        @media (min-width: 769px) {
-            body { padding: 40px 30px; max-width: 900px; }
-            article { padding: 48px 52px; }
-            h1 { font-size: 2.4rem; }
-            h2 { font-size: 1.6rem; }
-            p { font-size: 1.05rem; }
-        }
+        /* BLOGGER-SAFE CSS: All styles scoped to article with !important */
+        /* Blogger themes override body/html — so we style inside article */
+        .post-title,.entry-title,h3.post-title,h2.post-title,.post h3,.post-title.entry-title,.blog-post h3,.Blog .post h3,.post-title.entry-title.item,.Blog .post .post-title,.post-title.entry-title.sticky {display:none!important;}
+        .post-outer,.post,.Blog,.blog-posts{width:100%!important;max-width:100%!important;}
+        .post-body,.entry-content{width:100%!important;max-width:100%!important;padding:0!important;margin:0!important;overflow:visible!important;background:none!important;border:none!important;}
+        .column-left-outer,.column-right-outer,.sidebar,.blog-sidebar{display:none!important;}
+        article { font-family: 'Montserrat', sans-serif!important; line-height: 1.8!important; background: #ffffff!important; padding: 48px 52px!important; border-radius: 20px!important; box-shadow: 0 10px 30px rgba(0,0,0,0.04)!important; border: 1px solid #e2e8f0!important; width: 100%!important; max-width: 100%!important; overflow-wrap: break-word!important; word-wrap: break-word!important; color: #0f172a!important; box-sizing: border-box!important; }
+        article * { box-sizing: border-box!important; }
+        article .blog-thumbnail { width: 100%!important; }
+        article h1 { font-size: 2.4rem!important; font-weight: 800!important; color: #0f172a!important; margin: 0 0 12px 0!important; line-height: 1.2!important; text-align: center!important; }
+        article h2 { font-size: 1.6rem!important; font-weight: 800!important; color: #0f172a!important; margin: 36px 0 16px 0!important; border-bottom: 1px solid #e2e8f0!important; padding: 0 0 8px 0!important; }
+        article h3 { font-size: 1.2rem!important; font-weight: 700!important; color: #0f172a!important; margin: 24px 0 12px 0!important; }
+        article h4 { font-size: 1.05rem!important; font-weight: 700!important; color: #0f172a!important; margin: 20px 0 10px 0!important; }
+        article p { margin: 0 0 18px 0!important; text-align: justify!important; font-size: 1.05rem!important; line-height: 1.8!important; }
+        article a { color: #1b57f6!important; font-weight: 600!important; text-decoration: none!important; }
+        article a:hover { text-decoration: underline!important; }
+        article ul, article ol { margin: 16px 0!important; padding: 0 0 0 22px!important; line-height: 2!important; text-align: justify!important; }
+        article li { margin-bottom: 6px!important; }
+        article blockquote { border-left: 4px solid #1b57f6!important; padding: 16px 20px!important; margin: 24px 0!important; background: #f8fafc!important; border-radius: 0 8px 8px 0!important; text-align: justify!important; }
+        article table { width: 100%!important; border-collapse: collapse!important; margin: 20px 0!important; }
+        article td, article th { border: 1px solid #e2e8f0!important; padding: 12px 14px!important; text-align: left!important; }
+        article th { background: #f1f5f9!important; font-weight: 700!important; }
+        article figure { margin: 24px 0!important; width: 100%!important; }
+        article img { max-width: 100%!important; height: auto!important; border-radius: 12px!important; display: block!important; margin: 0 auto!important; }
+        article .nav-back { display: none!important; }
+        article footer { margin-top: 48px!important; font-size: 0.85rem!important; text-align: center!important; color: #64748b!important; font-weight: 600!important; }
+        article .thumb-placeholder { aspect-ratio: 9/16!important; background: linear-gradient(135deg, #1b57f6, #8b5cf6)!important; display: flex!important; align-items: center!important; justify-content: center!important; color: #fff!important; font-size: 1.5rem!important; font-weight: 800!important; padding: 40px!important; text-align: center!important; min-height: 300px!important; border-radius: 12px!important; }
         /* Tablet */
-        @media (min-width: 481px) and (max-width: 768px) {
-            body { padding: 24px 16px; }
-            article { padding: 32px 24px; border-radius: 16px; }
-            h1 { font-size: 1.8rem; }
-            h2 { font-size: 1.35rem; }
-            p { font-size: 1rem; }
+        @media (max-width: 768px) {
+            article { padding: 32px 24px!important; }
+            article h1 { font-size: 1.8rem!important; }
+            article h2 { font-size: 1.35rem!important; }
+            article p { font-size: 1rem!important; }
         }
-        /* Mobile optimization */
+        /* Mobile */
         @media (max-width: 480px) {
-            body { padding: 16px 12px; }
-            article { padding: 24px 16px; border-radius: 14px; }
-            h1 { font-size: 1.5rem; }
-            h2 { font-size: 1.2rem; margin-top: 24px; }
-            h3 { font-size: 1.05rem; }
-            p { font-size: 0.95rem; margin-bottom: 14px; }
-            ul, ol { padding-left: 18px; font-size: 0.95rem; }
-            td, th { padding: 8px 10px; font-size: 0.85rem; }
-            blockquote { padding: 12px 16px; }
-            .blog-thumbnail { max-height: 360px; }
-            figure { margin: 16px 0; }
-            img { border-radius: 8px; }
+            article { padding: 20px 16px!important; border-radius: 14px!important; }
+            article h1 { font-size: 1.5rem!important; }
+            article h2 { font-size: 1.2rem!important; margin-top: 24px!important; }
+            article h3 { font-size: 1.05rem!important; }
+            article p { font-size: 0.95rem!important; margin-bottom: 14px!important; }
+            article ul, article ol { padding-left: 18px!important; font-size: 0.95rem!important; }
+            article td, article th { padding: 8px 10px!important; font-size: 0.85rem!important; }
+            article blockquote { padding: 12px 16px!important; }
+            article .blog-thumbnail { max-height: 360px!important; }
+            article figure { margin: 16px 0!important; }
+            article img { border-radius: 8px!important; }
         }
-        @media (max-width: 360px) {
-            h1 { font-size: 1.3rem; }
-            h2 { font-size: 1.1rem; }
-            article { padding: 16px 12px; }
-            .blog-thumbnail { max-height: 280px; }
-        }
-        /* Image error fallback via JS */
-        .thumb-placeholder { aspect-ratio: 9/16; background: linear-gradient(135deg, #1b57f6, #8b5cf6); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 1.5rem; font-weight: 800; padding: 40px; text-align: center; min-height: 300px; border-radius: 12px; }
     </style>
     <script>
         // Image error handler
@@ -914,7 +890,6 @@ function generateArticleHtmlFromCampaignItem($item, $userId, $activeSlot, $db, $
             if (e.target.tagName !== 'IMG') return;
             var img = e.target;
             if (img.classList.contains('blog-thumb-img')) {
-                // Thumbnail: replace with gradient placeholder
                 var fig = img.parentElement;
                 var kw = img.getAttribute('data-kw') || '';
                 var div = document.createElement('div');
@@ -922,7 +897,6 @@ function generateArticleHtmlFromCampaignItem($item, $userId, $activeSlot, $db, $
                 div.textContent = kw || 'Blog Thumbnail';
                 if (fig) { img.style.display = 'none'; fig.insertBefore(div, img.nextSibling); }
             } else {
-                // Other images: hide
                 img.style.display = 'none';
                 var fig = img.closest('figure');
                 if (fig && !fig.querySelector('.img-fallback')) {
