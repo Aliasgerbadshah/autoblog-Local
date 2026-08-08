@@ -1,0 +1,1519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AutoBlog & Marketing SaaS Suite - Multi-Tenant Hub</title>
+    <!-- Google Font: Montserrat -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,600;1,800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* LIGHT THEME VARIABLES */
+            --bg-gradient: linear-gradient(135deg, #a5b4fc 0%, #c7d2fe 30%, #e0e7ff 60%, #fae8ff 100%);
+            --header-bg: rgba(255, 255, 255, 0.85);
+            --card-bg: rgba(255, 255, 255, 0.9);
+            --inner-bg: #f8fafc;
+            --text-dark: #0f172a;
+            --text-muted: #64748b;
+            --primary-blue: #1b57f6;
+            --primary-hover: #1243cb;
+            --accent-green: #10b981;
+            --accent-purple: #8b5cf6;
+            --border-light: #e2e8f0;
+            --table-header: #f1f5f9;
+            --shadow-color: rgba(15, 23, 42, 0.06);
+        }
+
+        [data-theme="dark"] {
+            /* DARK THEME VARIABLES */
+            --bg-gradient: linear-gradient(135deg, #090d16 0%, #0f172a 35%, #1e1b4b 70%, #2e1065 100%);
+            --header-bg: rgba(15, 23, 42, 0.88);
+            --card-bg: #1e293b;
+            --inner-bg: #0f172a;
+            --text-dark: #f8fafc;
+            --text-muted: #94a3b8;
+            --primary-blue: #38bdf8;
+            --primary-hover: #0284c7;
+            --accent-green: #34d399;
+            --accent-purple: #c084fc;
+            --border-light: #334155;
+            --table-header: #0f172a;
+            --shadow-color: rgba(0, 0, 0, 0.5);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Montserrat', -apple-system, sans-serif;
+            transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+        }
+
+        body {
+            background: var(--bg-gradient);
+            background-size: 200% 200%;
+            animation: gradientShift 15s ease infinite alternate;
+            color: var(--text-dark);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        header {
+            background: var(--header-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border-light);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 4px 20px var(--shadow-color);
+        }
+
+        .logo-group { display: flex; align-items: center; gap: 12px; }
+
+        .logo-icon {
+            background: linear-gradient(135deg, var(--primary-blue), var(--accent-purple));
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-weight: bold;
+            font-size: 1.25rem;
+            box-shadow: 0 4px 12px rgba(56, 189, 248, 0.3);
+        }
+
+        .brand-title {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 1.25rem;
+            font-weight: 800;
+            color: var(--text-dark);
+            letter-spacing: -0.02em;
+        }
+
+        .slot-selector-box {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--card-bg);
+            padding: 6px 14px;
+            border-radius: 20px;
+            border: 1px solid var(--border-light);
+            font-weight: 700;
+            font-size: 0.85rem;
+        }
+
+        .slot-select {
+            background: transparent;
+            border: none;
+            color: var(--primary-blue);
+            font-weight: 800;
+            font-size: 0.85rem;
+            outline: none;
+            cursor: pointer;
+        }
+
+        .user-profile-bar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            background: var(--card-bg);
+            padding: 6px 14px;
+            border-radius: 20px;
+            border: 1px solid var(--border-light);
+            font-weight: 600;
+        }
+
+        .theme-toggle-btn {
+            background: var(--card-bg);
+            border: 1px solid var(--border-light);
+            padding: 6px 14px;
+            border-radius: 20px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.825rem;
+            font-weight: 700;
+            color: var(--text-dark);
+        }
+
+        .nav-tabs {
+            display: flex;
+            gap: 8px;
+            background: var(--header-bg);
+            backdrop-filter: blur(10px);
+            padding: 6px;
+            border-radius: 14px;
+            border: 1px solid var(--border-light);
+            flex-wrap: wrap;
+        }
+
+        .tab-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            padding: 9px 18px;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .tab-btn.active, .tab-btn:hover {
+            color: var(--primary-blue);
+            background: var(--card-bg);
+            box-shadow: 0 2px 8px var(--shadow-color);
+        }
+
+        .main-container {
+            max-width: 1280px;
+            margin: 2rem auto;
+            padding: 0 1.5rem;
+            width: 100%;
+            flex: 1;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 1.25rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-light);
+            border-radius: 18px;
+            padding: 1.25rem;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            box-shadow: 0 10px 25px var(--shadow-color);
+        }
+
+        .stat-title {
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .stat-value {
+            font-size: 1.85rem;
+            font-weight: 800;
+            color: var(--text-dark);
+        }
+
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        .card {
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border-light);
+            border-radius: 24px;
+            padding: 1.75rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 12px 32px var(--shadow-color);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.25rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .card-title {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 1.15rem;
+            font-weight: 800;
+            color: var(--text-dark);
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.25rem;
+            margin-bottom: 1rem;
+        }
+
+        .form-group { display: flex; flex-direction: column; gap: 6px; }
+        label { font-size: 0.85rem; color: var(--text-dark); font-weight: 700; }
+
+        input, select, textarea {
+            background: var(--inner-bg);
+            border: 1px solid var(--border-light);
+            border-radius: 10px;
+            padding: 11px 14px;
+            color: var(--text-dark);
+            font-size: 0.9rem;
+            font-weight: 500;
+            width: 100%;
+            outline: none;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            background: var(--card-bg);
+            border-color: var(--primary-blue);
+            box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.15);
+        }
+
+        .btn {
+            background: var(--primary-blue);
+            color: #ffffff;
+            border: none;
+            padding: 11px 22px;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            justify-content: center;
+            text-decoration: none;
+            box-shadow: 0 4px 12px rgba(27, 87, 246, 0.25);
+        }
+
+        .btn:hover { background: var(--primary-hover); transform: translateY(-1px); }
+        .btn-accent { background: var(--accent-green); box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25); }
+        .btn-purple { background: var(--accent-purple); box-shadow: 0 4px 12px rgba(139, 92, 246, 0.25); }
+        .btn-danger { background: #ef4444; color: #fff; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.25); padding: 6px 12px; font-size: 0.8rem; }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+            text-align: left;
+            font-size: 0.9rem;
+        }
+
+        th {
+            background: var(--table-header);
+            color: var(--text-muted);
+            padding: 12px 14px;
+            border-bottom: 1px solid var(--border-light);
+            font-weight: 700;
+        }
+
+        td { padding: 12px 14px; border-bottom: 1px solid var(--border-light); font-weight: 500; }
+
+        .badge {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            display: inline-block;
+        }
+
+        .badge-success { background: rgba(16, 185, 129, 0.2); color: var(--accent-green); border: 1px solid rgba(16, 185, 129, 0.3); }
+        .badge-warning { background: rgba(245, 158, 11, 0.2); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3); }
+        .badge-danger { background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
+        .badge-purple { background: rgba(139, 92, 246, 0.2); color: var(--accent-purple); border: 1px solid rgba(139, 92, 246, 0.3); }
+
+        footer.site-footer {
+            text-align: center;
+            padding: 1.5rem;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            font-weight: 600;
+            border-top: 1px solid var(--border-light);
+            margin-top: auto;
+            background: var(--header-bg);
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo-group">
+            <div class="logo-icon">✨</div>
+            <h1 class="brand-title">AutoBlog SaaS</h1>
+        </div>
+
+        <div style="display:flex; align-items:center; gap: 1rem; flex-wrap: wrap;">
+            <!-- ACTIVE WORKSPACE SITE SLOT SELECTOR -->
+            <div class="slot-selector-box">
+                <span>📂 Workspace Slot:</span>
+                <select id="active-slot-select" class="slot-select" onchange="switchSlot(this.value)">
+                    <option value="1">Slot #1: Primary Site Profile</option>
+                    <option value="2">Slot #2: Site Profile #2</option>
+                    <option value="3">Slot #3: Site Profile #3</option>
+                    <option value="4">Slot #4: Site Profile #4</option>
+                    <option value="5">Slot #5: Site Profile #5</option>
+                </select>
+            </div>
+
+            <button type="button" class="theme-toggle-btn" onclick="toggleTheme()">
+                <span id="theme-icon">🌙</span> <span id="theme-text">Dark Mode</span>
+            </button>
+            <div class="user-profile-bar">
+                <span>👤 Workspace: <strong id="user-display"><?php echo escapeHtml($user['username'] ?? ''); ?></strong></span>
+                <span class="badge badge-success">Vault Active</span>
+            </div>
+            <a href="/logout.php" class="btn" style="background:var(--inner-bg); color:var(--text-dark); border:1px solid var(--border-light); padding: 6px 14px; font-size:0.8rem; box-shadow:none;">Logout 🚪</a>
+        </div>
+    </header>
+
+    <div class="main-container">
+
+        <!-- SLOT PROFILE CONFIGURATION BANNER -->
+        <div class="card" style="margin-bottom:1.5rem; background:var(--inner-bg); padding:1.25rem;">
+            <div class="card-header" style="margin-bottom:0.75rem; padding-bottom:0.5rem;">
+                <h3 style="font-size:1rem; font-weight:800; color:var(--primary-blue);">⚙️ Active Slot Profile Settings (<span id="slot-indicator-text">Slot #1</span>)</h3>
+            </div>
+            <form onsubmit="saveSlotSettings(event)">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Slot Campaign Name</label>
+                        <input type="text" id="slot-name-input" placeholder="e.g. ColorFiind Fashion Blog" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Main Domain URL for this Slot</label>
+                        <input type="url" id="slot-domain-input" placeholder="https://colorfiind.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Target Word Count Length</label>
+                        <select id="slot-wordcount-input">
+                            <option value="1500-2000">1,500 – 2,000+ Words (In-Depth Magazine)</option>
+                            <option value="1000-1500">1,000 – 1,500 Words (Standard Guide)</option>
+                            <option value="500-1000">500 – 1,000 Words (Quick Post)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Slot Publish Destination</label>
+                        <select id="slot-destination-input">
+                            <option value="blogger">Google Blogger REST API (Auto-Vault Fetched)</option>
+                            <option value="wordpress">WordPress REST API (Auto-Vault Fetched)</option>
+                            <option value="local">Local Magazine (HTML Exporter)</option>
+                        </select>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-purple" style="font-size:0.85rem; padding:8px 16px;">💾 Save Active Slot Profile Settings</button>
+            </form>
+        </div>
+
+        <!-- NAV TABS -->
+        <div class="nav-tabs" style="margin-bottom: 1.5rem;">
+            <button class="tab-btn active" onclick="switchTab('dashboard')">Dashboard Content</button>
+            <button class="tab-btn" onclick="switchTab('auditor')">🔍 Domain Auditor & SerpAPI</button>
+            <button class="tab-btn" onclick="switchTab('autoblog')">Human Article Writer</button>
+            <button class="tab-btn" onclick="switchTab('vault')">🔑 API Vault & Integrations</button>
+            <button class="tab-btn" onclick="switchTab('social')">Social Auto-Poster</button>
+            <button class="tab-btn" onclick="switchTab('backlinks')">🌐 Backlink Watchdog</button>
+        </div>
+
+        <!-- STATS BAR -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <span class="stat-title">Published Articles</span>
+                <span class="stat-value" id="stat-posts">0</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-title">Active Queue</span>
+                <span class="stat-value" id="stat-scheduled">0</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-title">Social Shares</span>
+                <span class="stat-value" id="stat-social">0</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-title">Tracked Backlinks</span>
+                <span class="stat-value" id="stat-backlinks">0</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-title">Active Dofollow</span>
+                <span class="stat-value" id="stat-dofollow">0</span>
+            </div>
+        </div>
+
+        <!-- TAB 1: DASHBOARD OVERVIEW & RECENT ARTICLES WITH DELETE ACTION -->
+        <div id="tab-dashboard" class="tab-content active">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">My Published Content for Active Slot</h2>
+                    <button class="btn btn-accent" onclick="quickGenerateArticle()">⚡ Quick Write 1,800w Article & Post</button>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Title</th>
+                            <th>Category</th>
+                            <th>Platform</th>
+                            <th>Status</th>
+                            <th>Published Article Link</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="recent-posts-tbody">
+                        <tr><td colspan="6" style="text-align:center; color: var(--text-muted);">Loading slot articles...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- TAB 2: DOMAIN AUDITOR & SERP RESEARCH -->
+        <div id="tab-auditor" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">🔍 Customer Website Audit & Keyword Research Agent</h2>
+                </div>
+                <p style="color: var(--text-muted); margin-bottom: 1.25rem;">
+                    Paste any website URL. The AI Agent will crawl sub-pages, search low-competition keywords using built-in search or SerpAPI, and create a custom content roadmap.
+                </p>
+
+                <form onsubmit="handleAnalyzeDomain(event)">
+                    <div class="form-grid">
+                        <div class="form-group"><label>Customer Website Domain / Page URL</label><input type="url" id="audit-domain-url" placeholder="https://customerwebsite.com" required></div>
+                        <div class="form-group"><label>Target Country</label><input type="text" id="audit-country" placeholder="India" required></div>
+                        <div class="form-group"><label>Target State/Region (optional)</label><input type="text" id="audit-region" placeholder="Madhya Pradesh"></div>
+                        <div class="form-group"><label>Target City (optional)</label><input type="text" id="audit-city" placeholder="Indore"></div>
+                        <div class="form-group"><label>Search Language</label><select id="audit-language"><option value="en">English</option><option value="hi">Hindi</option></select></div>
+                    </div>
+                    <button type="submit" class="btn btn-purple" id="btn-audit-submit">🚀 Audit Domain & Search High-Yield Keywords</button>
+                </form>
+            </div>
+
+            <div class="card" id="audit-results-card" style="display:none;">
+                <div class="card-header">
+                    <h2 class="card-title">Domain Insights & Target Keyword Roadmap</h2>
+                </div>
+                <div id="audit-summary-box" style="background:var(--inner-bg); padding:16px 20px; border-radius:12px; border:1px solid var(--border-light); margin-bottom:20px;"></div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Schedule Day</th>
+                            <th>Target Topic</th>
+                            <th>High-Volume Keyword</th>
+                            <th>Competition Level</th>
+                            <th>Human Plan</th>
+                        </tr>
+                    </thead>
+                    <tbody id="audit-roadmap-tbody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- TAB 3: HUMAN ARTICLE GENERATION STUDIO -->
+        <div id="tab-autoblog" class="tab-content">
+            <div class="card" style="border-top:4px solid #10b981;">
+                <div class="card-header"><h2 class="card-title">🌐 Website-First Blog Research Project</h2></div>
+                <p style="color:var(--text-muted);">The customer provides the website. The software finds the niche, competitors, trends, keywords, ranking opportunities, internal pages, and article roadmap automatically.</p>
+                <form onsubmit="saveProjectResearch(event)">
+                    <div class="form-grid">
+                        <div class="form-group"><label>Customer Website URL</label><input type="url" id="project-domain" placeholder="https://customerwebsite.com" required></div>
+                        <div class="form-group"><label>Target Country</label><select id="project-country" required><option value="India">India</option><option value="United States">United States</option><option value="United Kingdom">United Kingdom</option><option value="Canada">Canada</option><option value="Australia">Australia</option><option value="United Arab Emirates">United Arab Emirates</option><option value="Saudi Arabia">Saudi Arabia</option><option value="Singapore">Singapore</option><option value="Germany">Germany</option><option value="France">France</option><option value="Italy">Italy</option><option value="Spain">Spain</option><option value="Netherlands">Netherlands</option><option value="South Africa">South Africa</option><option value="New Zealand">New Zealand</option><option value="Malaysia">Malaysia</option><option value="Japan">Japan</option><option value="Other">Other</option></select></div>
+                        <div class="form-group"><label>Language</label><select id="project-language"><option value="en">English</option><option value="hi">Hindi</option></select></div>
+                        <div class="form-group"><label>Destination</label><select id="project-platform" onchange="updateCalendarDates()"><option value="blogger">Google Blogger</option><option value="local">HTML / Local Magazine</option><option value="wordpress">WordPress</option></select></div>
+                        <div class="form-group"><label>Campaign Days</label><select id="project-days" onchange="updateCalendarDates()"><option value="7">7 days</option><option value="10">10 days</option><option value="15">15 days</option><option value="25">25 days</option><option value="30">30 days</option></select></div>
+                        <div class="form-group"><label>Articles Per Day</label><select id="project-posts-per-day" onchange="updateCalendarDates()"><option value="1">1 article</option><option value="2">2 articles</option><option value="3">3 articles</option></select></div>
+                        <div class="form-group"><label>Start Date</label><input type="date" id="project-start-date" onchange="updateCalendarDates()"></div>
+                    </div>
+                    <div class="form-grid">
+                        <div class="form-group"><label>Chat Model for This Project</label><select id="project-chat-account"><option>Loading saved Chat models...</option></select></div>
+                        <div class="form-group"><label>Image Model for This Project</label><select id="project-image-account"><option>Loading saved Image models...</option></select></div>
+                        <div class="form-group"><label>SEO Research Account</label><select id="project-seo-account"><option>Loading saved DataForSEO accounts...</option></select></div>
+                        <div class="form-group"><label>Blogger Account</label><select id="project-blogger-account"><option>Loading saved Blogger accounts...</option></select></div>
+                    </div>
+                    <!-- POSTING TIMES & CALENDAR DATES -->
+                    <div id="posting-times-section" style="margin-top:16px; padding:16px; background:var(--inner-bg); border-radius:12px; border:1px solid var(--border-light);">
+                        <h4 style="font-size:0.95rem; font-weight:800; color:var(--primary-blue); margin-bottom:10px;">📅 Posting Schedule Calendar</h4>
+                        <p style="font-size:0.82rem; color:var(--text-muted); margin-bottom:10px;">Select start date above. The calendar shows exact posting dates and times. Each approved blog posts on its assigned date.</p>
+                        <div id="posting-times-grid" class="form-grid"></div>
+                        <div id="calendar-dates-display" style="margin-top:12px;"></div>
+                    </div>
+                    <button type="submit" class="btn btn-purple">🚀 Analyze Website & Create Automatic SEO Roadmap</button>
+                    <button type="button" class="btn" style="background:#0f172a;margin-left:8px" onclick="createDemoCampaign()">🧪 Demo Mode (No API Tokens)</button>
+                </form>
+                <div id="project-research-status" style="margin-top:12px;font-weight:700;"></div>
+            </div>
+            <div class="card" id="automatic-roadmap-card" style="display:none;">
+                <div class="card-header"><h2 class="card-title">📊 Automatic Keyword and Content Roadmap</h2></div>
+                <p style="color:var(--text-muted);">The software selected these opportunities using website content, target location, organic research, SERP results, competitor analysis, volume, difficulty, and traffic potential.</p>
+                <table><thead><tr><th>Article Topic</th><th>Primary Keyword</th><th>Supporting Keywords</th><th>Target Website Page</th><th>Demand / Difficulty</th><th>Human Review</th></tr></thead><tbody id="automatic-roadmap-tbody"></tbody></table>
+            </div>
+            <div class="card" id="demo-progress-card">
+                <div class="card-header"><h2 class="card-title">✅ Roadmap Approval Progress</h2></div>
+                <table><thead><tr><th>Day/Slot</th><th>Blog</th><th>Roadmap Status</th><th>Article Status</th><th>Schedule Date</th><th>Time</th><th>Platform</th><th>HTML</th><th>Action</th></tr></thead><tbody id="demo-progress-tbody"><tr><td colspan="9">No campaign loaded.</td></tr></tbody></table>
+            </div>
+            <!-- APPROVED & SCHEDULED ITEMS (separate from pending) -->
+            <div class="card" id="approved-scheduled-card" style="display:none; border-top:4px solid #10b981;">
+                <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;"><h2 class="card-title" style="margin:0;">✅ Approved & Scheduled Blogs</h2><button class="btn btn-accent" style="font-size:0.8rem;padding:8px 16px;" onclick="generateAllHTML()">⚡ Generate All HTML</button></div>
+                <p style="color:var(--text-muted); font-size:0.85rem;">These approved blogs are locked and scheduled for posting. They will NOT be removed when you create new campaigns.</p>
+                <div id="generate-all-status" style="display:none;margin-bottom:12px;padding:10px;border-radius:8px;background:#f0fdf4;color:#166534;font-weight:600;font-size:0.9rem;"></div>
+                <table><thead><tr><th>Day</th><th>Title</th><th>Schedule Date</th><th>Time</th><th>Platform</th><th>Article Status</th><th>HTML</th><th>Action</th></tr></thead><tbody id="approved-scheduled-tbody"><tr><td colspan="8">No approved items.</td></tr></tbody></table>
+            </div>
+            <div id="legacy-writer-card" class="card" style="display:none">
+                <div class="card-header">
+                    <h2 class="card-title">1,800+ Word Human Style Writer (Anti-AI Detector Protocol)</h2>
+                </div>
+                <form id="gen-form" onsubmit="handleGenerateSubmit(event)">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Target Keyword / Topic</label>
+                            <input type="text" id="gen-keyword" placeholder="e.g., Winter Color Palettes 2026" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Category Tag</label>
+                            <input type="text" id="gen-category" value="Style Guide">
+                        </div>
+
+                        <div class="form-group">
+                            <label>Publish Destination</label>
+                            <select id="gen-platform">
+                                <option value="blogger">Google Blogger REST API (Auto-Vault Fetched)</option>
+                                <option value="wordpress">WordPress REST API (Auto-Vault Fetched)</option>
+                                <option value="local">Local Magazine (HTML with Unsplash Banner & Internal Links)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Target Backlink URL for Domain Absorption</label>
+                            <input type="url" id="gen-target-link" placeholder="https://colorfiind.com">
+                        </div>
+                        <div class="form-group">
+                            <label>Anchor Text</label>
+                            <input type="text" id="gen-target-anchor" placeholder="e.g. ColorFiind Tones">
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-accent" style="margin-top: 1rem;">⚡ Generate 1,800+ Word Human Article & Publish</button>
+                </form>
+            </div>
+            <div class="card" style="border-top:4px solid #10b981;">
+                <div class="card-header"><h2 class="card-title">🗓️ Human Review & Blog Scheduler</h2></div>
+                <p style="color:var(--text-muted);">You choose the campaign length and posting rhythm. The software assigns the approved roadmap topics automatically—no internal plan number is needed.</p>
+                <form onsubmit="handleScheduleCampaign(event)">
+                    <div class="form-grid">
+                        <div class="form-group"><label>Campaign Duration</label><select id="schedule-days"><option value="7">7 days</option><option value="10">10 days</option><option value="15">15 days</option><option value="25">25 days</option><option value="30">30 days</option><option value="custom">Custom</option></select></div>
+                        <div class="form-group" id="custom-days-wrap" style="display:none"><label>Custom Days (1–365)</label><input type="number" id="schedule-custom-days" min="1" max="365"></div>
+                        <div class="form-group"><label>Articles Per Day</label><select id="schedule-posts-per-day" onchange="renderScheduleTimes()"><option value="1">1 article</option><option value="2">2 articles</option><option value="3">3 articles</option></select></div>
+                        <div class="form-group"><label>Destination</label><select id="schedule-platform"><option value="blogger">Google Blogger</option><option value="wordpress">WordPress</option><option value="local">Local Magazine</option></select></div>
+                    </div>
+                    <div id="schedule-times-wrap" class="form-grid"></div>
+                    <label style="display:block;margin:8px 0"><input type="checkbox" id="schedule-recommended-times" onchange="applyRecommendedTimes()"> Recommend posting times for the selected location</label>
+                    <button type="submit" class="btn btn-purple">✅ Schedule Approved Roadmap</button>
+                </form>
+                <div id="schedule-status" style="margin-top:12px;font-weight:700;"></div>
+                <table style="margin-top:18px;"><thead><tr><th>Title</th><th>Keyword</th><th>Scheduled For</th><th>Status</th><th>Action</th></tr></thead><tbody id="schedule-queue-tbody"><tr><td colspan="5">Loading queue...</td></tr></tbody></table>
+            </div>
+        </div>
+
+        <!-- TAB 4: API VAULT & TEST BLOGGER CONNECTION -->
+        <div id="tab-vault" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">🔑 Persistent Workspace API Key Vault</h2>
+                </div>
+
+                <!-- Google Blogger API Credentials + Connection Tester -->
+                <div style="background:var(--inner-bg); padding:1.25rem; border-radius:12px; border:1px solid var(--border-light); margin-bottom:1.25rem;">
+                    <h3 style="font-size:1rem; margin-bottom:0.75rem; color:#f59e0b;">1. Google Blogger API Integration</h3>
+                    <form id="blogger-vault-form" onsubmit="return handleSaveBloggerVault(event)">
+                        <div class="form-grid">
+                            <div class="form-group"><label>Blogger Account Name</label><input type="text" id="v-blog-alias" value="Primary Blogger Account"></div>
+                            <div class="form-group">
+                                <label>Blogger Blog ID</label>
+                                <input type="text" id="v-blog-id" placeholder="e.g. 810293810238190" required>
+                            </div>
+                        </div>
+                        <div style="background:rgba(245, 158, 11, 0.1); padding:12px 16px; border-radius:8px; border:1px solid rgba(245, 158, 11, 0.2); margin-bottom:12px;">
+                            <p style="font-size:0.8rem; font-weight:700; color:#b45309; margin-bottom:6px;">🔑 OAuth 2.0 Credentials (Required for Test & Publishing):</p>
+                            <p style="font-size:0.75rem; color:#64748b; margin-bottom:4px;">Access token is NOT needed — it auto-generates from the Refresh Token.</p>
+                            <p style="font-size:0.75rem; color:#64748b; margin-bottom:8px;"><strong>Setup steps:</strong></p>
+                            <ol style="font-size:0.73rem; color:#64748b; margin:0 0 8px 0; padding-left:18px; line-height:1.7;">
+                                <li>Google Cloud Console → Enable <strong>Blogger API v3</strong></li>
+                                <li>Google Cloud Console → Credentials → Create <strong>OAuth 2.0 Client ID</strong> (Web application)</li>
+                                <li>Add Authorized redirect URI: <code style="background:#f1f5f9;padding:1px 4px;border-radius:3px;">https://developers.google.com/oauthplayground</code></li>
+                                <li>Copy <strong>Client ID</strong> + <strong>Client Secret</strong> → paste below</li>
+                                <li>Go to <a href="https://developers.google.com/oauthplayground" target="_blank" style="color:#1b57f6;">OAuth Playground</a> → Step 1: select <strong>Blogger API v3</strong> → Authorize</li>
+                                <li>Step 2: Click <strong>Exchange authorization code for tokens</strong> → Copy <strong>Refresh Token</strong> (starts with 1//)</li>
+                            </ol>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label>OAuth Client ID</label>
+                                    <input type="text" id="v-blog-cid" placeholder="xxxx.apps.googleusercontent.com">
+                                </div>
+                                <div class="form-group">
+                                    <label>Client Secret</label>
+                                    <input type="password" id="v-blog-secret" placeholder="GOCSPX-...">
+                                </div>
+                                <div class="form-group">
+                                    <label>Refresh Token</label>
+                                    <input type="password" id="v-blog-refresh" placeholder="1//04... (auto-generates access token)">
+                                </div>
+                            </div>
+                        </div>
+                        <div style="display:flex; gap:12px;">
+                            <button type="submit" class="btn btn-purple">💾 Save Blogger Credentials</button>
+                            <button type="button" class="btn" style="background:#0f172a;" onclick="testBloggerConnection()">🔍 Test Blogger Connection</button>
+                        </div>
+                        <div id="blogger-test-status" style="margin-top:10px; font-size:0.85rem; font-weight:700;"></div>
+                    </form>
+                </div>
+
+                <!-- Brevo API Integration -->
+                <div style="background:var(--inner-bg); padding:1.25rem; border-radius:12px; border:1px solid var(--border-light); margin-bottom:1.25rem;">
+                    <h3 style="font-size:1rem; margin-bottom:0.75rem; color:#3b82f6;">2. Brevo Transactional Email API (Login OTP & Daily Digest)</h3>
+                    <form id="brevo-vault-form" onsubmit="return handleSaveBrevoVault(event)">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>Brevo API v3 Key (xkeysib-...)</label>
+                                <input type="password" id="v-brevo-key" placeholder="xkeysib-..." required>
+                            </div>
+                            <div class="form-group">
+                                <label>Verified Sender Email Address</label>
+                                <input type="email" id="v-brevo-sender" placeholder="aliasgershabbir52@gmail.com" required>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-purple">💾 Save Brevo Settings to Vault</button>
+                    </form>
+                </div>
+
+                <!-- Separate Chat and Image APIs -->
+                <div style="background:var(--inner-bg); padding:1.25rem; border-radius:12px; border:1px solid var(--border-light); margin-bottom:1.25rem;">
+                    <h3 style="font-size:1rem; margin-bottom:0.75rem; color:#8b5cf6;">3. Separate Blog Writing APIs</h3>
+                    <p style="font-size:0.82rem;color:var(--text-muted);">Select a provider and paste its API key. The software chooses the correct endpoint and recommended model automatically.</p>
+                    <form onsubmit="return handleSaveAiApis(event)">
+                        <div class="form-grid">
+                            <div class="form-group"><label>Chat Provider</label><select id="v-chat-provider" onchange="updateAiDefaults()"><option value="gemini">Google Gemini</option><option value="openai">OpenAI</option><option value="anthropic">Anthropic Claude</option><option value="huggingface">Hugging Face</option><option value="openrouter">OpenRouter</option><option value="zenmux">ZenMux (Kimi K3)</option><option value="pollinations">Pollinations.ai</option><option value="custom">Custom Provider</option></select></div>
+                            <div class="form-group"><label>Chat Account Name</label><input type="text" id="v-chat-alias" value="Primary Chat Model"></div><div class="form-group"><label>Chat API Key</label><input type="password" id="v-chat-key" required></div>
+                            <div class="form-group"><label>Image Provider</label><select id="v-image-provider" onchange="updateAiDefaults()"><option value="huggingface">Hugging Face (free tier)</option><option value="openai">OpenAI</option><option value="gemini">Google Gemini</option><option value="stability">Stability AI</option><option value="replicate">Replicate</option><option value="pollinations">Pollinations.ai</option><option value="custom">Custom Provider</option></select></div>
+                            <div class="form-group"><label>Image Account Name</label><input type="text" id="v-image-alias" value="Primary Image Model"></div><div class="form-group"><label>Image API Key</label><input type="password" id="v-image-key" required></div>
+                        </div>
+                        <details style="margin:10px 0;color:var(--text-muted);"><summary>Advanced settings (optional)</summary><div style="margin:10px 0"><strong>Gemini automatic model pool</strong><label style="margin-left:14px"><input type="checkbox" id="gemini-auto-model" checked> Auto-select and fallback</label><div class="form-grid"><label><input type="checkbox" class="gemini-model-option" value="gemini-2.5-flash-lite" checked> Gemini 2.5 Flash</label><label><input type="checkbox" class="gemini-model-option" value="gemini-3.5-flash" checked> Gemini 3.5 Flash</label><label><input type="checkbox" class="gemini-model-option" value="gemini-3.6-flash" checked> Gemini 3.6 Flash</label></div></div><div class="form-grid" style="margin-top:10px;"><div class="form-group"><label>Chat Model</label><input type="text" id="v-chat-model"></div><div class="form-group"><label>Image Model</label><input type="text" id="v-image-model"></div><div class="form-group"><label>Custom Chat Endpoint</label><input type="url" id="v-chat-endpoint"></div><div class="form-group"><label>Custom Image Endpoint</label><input type="url" id="v-image-endpoint"></div></div></details>
+                        </div>
+                        <button type="submit" class="btn btn-purple">💾 Save Separate Chat & Image APIs</button><button type="button" class="btn" style="background:#0f172a;" onclick="testAi('chat_api')">🔍 Test Chat API</button><button type="button" class="btn" style="background:#0f172a;" onclick="testAi('image_api')">🔍 Test Image API</button><div id="ai-test-status" style="margin-top:10px;font-size:0.85rem;font-weight:700;"></div>
+                    </form>
+                </div>
+
+                <!-- DataForSEO SEO Research API -->
+                <div style="background:var(--inner-bg); padding:1.25rem; border-radius:12px; border:1px solid var(--border-light); margin-bottom:1.25rem;">
+                    <h3 style="font-size:1rem; margin-bottom:0.75rem; color:#10b981;">3. DataForSEO: Keyword, Google SERP & Competitor Research</h3>
+                    <form id="dataforseo-vault-form" onsubmit="return handleSaveDataForSeo(event)">
+                        <div class="form-grid">
+                            <div class="form-group"><label>DataForSEO Login</label><input type="text" id="v-dfs-login" placeholder="DataForSEO account login" required></div>
+                            <div class="form-group"><label>DataForSEO Password</label><input type="password" id="v-dfs-pass" placeholder="DataForSEO password" required></div>
+                            <div class="form-group"><label>Google Location Code</label><input type="number" id="v-dfs-location" value="2356"></div>
+                        </div>
+                        <button type="submit" class="btn btn-purple">💾 Save DataForSEO Research Credentials</button>
+                        <button type="button" class="btn" style="background:#0f172a;" onclick="testDataForSeo()">🔍 Test DataForSEO</button>
+                        <div id="dataforseo-test-status" style="margin-top:10px;font-size:0.85rem;font-weight:700;"></div>
+                    </form>
+                </div>
+
+                <!-- WordPress Credentials -->
+                <div style="background:var(--inner-bg); padding:1.25rem; border-radius:12px; border:1px solid var(--border-light);">
+                    <h3 style="font-size:1rem; margin-bottom:0.75rem; color:var(--primary-blue);">3. WordPress REST API Integration</h3>
+                    <form id="wp-vault-form" onsubmit="return handleSaveWpVault(event)">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>WordPress Site URL</label>
+                                <input type="url" id="v-wp-url" placeholder="https://myblog.com">
+                            </div>
+                            <div class="form-group">
+                                <label>Username</label>
+                                <input type="text" id="v-wp-user" placeholder="admin">
+                            </div>
+                            <div class="form-group">
+                                <label>Application Password</label>
+                                <input type="password" id="v-wp-pass" placeholder="xxxx xxxx xxxx xxxx">
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-purple">💾 Save WordPress Credentials to Vault</button>
+                    </form>
+                </div>
+
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Saved Workspace Vault Integrations</h2>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Integration Service</th>
+                            <th>Account Alias</th>
+                            <th>Status</th>
+                            <th>Last Updated</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="vault-summary-tbody">
+                        <tr><td colspan="5" style="text-align:center; color: var(--text-muted);">Loading vault summary...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- TAB 5: SOCIAL AUTO-POSTER -->
+        <div id="tab-social" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Connect Social Accounts for Active Slot</h2>
+                </div>
+                <form id="social-account-form" onsubmit="handleAddSocialAccount(event)">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Platform</label>
+                            <select id="soc-platform">
+                                <option value="facebook">Facebook Page (Graph API)</option>
+                                <option value="instagram">Instagram Business (Graph API)</option>
+                                <option value="pinterest">Pinterest Board (API v5)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Account / Board Name</label>
+                            <input type="text" id="soc-name" placeholder="Official Brand Page" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Page ID / Board ID / User ID</label>
+                            <input type="text" id="soc-id" placeholder="e.g. 104829104829" required>
+                        </div>
+                        <div class="form-group">
+                            <label>API Access Token</label>
+                            <input type="password" id="soc-token" placeholder="Long-lived API Access Token" required>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-purple">🔗 Connect Social Account to Active Slot</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- TAB 6: BACKLINK WATCHDOG -->
+        <div id="tab-backlinks" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Add Target Backlink to Audit & Monitor</h2>
+                </div>
+                <form id="backlink-form" onsubmit="handleAddBacklink(event)">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Target Partner Site / Name</label>
+                            <input type="text" id="bl-site" placeholder="Medium / Guest Blog Domain" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Page URL containing the Backlink</label>
+                            <input type="url" id="bl-page" placeholder="https://externalblog.com/article" required>
+                        </div>
+                        <div class="form-group">
+                            <label>My Target URL being Linked To</label>
+                            <input type="url" id="bl-target" placeholder="https://colorfiind.com" required>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-accent">🔍 Verify & Add Backlink</button>
+                </form>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Live Backlink Audit Matrix</h2>
+                    <button class="btn" onclick="quickAuditBacklinks()">🔄 Run Full Audit</button>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Partner / Site</th>
+                            <th>Page URL</th>
+                            <th>Anchor Text</th>
+                            <th>Link Relation</th>
+                            <th>Link Status</th>
+                            <th>HTTP Code</th>
+                            <th>Last Checked</th>
+                        </tr>
+                    </thead>
+                    <tbody id="backlinks-tbody">
+                        <tr><td colspan="7" style="text-align:center; color: var(--text-muted);">No backlinks tracked yet.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <footer class="site-footer">
+        AutoBlog & Marketing SaaS Suite &bull; Multi-Slot Active Hub
+    </footer>
+
+    <script>
+        function toggleTheme() {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            updateThemeButton(newTheme);
+        }
+
+        function updateThemeButton(theme) {
+            document.getElementById('theme-icon').innerText = theme === 'dark' ? '☀️' : '🌙';
+            document.getElementById('theme-text').innerText = theme === 'dark' ? 'Light Mode' : 'Dark Mode';
+        }
+
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        updateThemeButton(savedTheme);
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            
+            document.getElementById('tab-' + tabId).classList.add('active');
+            event.target.classList.add('active');
+            
+            if (tabId === 'dashboard' || tabId === 'autoblog') loadPosts();
+            if (tabId === 'vault') loadVaultSummary();
+            if (tabId === 'social') loadSocialAccounts();
+            if (tabId === 'backlinks') loadBacklinks();
+        }
+
+        async function loadSlotSettings() {
+            try {
+                const res = await fetch('/api/auth/slot-settings');
+                const data = await res.json();
+                document.getElementById('slot-indicator-text').innerText = `Slot #${data.slot_number}: ${data.slot_name}`;
+                document.getElementById('slot-name-input').value = data.slot_name || '';
+                document.getElementById('slot-domain-input').value = data.domain_url || '';
+                document.getElementById('slot-wordcount-input').value = data.word_count_target || '1500-2000';
+                document.getElementById('slot-destination-input').value = data.destination_platform || 'blogger';
+                document.getElementById('active-slot-select').value = data.slot_number;
+            } catch (e) { console.error(e); }
+        }
+
+        async function switchSlot(slotNum) {
+            const res = await fetch('/api/auth/switch-slot', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ slot_number: slotNum })
+            });
+            await res.json();
+            loadSlotSettings();
+            loadStats();
+            loadPosts();
+            loadSocialAccounts();
+            alert(`Switched active workspace profile to Slot #${slotNum}`);
+        }
+
+        async function saveSlotSettings(e) {
+            e.preventDefault();
+            const payload = {
+                slot_name: document.getElementById('slot-name-input').value,
+                domain_url: document.getElementById('slot-domain-input').value,
+                word_count_target: document.getElementById('slot-wordcount-input').value,
+                destination_platform: document.getElementById('slot-destination-input').value
+            };
+
+            await fetch('/api/auth/slot-settings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            alert('Slot Profile Settings Saved!');
+            loadSlotSettings();
+        }
+
+        async function deletePost(postId) {
+            if (!confirm('Are you sure you want to delete this article?')) return;
+            const res = await fetch(`/api/autoblog/delete-post/${postId}`, { method: 'POST' });
+            if (res.ok) {
+                alert('Article deleted!');
+                loadStats();
+                loadPosts();
+            }
+        }
+
+        async function deleteCredential(credId, serviceName) {
+            if (!confirm('Are you sure you want to delete this saved vault credential?')) return;
+            const res = await fetch(`/api/vault/delete-credential/${credId}`, { method: 'POST' });
+            if (res.ok) {
+                alert('Credential removed from Vault!');
+                if (serviceName === 'blogger_api') {
+                    document.getElementById('v-blog-id').value = '';
+                    document.getElementById('v-blog-cid').value = '';
+                    document.getElementById('v-blog-secret').value = '';
+                    document.getElementById('v-blog-refresh').value = '';
+                } else if (serviceName === 'brevo_api') {
+                    document.getElementById('v-brevo-key').value = '';
+                    document.getElementById('v-brevo-sender').value = '';
+                } else if (serviceName === 'wordpress_api') {
+                    document.getElementById('v-wp-url').value = '';
+                    document.getElementById('v-wp-user').value = '';
+                    document.getElementById('v-wp-pass').value = '';
+                }
+                loadVaultSummary();
+            }
+        }
+
+        async function loadVaultSummary() {
+            try {
+                const res = await fetch('/api/vault/credentials');
+                const data = await res.json();
+                const summary = Array.isArray(data) ? data : (data.summary || []);
+                const services = data.services || {};
+
+                if (services.blogger_api) {
+                    if (services.blogger_api.blogger_blog_id) document.getElementById('v-blog-id').value = services.blogger_api.blogger_blog_id;
+                    if (services.blogger_api.client_id) document.getElementById('v-blog-cid').value = services.blogger_api.client_id;
+                    if (services.blogger_api.client_secret) document.getElementById('v-blog-secret').value = services.blogger_api.client_secret;
+                    if (services.blogger_api.refresh_token) document.getElementById('v-blog-refresh').value = services.blogger_api.refresh_token;
+                }
+
+                if (services.brevo_api) {
+                    if (services.brevo_api.api_key) document.getElementById('v-brevo-key').value = services.brevo_api.api_key;
+                    if (services.brevo_api.sender_email) document.getElementById('v-brevo-sender').value = services.brevo_api.sender_email;
+                }
+
+                if (services.chat_api) { document.getElementById('v-chat-provider').value=services.chat_api.provider||'custom'; document.getElementById('v-chat-endpoint').value=services.chat_api.endpoint||document.getElementById('v-chat-endpoint').value; document.getElementById('v-chat-key').value=services.chat_api.api_key||''; document.getElementById('v-chat-model').value=(services.chat_api.model==='gemini-2.0-flash'?'gemini-2.5-flash-lite':(services.chat_api.model||document.getElementById('v-chat-model').value)); }
+                if (services.image_api) { document.getElementById('v-image-provider').value=services.image_api.provider||'custom'; document.getElementById('v-image-endpoint').value=services.image_api.endpoint||document.getElementById('v-image-endpoint').value; document.getElementById('v-image-key').value=services.image_api.api_key||''; document.getElementById('v-image-model').value=services.image_api.model||document.getElementById('v-image-model').value; }
+
+                if (services.dataforseo_api) {
+                    if (services.dataforseo_api.login) document.getElementById('v-dfs-login').value = services.dataforseo_api.login;
+                    if (services.dataforseo_api.password) document.getElementById('v-dfs-pass').value = services.dataforseo_api.password;
+                    if (services.dataforseo_api.location_code) document.getElementById('v-dfs-location').value = services.dataforseo_api.location_code;
+                }
+
+                if (services.wordpress_api) {
+                    if (services.wordpress_api.wp_site_url) document.getElementById('v-wp-url').value = services.wordpress_api.wp_site_url;
+                    if (services.wordpress_api.wp_username) document.getElementById('v-wp-user').value = services.wordpress_api.wp_username;
+                    if (services.wordpress_api.wp_app_password) document.getElementById('v-wp-pass').value = services.wordpress_api.wp_app_password;
+                }
+
+                const tbody = document.getElementById('vault-summary-tbody');
+                if (!summary || summary.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color: var(--text-muted);">No API keys saved in vault yet.</td></tr>';
+                    return;
+                }
+                tbody.innerHTML = summary.map(s => `
+                    <tr>
+                        <td><strong style="color:var(--primary-blue);">${escapeHtml(s.service_name.toUpperCase())}</strong></td>
+                        <td><span style="font-weight:700;">${escapeHtml(s.account_alias)}</span></td>
+                        <td><span class="badge badge-success">Encrypted & Active</span></td>
+                        <td style="color:var(--text-muted); font-size:0.85rem;">${s.updated_at}</td>
+                        <td><button class="btn btn-danger" onclick="deleteCredential(${s.id}, '${escapeHtml(s.service_name)}')">🗑️ Delete Key</button></td>
+                    </tr>
+                `).join('');
+            } catch (e) { console.error(e); }
+        }
+
+        async function handleSaveBloggerVault(e) {
+            if (e) e.preventDefault();
+            const creds = {
+                account_alias: document.getElementById('v-blog-alias').value || 'Primary Blogger Account',
+                blogger_blog_id: document.getElementById('v-blog-id').value,
+                client_id: document.getElementById('v-blog-cid').value,
+                client_secret: document.getElementById('v-blog-secret').value,
+                refresh_token: document.getElementById('v-blog-refresh').value
+            };
+            await saveVaultService('blogger_api', creds);
+            return false;
+        }
+
+        async function handleSaveBrevoVault(e) {
+            if (e) e.preventDefault();
+            const creds = {
+                account_alias: 'Brevo Email',
+                api_key: document.getElementById('v-brevo-key').value,
+                sender_email: document.getElementById('v-brevo-sender').value
+            };
+            await saveVaultService('brevo_api', creds);
+            return false;
+        }
+
+        function updateAiDefaults() {
+            const chat=document.getElementById('v-chat-provider').value, image=document.getElementById('v-image-provider').value;
+            const chatModel={gemini:'gemini-2.5-flash-lite',openai:'gpt-4o-mini',anthropic:'claude-3-5-sonnet-latest',huggingface:'meta-llama/Llama-3.1-8B-Instruct',openrouter:'openai/gpt-4o-mini',zenmux:'moonshotai/kimi-k3',pollinations:'openai',custom:''}[chat]||'';
+            const imageModel={huggingface:'black-forest-labs/FLUX.1-schnell',openai:'gpt-image-1',gemini:'gemini-3.1-flash-image-preview',stability:'stable-image-ultra',replicate:'black-forest-labs/flux-schnell',pollinations:'flux',custom:''}[image]||'';
+            document.getElementById('v-chat-model').value=chatModel; document.getElementById('v-image-model').value=imageModel;
+            const chatEndpoints={gemini:'',openai:'https://api.openai.com/v1/chat/completions',anthropic:'https://api.anthropic.com/v1/messages',huggingface:'https://router.huggingface.co/v1/chat/completions',openrouter:'https://openrouter.ai/api/v1/chat/completions',zenmux:'https://zenmux.ai/api/v1/chat/completions',pollinations:'https://gen.pollinations.ai/v1/chat/completions',custom:''};
+            const imageEndpoints={huggingface:'',openai:'https://api.openai.com/v1/images/generations',gemini:'',stability:'',replicate:'',pollinations:'',custom:''};
+            document.getElementById('v-chat-endpoint').value=chatEndpoints[chat]||'';
+            document.getElementById('v-image-endpoint').value=imageEndpoints[image]||'';
+        }
+        async function testAi(service) { updateAiDefaults(); const el=document.getElementById('ai-test-status'); el.innerText='Testing '+service+'...'; const isChat=service==='chat_api'; const res=await fetch('/api/vault/test-ai',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({service_name:service,provider:document.getElementById(isChat?'v-chat-provider':'v-image-provider').value,api_key:document.getElementById(isChat?'v-chat-key':'v-image-key').value,model:document.getElementById(isChat?'v-chat-model':'v-image-model').value,endpoint:document.getElementById(isChat?'v-chat-endpoint':'v-image-endpoint').value})}); const data=await res.json(); el.innerText=res.ok?'🟢 '+service+' connected successfully.':'🔴 '+(data.error||'API test failed.'); }
+
+        async function handleSaveAiApis(e) {
+            e.preventDefault();
+            const geminiPool=[...document.querySelectorAll('.gemini-model-option:checked')].map(x=>x.value); await saveVaultService('chat_api',{account_alias:document.getElementById('v-chat-alias').value||'Primary Chat Model',auto_model:document.getElementById('gemini-auto-model').checked,model_pool:geminiPool,provider:document.getElementById('v-chat-provider').value,endpoint:document.getElementById('v-chat-endpoint').value,api_key:document.getElementById('v-chat-key').value,model:document.getElementById('v-chat-model').value});
+            await saveVaultService('image_api',{account_alias:document.getElementById('v-image-alias').value||'Primary Image Model',provider:document.getElementById('v-image-provider').value,endpoint:document.getElementById('v-image-endpoint').value,api_key:document.getElementById('v-image-key').value,model:document.getElementById('v-image-model').value});
+            return false;
+        }
+
+        async function handleSaveDataForSeo(e) {
+            e.preventDefault();
+            await saveVaultService('dataforseo_api', {account_alias:'DataForSEO SEO Research', login:document.getElementById('v-dfs-login').value, password:document.getElementById('v-dfs-pass').value, location_code:document.getElementById('v-dfs-location').value});
+            return false;
+        }
+
+        async function testDataForSeo() {
+            const status=document.getElementById('dataforseo-test-status'); status.innerText='Testing keyword research provider...';
+            const res=await fetch('/api/seo/research',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({keywords:['test keyword'],login:document.getElementById('v-dfs-login').value,password:document.getElementById('v-dfs-pass').value,location_code:Number(document.getElementById('v-dfs-location').value||2356)})});
+            const data=await res.json(); status.innerText=data.success?'🟢 DataForSEO responded successfully.':'🔴 '+(data.error||data.volume?.error||'Check credentials.');
+        }
+
+        function renderScheduleTimes() {
+            const n=Number(document.getElementById('schedule-posts-per-day').value), wrap=document.getElementById('schedule-times-wrap');
+            wrap.innerHTML=Array.from({length:n},(_,i)=>`<div class="form-group"><label>Post ${i+1} Local Time</label><input type="time" class="schedule-time-input" value="${['10:00','18:00','20:30'][i]}"></div>`).join('');
+        }
+        function applyRecommendedTimes() { if(document.getElementById('schedule-recommended-times').checked) { const vals=['10:00','18:00','20:30']; document.querySelectorAll('.schedule-time-input').forEach((x,i)=>x.value=vals[i]); } }
+        document.getElementById('schedule-days')?.addEventListener('change',e=>document.getElementById('custom-days-wrap').style.display=e.target.value==='custom'?'block':'none');
+        async function handleScheduleCampaign(e) {
+            e.preventDefault(); const status=document.getElementById('schedule-status'); status.innerText='Creating campaign from the approved roadmap...';
+            const selected=document.getElementById('schedule-days').value, days=selected==='custom'?Number(document.getElementById('schedule-custom-days').value):Number(selected);
+            const times=[...document.querySelectorAll('.schedule-time-input')].map(x=>x.value);
+            const res=await fetch('/api/autoblog/schedule-campaign',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({days,posts_per_day:Number(document.getElementById('schedule-posts-per-day').value),times,target_platform:document.getElementById('schedule-platform').value})});
+            const data=await res.json(); status.innerText=res.ok?'🟢 '+data.message:'🔴 '+(data.error||'Scheduling failed.'); loadScheduleQueue(); loadStats();
+        }
+
+        async function loadScheduleQueue() {
+            try { const res=await fetch('/api/autoblog/queue'); const rows=await res.json(); const tbody=document.getElementById('schedule-queue-tbody');
+                tbody.innerHTML=rows.length?rows.map(q=>`<tr><td>${escapeHtml(q.topic_title)}</td><td>${escapeHtml(q.keyword)}</td><td>${q.scheduled_time}</td><td><span class="badge badge-purple">${q.status}</span></td><td>${q.status==='Scheduled'?`<button class="btn btn-danger" onclick="cancelSchedule(${q.id})">Cancel</button>`:'—'}</td></tr>`).join(''):'<tr><td colspan="5">No scheduled articles.</td></tr>';
+            } catch(e) { console.error(e); }
+        }
+        async function cancelSchedule(id) { await fetch('/api/autoblog/queue/'+id,{method:'POST'}); loadScheduleQueue(); loadStats(); }
+
+        async function handleSaveWpVault(e) {
+            if (e) e.preventDefault();
+            const creds = {
+                account_alias: 'WordPress Site',
+                wp_site_url: document.getElementById('v-wp-url').value,
+                wp_username: document.getElementById('v-wp-user').value,
+                wp_app_password: document.getElementById('v-wp-pass').value
+            };
+            await saveVaultService('wordpress_api', creds);
+            return false;
+        }
+
+        async function saveVaultService(serviceName, credentials) {
+            try {
+                const res = await fetch('/api/vault/credentials', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        service_name: serviceName,
+                        account_alias: credentials.account_alias || serviceName,
+                        credentials: credentials
+                    })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    alert(`Credentials for ${serviceName} saved securely to your workspace vault!`);
+                    loadVaultSummary();
+                } else {
+                    alert(`Error saving credentials: ${data.error || 'Server error'}`);
+                }
+            } catch (err) {
+                alert(`Failed to save credentials: ${err.message}`);
+            }
+        }
+
+        async function testBloggerConnection() {
+            const statusDiv = document.getElementById('blogger-test-status');
+            statusDiv.innerHTML = '<span style="color:#2563eb;">🔍 Connecting to Google Blogger via OAuth...</span>';
+
+            const res = await fetch('/api/vault/test-blogger', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    blogger_blog_id: document.getElementById('v-blog-id').value,
+                    client_id: document.getElementById('v-blog-cid').value,
+                    client_secret: document.getElementById('v-blog-secret').value,
+                    refresh_token: document.getElementById('v-blog-refresh').value
+                })
+            });
+
+            const data = await res.json();
+            if (res.ok && data.success) {
+                statusDiv.innerHTML = `<span style="color:#10b981;">🟢 Connected Successfully to Blog: "${escapeHtml(data.blog_name)}" (${data.url})</span>`;
+            } else {
+                statusDiv.innerHTML = `<span style="color:#ef4444;">🔴 Connection Failed: ${escapeHtml(data.error || 'Invalid credentials.')}</span>`;
+            }
+        }
+
+        async function loadProjectModelChoices() {
+            const map=[['chat_api','project-chat-account'],['image_api','project-image-account'],['dataforseo_api','project-seo-account'],['blogger_api','project-blogger-account']];
+            for (const [service,id] of map) { try { const rows=await (await fetch('/api/vault/accounts/'+service)).json(); const el=document.getElementById(id); el.innerHTML=rows.length?rows.map(x=>`<option value="${x.id}">${escapeHtml(x.account_alias)}${x.provider?' — '+escapeHtml(x.provider):''}${x.model?' — '+escapeHtml(x.model):''}</option>`).join(''):'<option value="">No saved account</option>'; } catch(e){} }
+            try { const s=await (await fetch('/api/projects/settings')).json(); if(s.domain_url)document.getElementById('project-domain').value=s.domain_url; if(s.target_country)document.getElementById('project-country').value=s.target_country; ['chat_credential_id','image_credential_id','seo_credential_id','blogger_credential_id'].forEach((k,i)=>{if(s[k])document.getElementById(map[i][1]).value=s[k];}); } catch(e){}
+        }
+        async function dashboardDecision(token,decision) { const res=await fetch('/api/demo/decision/'+token+'/'+decision,{method:'POST'}); if(!res.ok){alert('This approval link is expired or already used.');} loadDemoProgress(); loadStats(); }
+        async function htmlDecision(token,decision) { if(!confirm('Are you sure you want to '+(decision==='approve'?'APPROVE this HTML for publishing?':'REJECT and rewrite this HTML?'))) return; const res=await fetch('/api/demo/html-decision/'+token+'/'+decision,{method:'POST'}); if(res.ok){alert(decision==='approve'?'✅ HTML Approved! Article is now scheduled for publishing.':'🔄 HTML Rejected! A rewritten version will be generated shortly.');loadDemoProgress();loadStats();}else{alert('This HTML approval link is expired or already used.');} }
+
+        async function publishNow(itemId, platform) {
+            if(!confirm('Publish this article NOW to ' + (platform||'blogger').toUpperCase() + '?')) return;
+            try {
+                const res = await fetch('/api/publish-now', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({item_id:itemId, platform:platform||'blogger'})});
+                const data = await res.json();
+                if(res.ok && data.success) {
+                    alert('✅ Published successfully! ' + (data.url ? 'URL: ' + data.url : data.message || ''));
+                } else {
+                    alert('🔴 Publishing failed: ' + (data.error || 'Unknown error. Check Vault credentials.'));
+                }
+                loadDemoProgress(); loadStats();
+            } catch(e) { alert('Request error: ' + e.message); }
+        }
+
+        async function generateAllHTML() {
+            const statusDiv = document.getElementById('generate-all-status');
+            statusDiv.style.display = 'block';
+            statusDiv.style.background = '#fef3c7';
+            statusDiv.style.color = '#92400e';
+            statusDiv.innerText = '⏳ Generating HTML for all approved items... This may take a few minutes.';
+            try {
+                const res = await fetch('/api/generate-all-html', {method:'POST', headers:{'Content-Type':'application/json'}});
+                const data = await res.json();
+                if(data.success) {
+                    statusDiv.style.background = '#f0fdf4';
+                    statusDiv.style.color = '#166534';
+                    statusDiv.innerText = '✅ ' + data.message + (data.articles ? ' (' + data.articles.map(a => a.title).join(', ') + ')' : '');
+                    loadDemoProgress(); loadStats();
+                } else {
+                    statusDiv.style.background = '#fef2f2';
+                    statusDiv.style.color = '#991b1b';
+                    statusDiv.innerText = '🔴 Error: ' + (data.error || 'Unknown error');
+                }
+            } catch(e) {
+                statusDiv.style.background = '#fef2f2';
+                statusDiv.style.color = '#991b1b';
+                statusDiv.innerText = '🔴 Request error: ' + e.message;
+            }
+        }
+
+        function showScheduleModal(itemId, schedDate, schedTime, platform) {
+            const today = new Date().toISOString().split('T')[0];
+            const dateVal = schedDate || today;
+            const timeVal = schedTime || '10:00';
+            const modalHtml = `<div id="schedule-modal" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;">
+                <div style="background:#fff;border-radius:16px;padding:32px;max-width:420px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+                    <h3 style="margin:0 0 20px 0;color:#0f172a;">📅 Schedule Post</h3>
+                    <div style="margin-bottom:16px;"><label style="font-weight:700;display:block;margin-bottom:6px;">Date</label><input type="date" id="sched-modal-date" value="${dateVal}" min="${today}" style="width:100%;padding:10px;border:1px solid #e2e8f0;border-radius:8px;font-size:1rem;"></div>
+                    <div style="margin-bottom:16px;"><label style="font-weight:700;display:block;margin-bottom:6px;">Time</label><input type="time" id="sched-modal-time" value="${timeVal}" style="width:100%;padding:10px;border:1px solid #e2e8f0;border-radius:8px;font-size:1rem;"></div>
+                    <div style="margin-bottom:20px;"><label style="font-weight:700;display:block;margin-bottom:6px;">Platform</label><select id="sched-modal-platform" style="width:100%;padding:10px;border:1px solid #e2e8f0;border-radius:8px;font-size:1rem;"><option value="blogger" ${platform==='blogger'?'selected':''}>Google Blogger</option><option value="wordpress" ${platform==='wordpress'?'selected':''}>WordPress</option><option value="local" ${platform==='local'?'selected':''}>Local HTML</option></select></div>
+                    <div style="display:flex;gap:12px;">
+                        <button onclick="submitSchedule(${itemId})" style="flex:1;background:#10b981;color:#fff;padding:12px;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-size:1rem;">📅 Schedule</button>
+                        <button onclick="document.getElementById('schedule-modal').remove()" style="flex:1;background:#ef4444;color:#fff;padding:12px;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-size:1rem;">Cancel</button>
+                    </div>
+                </div></div>`;
+            const old = document.getElementById('schedule-modal');
+            if(old) old.remove();
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+        }
+
+        async function submitSchedule(itemId) {
+            const date = document.getElementById('sched-modal-date').value;
+            const time = document.getElementById('sched-modal-time').value;
+            const platform = document.getElementById('sched-modal-platform').value;
+            document.getElementById('schedule-modal').remove();
+            try {
+                const res = await fetch('/api/schedule-post', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({item_id:itemId, scheduled_date:date, scheduled_time:time, platform:platform})});
+                const data = await res.json();
+                if(res.ok && data.success) {
+                    alert('✅ ' + data.message);
+                } else {
+                    alert('🔴 Scheduling failed: ' + (data.error || 'Unknown error.'));
+                }
+                loadDemoProgress(); loadStats();
+            } catch(e) { alert('Request error: ' + e.message); }
+        }
+        async function loadDemoProgress() { try { const data=await (await fetch('/api/demo/campaign-status')).json(); const body=document.getElementById('demo-progress-tbody'); const approvedBody=document.getElementById('approved-scheduled-tbody'); const approvedCard=document.getElementById('approved-scheduled-card'); if(!data.items||!data.items.length){body.innerHTML='<tr><td colspan="9">No campaign loaded.</td></tr>';approvedCard.style.display='none';return;} 
+            const pendingItems=[];const approvedItems=[];
+            data.items.forEach(x=>{if(x.plan_status==='Approved'||x.plan_status==='Provisional Approved'||x.article_status==='HTML Ready'||x.article_status==='Final Article Approved'){approvedItems.push(x);}else{pendingItems.push(x);}});
+            body.innerHTML=pendingItems.length?pendingItems.map(x=>`<tr><td>Day ${x.day_number} / Slot ${x.post_number}</td><td>${escapeHtml(x.title)}</td><td><span class="badge badge-purple">${x.plan_status}</span></td><td><span class="badge badge-purple">${x.article_status}</span></td><td>${x.scheduled_date||'—'}</td><td>${x.scheduled_time||'—'}</td><td><span class="badge badge-success">${(x.target_platform||'local').toUpperCase()}</span></td><td>${x.html_path?`<a href="${x.html_path}" target="_blank">View HTML</a>`:'—'}</td><td>${x.approval_token?`<button class="btn btn-purple" onclick="dashboardDecision('${x.approval_token}','approve')">Approve</button> <button class="btn btn-danger" onclick="dashboardDecision('${x.approval_token}','reject')">Disapprove</button>`:''}${x.html_approval_token?` <button class="btn btn-accent" onclick="htmlDecision('${x.html_approval_token}','approve')">✅ Approve HTML</button> <button class="btn btn-danger" onclick="htmlDecision('${x.html_approval_token}','reject')">🔄 Rewrite HTML</button>`:''}${(!x.approval_token&&!x.html_approval_token)?'—':''}</td></tr>`).join(''):'<tr><td colspan="9" style="text-align:center;color:var(--accent-green);font-weight:700;">✅ All items approved! Check Approved & Scheduled section below.</td></tr>';
+            if(approvedItems.length){approvedCard.style.display='block';approvedBody.innerHTML=approvedItems.map(x=>`<tr><td>Day ${x.day_number}</td><td><strong>${escapeHtml(x.title)}</strong></td><td>${x.scheduled_date||'—'}</td><td>${x.scheduled_time||'—'}</td><td><span class="badge badge-success">${(x.target_platform||'local').toUpperCase()}</span></td><td><span class="badge badge-success">${x.article_status}</span></td><td>${x.html_path?`<a href="${x.html_path}" target="_blank">View HTML</a>`:'—'}</td><td style="white-space:nowrap;">${x.article_status!=='Published'?`<button class="btn btn-accent" style="font-size:0.8rem;padding:6px 12px;" onclick="publishNow(${x.id},'${x.target_platform||'blogger'}')">🚀 Publish Now</button> <button class="btn btn-purple" style="font-size:0.8rem;padding:6px 12px;" onclick="showScheduleModal(${x.id},'${x.scheduled_date||''}','${x.scheduled_time||''}','${x.target_platform||'blogger'}')">📅 Schedule</button>`:'<span style="color:#10b981;font-weight:700;">✅ Published</span>'}</td></tr>`).join('');}else{approvedCard.style.display='none';}
+        } catch(e){} }
+        async function createDemoCampaign() {
+            const status=document.getElementById('project-research-status'); status.innerText='Creating local demo roadmap without paid SEO, Chat, or Image requests...';
+            const postingTimes=[...document.querySelectorAll('.project-posting-time')].map(x=>x.value);
+            const startDate=document.getElementById('project-start-date').value||new Date().toISOString().split('T')[0];
+            const res=await fetch('/api/demo/campaign',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({domain_url:document.getElementById('project-domain').value,country:document.getElementById('project-country').value,language_code:document.getElementById('project-language').value,days:Number(document.getElementById('project-days').value),posts_per_day:Number(document.getElementById('project-posts-per-day').value),start_date:startDate,posting_times:postingTimes,target_platform:document.getElementById('project-platform').value})}); const data=await res.json(); status.innerText=res.ok?(data.email_sent?'🟢 Roadmap created and approval email sent with full draft content.':'🟠 Roadmap created, but Brevo email was not sent. Check Brevo API key.'):'🔴 '+(data.error||'Demo failed.'); loadDemoProgress(); if(res.ok) window.open('/api/demo/review/'+data.campaign_id,'_blank');
+        }
+        async function saveProjectResearch(e) {
+            e.preventDefault(); const status=document.getElementById('project-research-status'); status.innerText='Saving project and researching the website...';
+            const settings={domain_url:document.getElementById('project-domain').value,target_country:document.getElementById('project-country').value,target_language:document.getElementById('project-language').value,destination_platform:document.getElementById('project-platform').value,chat_credential_id:document.getElementById('project-chat-account').value,image_credential_id:document.getElementById('project-image-account').value,seo_credential_id:document.getElementById('project-seo-account').value,blogger_credential_id:document.getElementById('project-blogger-account').value};
+            await fetch('/api/projects/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(settings)});
+            const postingTimes=[...document.querySelectorAll('.project-posting-time')].map(x=>x.value);
+            const startDate=document.getElementById('project-start-date').value||new Date().toISOString().split('T')[0];
+            const res=await fetch('/api/research/ai-roadmap',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({domain_url:settings.domain_url,country:settings.target_country,language_code:settings.target_language,days:Number(document.getElementById('project-days').value),posts_per_day:Number(document.getElementById('project-posts-per-day').value),start_date:startDate,posting_times:postingTimes,target_platform:document.getElementById('project-platform').value})}); const data=await res.json();
+            if(!res.ok){status.innerText='🔴 '+(data.error||'Website research failed.');return;} status.innerText=data.email_sent?'🟢 Roadmap researched and approval email sent with full draft content.':'🟠 Roadmap researched, but approval email was not sent. Check Brevo API key.'; const tbody=document.getElementById('automatic-roadmap-tbody'); tbody.innerHTML=(data.suggested_roadmap||[]).map(r=>`<tr><td><strong>${escapeHtml(r.topic)}</strong></td><td>${escapeHtml(r.keyword)}</td><td>Related questions and long-tail variations will be assigned by research</td><td><a href="${r.target_link}" target="_blank">${escapeHtml(r.target_anchor||'Relevant page')}</a></td><td>${escapeHtml(r.competition)}${r.search_volume?' — volume: '+r.search_volume:''}${r.difficulty?' — difficulty: '+r.difficulty:''}</td><td><button class="btn btn-purple" onclick="approveRoadmapPlan(${r.plan_id},this)">Approve Topic</button></td></tr>`).join(''); document.getElementById('automatic-roadmap-card').style.display='block';
+        }
+
+        async function approveRoadmapPlan(id,button) { const res=await fetch('/api/content-plans/'+id+'/approve',{method:'POST'}); const data=await res.json(); if(res.ok){button.innerText='Approved';button.disabled=true;}else alert(data.error||'Approval failed.'); }
+
+        async function handleAnalyzeDomain(e) {
+            e.preventDefault();
+            const btn = document.getElementById('btn-audit-submit');
+            btn.innerText = '⏳ Crawling Domain & Researching Keywords...';
+
+            const res = await fetch('/api/auditor/analyze-domain', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ domain_url: document.getElementById('audit-domain-url').value, country: document.getElementById('audit-country').value, region: document.getElementById('audit-region').value, city: document.getElementById('audit-city').value, language_code: document.getElementById('audit-language').value })
+            });
+
+            const data = await res.json();
+            btn.innerText = '🚀 Audit Domain & Search High-Yield Keywords';
+
+            if (res.ok && data.status === 'success') {
+                const info = data.domain_info;
+                document.getElementById('audit-summary-box').innerHTML = `
+                    <p style="margin:0 0 6px 0; font-size:1.1rem; font-weight:800; color:var(--primary-blue);">🌐 Website Profile: ${escapeHtml(info.title || info.domain)}</p>
+                    <p style="margin:0; color:var(--text-muted); font-size:0.9rem;">${escapeHtml(info.description || 'Core Business Services Detected')}</p>
+                `;
+
+                const tbody = document.getElementById('audit-roadmap-tbody');
+                tbody.innerHTML = data.suggested_roadmap.map(r => `
+                    <tr>
+                        <td><strong>${r.day}</strong></td>
+                        <td><strong>${escapeHtml(r.topic)}</strong></td>
+                        <td><code>${escapeHtml(r.keyword)}</code></td>
+                        <td><span class="badge badge-success">${r.competition}</span></td>
+                        <td><button class="btn btn-purple" onclick="createContentPlan(decodeURIComponent('${encodeURIComponent(JSON.stringify(r))}'))">Create Plan</button></td>
+                    </tr>
+                `).join('');
+
+                document.getElementById('audit-results-card').style.display = 'block';
+            } else {
+                alert(data.error || 'Domain crawl failed.');
+            }
+        }
+
+        async function createContentPlan(encoded) {
+            const r = typeof encoded === 'string' ? JSON.parse(encoded) : encoded;
+            const res = await fetch('/api/content-plans', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({title:r.topic, primary_keyword:r.keyword, target_link:r.target_link, target_anchor:r.target_anchor, supporting_keywords:[], image_plan:{count:'2-4 relevant images', alt_text:true}, video_needed:false})});
+            const data = await res.json();
+            alert(res.ok ? `Plan #${data.plan_id} created. Review it, then approve it before scheduling.` : (data.error || 'Could not create plan.'));
+        }
+
+        async function loadStats() {
+            try {
+                const res = await fetch('/api/stats');
+                const data = await res.json();
+                document.getElementById('stat-posts').innerText = data.total_posts;
+                document.getElementById('stat-scheduled').innerText = data.scheduled_count;
+                document.getElementById('stat-social').innerText = data.social_shares;
+                document.getElementById('stat-backlinks').innerText = data.total_backlinks;
+                document.getElementById('stat-dofollow').innerText = data.active_dofollow;
+            } catch (e) { console.error(e); }
+        }
+
+        async function loadPosts() {
+            try {
+                const res = await fetch('/api/autoblog/posts');
+                const posts = await res.json();
+                const tbody = document.getElementById('recent-posts-tbody');
+                if (posts.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color: var(--text-muted);">No posts published in this slot yet.</td></tr>';
+                    return;
+                }
+                tbody.innerHTML = posts.map(p => `
+                    <tr>
+                        <td><strong>${escapeHtml(p.title)}</strong></td>
+                        <td>${escapeHtml(p.category)}</td>
+                        <td><span class="badge badge-purple">${p.source_type}</span></td>
+                        <td><span class="badge badge-success">${p.status}</span></td>
+                        <td><a href="${p.published_url}" target="_blank" style="color:var(--primary-blue); text-decoration:none; font-weight:700;">Open Article ↗</a></td>
+                        <td><button class="btn btn-danger" onclick="deletePost(${p.id})">🗑️ Delete</button></td>
+                    </tr>
+                `).join('');
+            } catch (e) { console.error(e); }
+        }
+
+        async function loadSocialAccounts() {
+            try {
+                const res = await fetch('/api/social/accounts');
+                const accs = await res.json();
+                const tbody = document.getElementById('social-accounts-tbody');
+                if (accs.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color: var(--text-muted);">No social accounts connected to this slot yet.</td></tr>';
+                    return;
+                }
+                tbody.innerHTML = accs.map(a => `
+                    <tr>
+                        <td><span class="badge badge-purple">${a.platform.toUpperCase()}</span></td>
+                        <td><strong>${escapeHtml(a.account_name)}</strong></td>
+                        <td><code>${escapeHtml(a.page_id_or_board_id)}</code></td>
+                        <td><span class="badge badge-success">Active</span></td>
+                        <td>${a.created_at}</td>
+                    </tr>
+                `).join('');
+            } catch (e) { console.error(e); }
+        }
+
+        async function loadBacklinks() {
+            try {
+                const res = await fetch('/api/backlinks');
+                const links = await res.json();
+                const tbody = document.getElementById('backlinks-tbody');
+                if (links.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color: var(--text-muted);">No backlinks tracked yet.</td></tr>';
+                    return;
+                }
+                tbody.innerHTML = links.map(l => `
+                    <tr>
+                        <td><strong>${escapeHtml(l.target_site)}</strong></td>
+                        <td><a href="${l.backlink_url}" target="_blank" style="color:var(--primary-blue); text-decoration:none;">${escapeHtml(l.backlink_url)}</a></td>
+                        <td><code>${escapeHtml(l.anchor_text || '-')}</code></td>
+                        <td>${l.is_dofollow ? '<span class="badge badge-success">Dofollow</span>' : '<span class="badge badge-warning">Nofollow</span>'}</td>
+                        <td>${l.is_found ? '<span class="badge badge-success">Verified Active</span>' : '<span class="badge badge-danger">Not Found</span>'}</td>
+                        <td><code>${l.status_code}</code></td>
+                        <td style="color:var(--text-muted); font-size:0.8rem;">${l.last_checked}</td>
+                    </tr>
+                `).join('');
+            } catch (e) { console.error(e); }
+        }
+
+        async function handleGenerateSubmit(e) {
+            e.preventDefault();
+            const payload = {
+                keyword: document.getElementById('gen-keyword').value,
+                category: document.getElementById('gen-category').value,
+                target_platform: document.getElementById('gen-platform').value,
+                target_link: document.getElementById('gen-target-link').value,
+                target_anchor: document.getElementById('gen-target-anchor').value,
+                auto_share_social: document.getElementById('gen-auto-social') ? document.getElementById('gen-auto-social').checked : true
+            };
+
+            const res = await fetch('/api/autoblog/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            if (res.ok && data.status === 'completed') {
+                alert('Human Style Article Written & Direct Published with Visuals & Deep Links!');
+            } else {
+                alert(`🔴 Publishing Failed: ${data.error || 'Check Vault API Credentials.'}`);
+            }
+            loadStats();
+            loadPosts();
+        }
+
+        async function handleAddSocialAccount(e) {
+            e.preventDefault();
+            const payload = {
+                platform: document.getElementById('soc-platform').value,
+                account_name: document.getElementById('soc-name').value,
+                page_id_or_board_id: document.getElementById('soc-id').value,
+                access_token: document.getElementById('soc-token').value
+            };
+
+            await fetch('/api/social/accounts', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            alert('Social Account Connected to Active Slot!');
+            loadStats();
+            loadSocialAccounts();
+        }
+
+        async function handleAddBacklink(e) {
+            e.preventDefault();
+            const payload = {
+                target_site: document.getElementById('bl-site').value,
+                backlink_url: document.getElementById('bl-page').value,
+                my_url: document.getElementById('bl-target').value,
+                notes: document.getElementById('bl-notes') ? document.getElementById('bl-notes').value : ''
+            };
+
+            await fetch('/api/backlinks', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            alert('Backlink Verified and Added!');
+            loadStats();
+            loadBacklinks();
+        }
+
+        async function quickGenerateArticle() {
+            const res = await fetch('/api/autoblog/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    keyword: 'Human Tone Content Automation Best Practices',
+                    category: 'Technology',
+                    target_platform: 'blogger',
+                    auto_share_social: true
+                })
+            });
+            const data = await res.json();
+            if (res.ok && data.status === 'completed') {
+                alert('1,800 Word Human Article Generated & Posted to Blogger!');
+            } else {
+                alert(`🔴 Publishing Result: ${data.error || 'Check Blogger API Credentials in Vault.'}`);
+            }
+            loadStats();
+            loadPosts();
+        }
+
+        async function quickAuditBacklinks() {
+            await fetch('/api/backlinks/audit', { method: 'POST' });
+            alert('Full Backlink Audit Complete!');
+            loadStats();
+            loadBacklinks();
+        }
+
+        function escapeHtml(text) {
+            return (text || '').replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        }
+
+        function updateCalendarDates() {
+            const days = Number(document.getElementById('project-days').value);
+            const perDay = Number(document.getElementById('project-posts-per-day').value);
+            const startDate = document.getElementById('project-start-date').value || new Date().toISOString().split('T')[0];
+            if (!document.getElementById('project-start-date').value) document.getElementById('project-start-date').value = startDate;
+            const timesGrid = document.getElementById('posting-times-grid');
+            timesGrid.innerHTML = Array.from({length: perDay}, (_, i) => `<div class="form-group"><label>Post ${i+1} Time</label><input type="time" class="project-posting-time" value="${['10:00','18:00','20:30'][i]||'10:00'}"></div>`).join('');
+            const calDisplay = document.getElementById('calendar-dates-display');
+            const startDateObj = new Date(startDate + 'T00:00:00');
+            let calHtml = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin-top:8px;">';
+            for (let d = 0; d < days; d++) {
+                const date = new Date(startDateObj); date.setDate(date.getDate() + d);
+                const dateStr = date.toLocaleDateString('en-IN', {weekday:'short', month:'short', day:'numeric'});
+                const timeInputs = Array.from({length: perDay}, (_, p) => `<span style="font-size:0.75rem;color:var(--text-muted);">Post ${p+1}: ${['10:00','18:00','20:30'][p]||'10:00'}</span>`).join('<br>');
+                calHtml += `<div style="background:var(--card-bg);border:1px solid var(--border-light);border-radius:8px;padding:8px 12px;font-size:0.8rem;"><div style="font-weight:700;color:var(--primary-blue);">Day ${d+1}</div><div style="color:var(--text-dark);">${dateStr}</div>${timeInputs}</div>`;
+            }
+            calHtml += '</div>';
+            calHtml += `<p style="margin-top:8px;font-size:0.82rem;color:var(--text-muted);">Total: <strong>${days * perDay} blogs</strong> across <strong>${days} days</strong> on <strong>${document.getElementById('project-platform').value.toUpperCase()}</strong></p>`;
+            calDisplay.innerHTML = calHtml;
+        }
+
+        // Initial Load
+        loadSlotSettings();
+        loadProjectModelChoices();
+        loadDemoProgress();
+        setInterval(loadDemoProgress, 30000);
+        loadStats();
+        loadPosts();
+        loadScheduleQueue();
+        renderScheduleTimes();
+        updateCalendarDates();
+    </script>
+</body>
+</html>
