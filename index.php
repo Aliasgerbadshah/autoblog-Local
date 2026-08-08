@@ -784,25 +784,49 @@ function handleApiRoute($uri) {
             if (strlen($clean) > 4 && !in_array(strtolower($clean), array_map('strtolower', $base))) $base[] = $clean;
         }
         if (empty($base)) $base = [$seed];
-        $base = array_merge($base, ["$seed seasonal ideas", "best $seed combinations", "$seed buying guide", "$seed common mistakes"]);
+        // Add current year/month to ALL base topics so they're always fresh
+        $nowYear = date('Y');
+        $nowMonth = date('F');
+        $base = array_merge($base, [
+            "$seed strategies $nowMonth $nowYear",
+            "best $seed solutions $nowYear",
+            "$seed complete guide $nowYear",
+            "$seed tips and tricks $nowMonth $nowYear",
+            "$seed common mistakes to avoid $nowYear"
+        ]);
 
-        // Avoid duplicate topics: check ALL topics for this user (across all domains)
+        // Avoid duplicate topics: check ALL sources — database + persistent JSON file
         // Normalize domain for matching: strip protocol, www, trailing slash
         $domainNorm = preg_replace('#^(https?://)?(www\.)?#', '', strtolower(rtrim($domain, '/')));
         $db = getDB();
         $usedTopics = [];
-        // Load all topics for this user from created_blog_topics (any domain — prevents cross-campaign dupes too)
+        
+        // SOURCE 1: Persistent JSON file (survives redeployment!)
+        $topicFilePath = dirname(__DIR__) . '/data/used_topics.json';
+        if (file_exists($topicFilePath)) {
+            $topicFile = json_decode(file_get_contents($topicFilePath), true);
+            if (!empty($topicFile['topics'])) {
+                foreach ($topicFile['topics'] as $t) {
+                    $tDomain = preg_replace('#^(https?://)?(www\.)?#', '', strtolower(rtrim($t['domain'] ?? '', '/')));
+                    if ($tDomain === $domainNorm || empty($tDomain)) {
+                        $usedTopics[strtolower(trim($t['topic']))] = true;
+                        $usedTopics[strtolower(trim($t['keyword']))] = true;
+                    }
+                }
+            }
+        }
+        
+        // SOURCE 2: Database created_blog_topics table
         $stmt = $db->prepare('SELECT title, primary_keyword, domain_url FROM created_blog_topics WHERE user_id = ?');
         $stmt->execute([$userId]);
         foreach ($stmt->fetchAll() as $ut) {
             $utDomain = preg_replace('#^(https?://)?(www\.)?#', '', strtolower(rtrim($ut['domain_url'] ?? '', '/')));
-            // Match if same normalized domain OR if domain is empty
             if ($utDomain === $domainNorm || empty($utDomain)) {
                 $usedTopics[strtolower(trim($ut['title']))] = true;
                 $usedTopics[strtolower(trim($ut['primary_keyword']))] = true;
             }
         }
-        // Also check ALL campaign_items for this user (domain-normalized)
+        // SOURCE 3: ALL campaign_items for this user
         $stmt = $db->prepare('SELECT ci.title, ci.primary_keyword, c.domain_url FROM campaign_items ci JOIN campaigns c ON c.id = ci.campaign_id WHERE c.user_id = ?');
         $stmt->execute([$userId]);
         foreach ($stmt->fetchAll() as $ut) {
@@ -947,6 +971,14 @@ function handleApiRoute($uri) {
                 // Track this topic to avoid duplicates in future campaigns
                 $stmt = $db->prepare('INSERT OR IGNORE INTO created_blog_topics (user_id, campaign_id, title, primary_keyword, domain_url, created_at) VALUES (?, ?, ?, ?, ?, ?)');
                 $stmt->execute([$userId, $campaignId, ucwords($kw), $kw, $domain, $now]);
+                // ALSO save to persistent JSON file (survives redeployment!)
+                $topicFilePath = dirname(__DIR__) . '/data/used_topics.json';
+                $topicFileData = file_exists($topicFilePath) ? json_decode(file_get_contents($topicFilePath), true) : ['topics' => []];
+                if (!is_array($topicFileData)) $topicFileData = ['topics' => []];
+                if (!isset($topicFileData['topics'])) $topicFileData['topics'] = [];
+                $topicFileData['topics'][] = ['topic' => ucwords($kw), 'keyword' => $kw, 'domain' => $domain, 'date' => $now, 'status' => 'pending', 'user_id' => $userId, 'campaign_id' => $campaignId];
+                $topicFileData['_last_updated'] = date('Y-m-d H:i:s');
+                file_put_contents($topicFilePath, json_encode($topicFileData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
                 $token = generateToken();
                 $stmt = $db->prepare('INSERT INTO approval_tokens (user_id, campaign_item_id, approval_type, token, created_at) VALUES (?, ?, ?, ?, ?)');
                 $stmt->execute([$userId, $itemId, 'roadmap', $token, $now]);
@@ -966,27 +998,32 @@ function handleApiRoute($uri) {
     // Demo campaign status
     if ($uri === '/api/demo/campaign-status') {
         $db = getDB();
-        $stmt = $db->prepare('SELECT id FROM campaigns WHERE user_id = ? ORDER BY id DESC LIMIT 1');
-        $stmt->execute([$userId]);
-        $campaign = $stmt->fetch();
-        if (!$campaign) jsonResponse(['campaign' => null, 'items' => []]);
+        // Get ALL non-archived campaigns for this user
+        $stmt = $db->prepare('SELECT id, domain_url, days, posts_per_day, status FROM campaigns WHERE user_id = ? AND status != ? ORDER BY id DESC');
+        $stmt->execute([$userId, 'Archived']);
+        $allCampaigns = $stmt->fetchAll();
+        
+        $allRows = [];
+        foreach ($allCampaigns as $campaign) {
+            $stmt = $db->prepare('SELECT id, day_number, post_number, title, primary_keyword, plan_status, article_status, html_path, scheduled_date, scheduled_time, target_platform, campaign_id FROM campaign_items WHERE campaign_id = ? AND plan_status NOT IN ("Provisional Disapproved","Rejected","Replacement Pending") ORDER BY day_number, post_number');
+            $stmt->execute([$campaign['id']]);
+            $rows = $stmt->fetchAll();
+            foreach ($rows as &$row) {
+                $stmt2 = $db->prepare("SELECT token FROM approval_tokens WHERE campaign_item_id = ? AND approval_type = 'roadmap' AND decision IN ('Pending','Provisional') ORDER BY id DESC LIMIT 1");
+                $stmt2->execute([$row['id']]);
+                $tok = $stmt2->fetch();
+                $row['approval_token'] = $tok ? $tok['token'] : '';
 
-        $stmt = $db->prepare('SELECT id, day_number, post_number, title, primary_keyword, plan_status, article_status, html_path, scheduled_date, scheduled_time, target_platform FROM campaign_items WHERE campaign_id = ? ORDER BY day_number, post_number');
-        $stmt->execute([$campaign['id']]);
-        $rows = $stmt->fetchAll();
-        foreach ($rows as &$row) {
-            $stmt2 = $db->prepare("SELECT token FROM approval_tokens WHERE campaign_item_id = ? AND approval_type = 'roadmap' AND decision IN ('Pending','Provisional') ORDER BY id DESC LIMIT 1");
-            $stmt2->execute([$row['id']]);
-            $tok = $stmt2->fetch();
-            $row['approval_token'] = $tok ? $tok['token'] : '';
-
-            // HTML approval token for in-dashboard HTML approve/disapprove
-            $stmt3 = $db->prepare("SELECT token FROM approval_tokens WHERE campaign_item_id = ? AND approval_type = 'html' AND decision = 'Pending' ORDER BY id DESC LIMIT 1");
-            $stmt3->execute([$row['id']]);
-            $htmlTok = $stmt3->fetch();
-            $row['html_approval_token'] = $htmlTok ? $htmlTok['token'] : '';
+                // HTML approval token for in-dashboard HTML approve/disapprove
+                $stmt3 = $db->prepare("SELECT token FROM approval_tokens WHERE campaign_item_id = ? AND approval_type = 'html' AND decision = 'Pending' ORDER BY id DESC LIMIT 1");
+                $stmt3->execute([$row['id']]);
+                $htmlTok = $stmt3->fetch();
+                $row['html_approval_token'] = $htmlTok ? $htmlTok['token'] : '';
+                $row['campaign_domain'] = $campaign['domain_url'] ?? '';
+            }
+            $allRows = array_merge($allRows, $rows);
         }
-        jsonResponse(['campaign' => $campaign, 'items' => $rows]);
+        jsonResponse(['campaigns' => $allCampaigns, 'items' => $allRows]);
     }
 
     // ========== PUBLISH NOW — Immediately publish an approved HTML article to Blogger ==========
@@ -1277,6 +1314,63 @@ function handleApiRoute($uri) {
     }
 
     // ========== CRON TEST — Check if cron/scheduler is working ==========
+    // ========== TOPIC HISTORY — Export/Import persistent topic file ==========
+    if ($uri === '/api/topic-history' && $method === 'GET') {
+        $topicFilePath = dirname(__DIR__) . '/data/used_topics.json';
+        $topicFileData = file_exists($topicFilePath) ? json_decode(file_get_contents($topicFilePath), true) : ['topics' => []];
+        // Also merge with database topics
+        $db = getDB();
+        $stmt = $db->prepare('SELECT title, primary_keyword, domain_url, created_at FROM created_blog_topics WHERE user_id = ?');
+        $stmt->execute([$userId]);
+        $dbTopics = $stmt->fetchAll();
+        jsonResponse(['success' => true, 'file_topics' => count($topicFileData['topics'] ?? []), 'db_topics' => count($dbTopics), 'topics' => $topicFileData['topics'] ?? [], 'db_rows' => $dbTopics]);
+    }
+    if ($uri === '/api/topic-history/import' && $method === 'POST') {
+        $importTopics = $input['topics'] ?? [];
+        if (empty($importTopics)) jsonResponse(['success' => false, 'error' => 'No topics array provided.'], 400);
+        $topicFilePath = dirname(__DIR__) . '/data/used_topics.json';
+        $topicFileData = file_exists($topicFilePath) ? json_decode(file_get_contents($topicFilePath), true) : ['topics' => []];
+        if (!isset($topicFileData['topics'])) $topicFileData['topics'] = [];
+        $added = 0;
+        $existingKeys = [];
+        foreach ($topicFileData['topics'] as $et) { $existingKeys[strtolower(trim($et['topic'] ?? ''))] = true; }
+        foreach ($importTopics as $t) {
+            $key = strtolower(trim($t['topic'] ?? ''));
+            if (!empty($key) && !isset($existingKeys[$key])) {
+                $topicFileData['topics'][] = $t;
+                $existingKeys[$key] = true;
+                $added++;
+            }
+        }
+        $topicFileData['_last_updated'] = date('Y-m-d H:i:s');
+        file_put_contents($topicFilePath, json_encode($topicFileData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+        jsonResponse(['success' => true, 'added' => $added, 'total' => count($topicFileData['topics']), 'message' => "Imported $added new topics. Total: " . count($topicFileData['topics'])]);
+    }
+    if ($uri === '/api/topic-history/sync-db' && $method === 'POST') {
+        // Sync all database topics into the persistent JSON file
+        $db = getDB();
+        $stmt = $db->prepare('SELECT cbt.title, cbt.primary_keyword, cbt.domain_url, cbt.created_at, cbt.user_id, cbt.campaign_id, ci.plan_status FROM created_blog_topics cbt LEFT JOIN campaign_items ci ON ci.campaign_id = cbt.campaign_id AND ci.primary_keyword = cbt.primary_keyword WHERE cbt.user_id = ?');
+        $stmt->execute([$userId]);
+        $dbTopics = $stmt->fetchAll();
+        $topicFilePath = dirname(__DIR__) . '/data/used_topics.json';
+        $topicFileData = file_exists($topicFilePath) ? json_decode(file_get_contents($topicFilePath), true) : ['topics' => []];
+        if (!isset($topicFileData['topics'])) $topicFileData['topics'] = [];
+        $existingKeys = [];
+        foreach ($topicFileData['topics'] as $et) { $existingKeys[strtolower(trim($et['topic'] ?? ''))] = true; }
+        $added = 0;
+        foreach ($dbTopics as $t) {
+            $key = strtolower(trim($t['title'] ?? ''));
+            if (!empty($key) && !isset($existingKeys[$key])) {
+                $topicFileData['topics'][] = ['topic' => $t['title'], 'keyword' => $t['primary_keyword'], 'domain' => $t['domain_url'] ?? '', 'date' => $t['created_at'] ?? '', 'status' => strtolower($t['plan_status'] ?? 'pending'), 'user_id' => $t['user_id'], 'campaign_id' => $t['campaign_id']];
+                $existingKeys[$key] = true;
+                $added++;
+            }
+        }
+        $topicFileData['_last_updated'] = date('Y-m-d H:i:s');
+        file_put_contents($topicFilePath, json_encode($topicFileData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+        jsonResponse(['success' => true, 'added' => $added, 'total_in_file' => count($topicFileData['topics']), 'total_in_db' => count($dbTopics), 'message' => "Synced $added new topics from database to file. File total: " . count($topicFileData['topics'])]);
+    }
+
     if ($uri === '/api/cron-test' && $method === 'GET') {
         $db = getDB();
         // Check scheduled_queue
@@ -1404,6 +1498,8 @@ function handleApiRoute($uri) {
                 $stmt->execute([$tok['id']]);
                 $stmt = $db->prepare("UPDATE campaign_items SET plan_status = 'Approved' WHERE id = ?");
                 $stmt->execute([$item['id']]);
+                // Update persistent topic file
+                updateTopicStatusInFile($item['title'], 'approved');
 
                 // Auto-generate HTML article
                 $stmt = $db->prepare('SELECT * FROM campaign_items WHERE id = ?');
@@ -1424,6 +1520,7 @@ function handleApiRoute($uri) {
                 // Disapprove: IMMEDIATELY create replacement (don't wait)
                 $stmt = $db->prepare('UPDATE campaign_items SET plan_status = ? WHERE id = ?');
                 $stmt->execute(['Provisional Disapproved', $item['id']]);
+                updateTopicStatusInFile($item['title'], 'rejected');
 
                 $newToken = generateToken();
                 $newTitle = $item['title'] . ' — New Research Angle';
@@ -1460,6 +1557,7 @@ function handleApiRoute($uri) {
         if ($decision === 'approve') {
             $stmt = $db->prepare("UPDATE campaign_items SET plan_status = 'Approved' WHERE id = ?");
             $stmt->execute([$item['id']]);
+            updateTopicStatusInFile($item['title'], 'approved');
 
             // Generate HTML article
             $stmt = $db->prepare('SELECT * FROM campaign_items WHERE id = ?');

@@ -136,3 +136,27 @@ function validateImageUrl($url, $timeout = 5) {
     if ($contentType && !preg_match('/image\//i', $contentType) && !preg_match('/octet-stream/i', $contentType)) return false;
     return true;
 }
+
+/**
+ * Update a topic's status in the persistent used_topics.json file.
+ * This file survives code redeployment — the database may be reset but this file persists.
+ */
+function updateTopicStatusInFile($topicTitle, $status) {
+    $topicFilePath = dirname(__DIR__) . '/data/used_topics.json';
+    if (!file_exists($topicFilePath)) return;
+    $topicFileData = json_decode(file_get_contents($topicFilePath), true);
+    if (empty($topicFileData['topics'])) return;
+    $titleLower = strtolower(trim($topicTitle));
+    $updated = false;
+    foreach ($topicFileData['topics'] as &$t) {
+        if (strtolower(trim($t['topic'] ?? '')) === $titleLower) {
+            $t['status'] = $status;
+            $updated = true;
+        }
+    }
+    unset($t);
+    if ($updated) {
+        $topicFileData['_last_updated'] = date('Y-m-d H:i:s');
+        file_put_contents($topicFilePath, json_encode($topicFileData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+    }
+}
