@@ -425,6 +425,7 @@
             <button class="tab-btn" onclick="switchTab('vault')">🔑 API Vault & Integrations</button>
             <button class="tab-btn" onclick="switchTab('social')">Social Auto-Poster</button>
             <button class="tab-btn" onclick="switchTab('backlinks')">🌐 Backlink Watchdog</button>
+            <button class="tab-btn" onclick="switchTab('topics')">📋 Topics History</button>
         </div>
 
         <!-- STATS BAR -->
@@ -557,14 +558,18 @@
                 <table><thead><tr><th>Article Topic</th><th>Primary Keyword</th><th>Supporting Keywords</th><th>Target Website Page</th><th>Demand / Difficulty</th><th>Human Review</th></tr></thead><tbody id="automatic-roadmap-tbody"></tbody></table>
             </div>
             <div class="card" id="demo-progress-card">
-                <div class="card-header"><h2 class="card-title">✅ Roadmap Approval Progress</h2></div>
+                <div class="card-header"><h2 class="card-title">✅ Roadmap Approval Progress</h2>
+                    <div style="display:flex;gap:8px;">
+                        <button class="btn btn-accent" onclick="generateAllHtml()" id="btn-gen-all-html">⚡ Generate All HTML</button>
+                        <button class="btn" style="background:#0f172a;" onclick="runCronNow()">⏱️ Run Cron Now</button>
+                    </div>
+                </div>
                 <table><thead><tr><th>Day/Slot</th><th>Blog</th><th>Roadmap Status</th><th>Article Status</th><th>Schedule Date</th><th>Time</th><th>Platform</th><th>HTML</th><th>Action</th></tr></thead><tbody id="demo-progress-tbody"><tr><td colspan="9">No campaign loaded.</td></tr></tbody></table>
             </div>
             <!-- APPROVED & SCHEDULED ITEMS (separate from pending) -->
             <div class="card" id="approved-scheduled-card" style="display:none; border-top:4px solid #10b981;">
-                <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;"><h2 class="card-title" style="margin:0;">✅ Approved & Scheduled Blogs</h2><div style="display:flex;gap:8px;"><button class="btn btn-accent" style="font-size:0.8rem;padding:8px 16px;" onclick="runCronNow()">🔄 Run Cron Now</button><button class="btn btn-accent" style="font-size:0.8rem;padding:8px 16px;" onclick="generateAllHTML()">⚡ Generate All HTML</button></div></div>
+                <div class="card-header"><h2 class="card-title">✅ Approved & Scheduled Blogs</h2></div>
                 <p style="color:var(--text-muted); font-size:0.85rem;">These approved blogs are locked and scheduled for posting. They will NOT be removed when you create new campaigns.</p>
-                <div id="generate-all-status" style="display:none;margin-bottom:12px;padding:10px;border-radius:8px;background:#f0fdf4;color:#166534;font-weight:600;font-size:0.9rem;"></div>
                 <table><thead><tr><th>Day</th><th>Title</th><th>Schedule Date</th><th>Time</th><th>Platform</th><th>Article Status</th><th>HTML</th><th>Action</th></tr></thead><tbody id="approved-scheduled-tbody"><tr><td colspan="8">No approved items.</td></tr></tbody></table>
             </div>
             <div id="legacy-writer-card" class="card" style="display:none">
@@ -703,12 +708,12 @@
                     <p style="font-size:0.82rem;color:var(--text-muted);">Select a provider and paste its API key. The software chooses the correct endpoint and recommended model automatically.</p>
                     <form onsubmit="return handleSaveAiApis(event)">
                         <div class="form-grid">
-                            <div class="form-group"><label>Chat Provider</label><select id="v-chat-provider" onchange="updateAiDefaults()"><option value="gemini">Google Gemini</option><option value="openai">OpenAI</option><option value="anthropic">Anthropic Claude</option><option value="huggingface">Hugging Face</option><option value="openrouter">OpenRouter</option><option value="zenmux">ZenMux (Kimi K3)</option><option value="pollinations">Pollinations.ai</option><option value="custom">Custom Provider</option></select></div>
+                            <div class="form-group"><label>Chat Provider</label><select id="v-chat-provider" onchange="updateAiDefaults()"><option value="pollinations">Pollinations.ai</option><option value="openai">OpenAI</option><option value="gemini">Google Gemini</option><option value="anthropic">Anthropic Claude</option><option value="huggingface">Hugging Face</option><option value="openrouter">OpenRouter</option><option value="zenmux">ZenMux (Kimi K3)</option><option value="custom">Custom Provider</option></select></div>
                             <div class="form-group"><label>Chat Account Name</label><input type="text" id="v-chat-alias" value="Primary Chat Model"></div><div class="form-group"><label>Chat API Key</label><input type="password" id="v-chat-key" required></div>
-                            <div class="form-group"><label>Image Provider</label><select id="v-image-provider" onchange="updateAiDefaults()"><option value="huggingface">Hugging Face (free tier)</option><option value="openai">OpenAI</option><option value="gemini">Google Gemini</option><option value="stability">Stability AI</option><option value="replicate">Replicate</option><option value="pollinations">Pollinations.ai</option><option value="custom">Custom Provider</option></select></div>
+                            <div class="form-group"><label>Image Provider</label><select id="v-image-provider" onchange="updateAiDefaults()"><option value="pollinations">Pollinations.ai</option><option value="openai">OpenAI</option><option value="huggingface">Hugging Face (free tier)</option><option value="gemini">Google Gemini</option><option value="stability">Stability AI</option><option value="replicate">Replicate</option><option value="custom">Custom Provider</option></select></div>
                             <div class="form-group"><label>Image Account Name</label><input type="text" id="v-image-alias" value="Primary Image Model"></div><div class="form-group"><label>Image API Key</label><input type="password" id="v-image-key" required></div>
                         </div>
-                        <details style="margin:10px 0;color:var(--text-muted);"><summary>Advanced settings (optional)</summary><div style="margin:10px 0"><strong>Gemini automatic model pool</strong><label style="margin-left:14px"><input type="checkbox" id="gemini-auto-model" checked> Auto-select and fallback</label><div class="form-grid"><label><input type="checkbox" class="gemini-model-option" value="gemini-2.5-flash-lite" checked> Gemini 2.5 Flash</label><label><input type="checkbox" class="gemini-model-option" value="gemini-3.5-flash" checked> Gemini 3.5 Flash</label><label><input type="checkbox" class="gemini-model-option" value="gemini-3.6-flash" checked> Gemini 3.6 Flash</label></div></div><div class="form-grid" style="margin-top:10px;"><div class="form-group"><label>Chat Model</label><input type="text" id="v-chat-model"></div><div class="form-group"><label>Image Model</label><input type="text" id="v-image-model"></div><div class="form-group"><label>Custom Chat Endpoint</label><input type="url" id="v-chat-endpoint"></div><div class="form-group"><label>Custom Image Endpoint</label><input type="url" id="v-image-endpoint"></div></div></details>
+                        <details style="margin:10px 0;color:var(--text-muted);"><summary>Advanced settings (optional)</summary><div style="margin:10px 0"><strong>Gemini automatic model pool</strong><label style="margin-left:14px"><input type="checkbox" id="gemini-auto-model" checked> Auto-select and fallback</label><div class="form-grid"><label><input type="checkbox" class="gemini-model-option" value="gemini-2.5-flash-lite" checked> Gemini 2.5 Flash</label><label><input type="checkbox" class="gemini-model-option" value="gemini-3.5-flash" checked> Gemini 3.5 Flash</label><label><input type="checkbox" class="gemini-model-option" value="gemini-3.6-flash" checked> Gemini 3.6 Flash</label></div></div><div class="form-grid" style="margin-top:10px;"><div class="form-group"><label>Chat Model</label><select id="v-chat-model"><option value="gpt-5.4-nano">GPT-5.4 Nano (1.5K)</option><option value="gpt-oss-20b">GPT-OSS 20B (6.3K Limited)</option><option value="gpt-5.6-luna">GPT-5.6 Luna (350)</option><option value="gpt-5.4-mini">GPT-5.4 Mini (150)</option><option value="mistral-large-3">Mistral Large 3 (550)</option><option value="gpt-4o-mini">GPT-4o Mini (OpenAI)</option><option value="gpt-4o">GPT-4o (OpenAI)</option><option value="gemini-2.5-flash-lite">Gemini 2.5 Flash Lite</option><option value="claude-3-5-sonnet-latest">Claude 3.5 Sonnet</option></select><div id="pollinations-chat-model-wrap" style="display:none;margin-top:6px;"><label style="font-size:0.8rem;color:var(--text-muted);">Pollinations Chat Model (type manually):</label><input type="text" id="v-pollinations-chat-model" placeholder="e.g. openai, openai-fast, openai-large, gemini, gemini-fast, claude, deepseek, grok, mistral, qwen" style="font-size:0.85rem;"></div></div><div class="form-group"><label>Image Model</label><select id="v-image-model"><option value="gpt-image-1-mini">gpt-image-1-mini (OpenAI)</option><option value="gpt-image-1">gpt-image-1 (OpenAI)</option><option value="black-forest-labs/FLUX.1-schnell">FLUX.1 Schnell (HuggingFace)</option></select><div id="pollinations-image-model-wrap" style="display:none;margin-top:6px;"><label style="font-size:0.8rem;color:var(--text-muted);">Pollinations Image Model (type manually):</label><input type="text" id="v-pollinations-image-model" placeholder="e.g. flux, flux-pro, turbo, gptimage, gptimage-large, kontext, seedream5, imagen-4, grok-imagine" style="font-size:0.85rem;"></div></div><div class="form-group"><label>Custom Chat Endpoint</label><input type="url" id="v-chat-endpoint"></div><div class="form-group"><label>Custom Image Endpoint</label><input type="url" id="v-image-endpoint"></div></div></details>
                         </div>
                         <button type="submit" class="btn btn-purple">💾 Save Separate Chat & Image APIs</button><button type="button" class="btn" style="background:#0f172a;" onclick="testAi('chat_api')">🔍 Test Chat API</button><button type="button" class="btn" style="background:#0f172a;" onclick="testAi('image_api')">🔍 Test Image API</button><div id="ai-test-status" style="margin-top:10px;font-size:0.85rem;font-weight:700;"></div>
                     </form>
@@ -857,6 +862,24 @@
             </div>
         </div>
 
+        <!-- TAB: TOPICS HISTORY (Excel-compatible CSV) -->
+        <div id="tab-topics" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">📋 All Created Topics — Excel Sheet</h2>
+                    <div style="display:flex;gap:8px;">
+                        <button class="btn" onclick="syncTopicsCsv()">🔄 Sync Now</button>
+                        <a href="/api/topics-csv/download" class="btn btn-accent" style="text-decoration:none;">⬇ Download CSV (Excel)</a>
+                    </div>
+                </div>
+                <p style="color:var(--text-muted);margin-bottom:12px;font-size:0.9rem;">Every topic ever created is listed here. The software reads this list before generating new drafts to avoid duplicates. Download the CSV and open in Excel/Google Sheets.</p>
+                <table id="topics-history-table">
+                    <thead><tr><th>S.No</th><th>Topic (Blog Title)</th><th>Primary Keyword</th><th>Domain/Website</th><th>Status</th><th>Campaign ID</th><th>Created Date</th></tr></thead>
+                    <tbody id="topics-history-body"><tr><td colspan="7" style="text-align:center;color:var(--text-muted);">Loading topics...</td></tr></tbody>
+                </table>
+            </div>
+        </div>
+
     </div>
 
     <footer class="site-footer">
@@ -990,8 +1013,8 @@
                     if (services.brevo_api.sender_email) document.getElementById('v-brevo-sender').value = services.brevo_api.sender_email;
                 }
 
-                if (services.chat_api) { document.getElementById('v-chat-provider').value=services.chat_api.provider||'custom'; document.getElementById('v-chat-endpoint').value=services.chat_api.endpoint||document.getElementById('v-chat-endpoint').value; document.getElementById('v-chat-key').value=services.chat_api.api_key||''; document.getElementById('v-chat-model').value=(services.chat_api.model==='gemini-2.0-flash'?'gemini-2.5-flash-lite':(services.chat_api.model||document.getElementById('v-chat-model').value)); }
-                if (services.image_api) { document.getElementById('v-image-provider').value=services.image_api.provider||'custom'; document.getElementById('v-image-endpoint').value=services.image_api.endpoint||document.getElementById('v-image-endpoint').value; document.getElementById('v-image-key').value=services.image_api.api_key||''; document.getElementById('v-image-model').value=services.image_api.model||document.getElementById('v-image-model').value; }
+                if (services.chat_api) { document.getElementById('v-chat-provider').value=services.chat_api.provider||'custom'; _lastChatProvider=services.chat_api.provider||'custom'; document.getElementById('v-chat-endpoint').value=services.chat_api.endpoint||document.getElementById('v-chat-endpoint').value; document.getElementById('v-chat-key').value=services.chat_api.api_key||''; const chatMod=(services.chat_api.model==='gemini-2.0-flash'?'gemini-2.5-flash-lite':(services.chat_api.model||'')); if(services.chat_api.provider==='pollinations'){document.getElementById('v-pollinations-chat-model').value=chatMod;document.getElementById('v-chat-model').value='';}else{document.getElementById('v-chat-model').value=chatMod||document.getElementById('v-chat-model').value;} }
+                if (services.image_api) { document.getElementById('v-image-provider').value=services.image_api.provider||'custom'; _lastImageProvider=services.image_api.provider||'custom'; document.getElementById('v-image-endpoint').value=services.image_api.endpoint||document.getElementById('v-image-endpoint').value; document.getElementById('v-image-key').value=services.image_api.api_key||''; const imgMod=services.image_api.model||''; if(services.image_api.provider==='pollinations'){document.getElementById('v-pollinations-image-model').value=imgMod;document.getElementById('v-image-model').value='';}else{document.getElementById('v-image-model').value=imgMod||document.getElementById('v-image-model').value;} }
 
                 if (services.dataforseo_api) {
                     if (services.dataforseo_api.login) document.getElementById('v-dfs-login').value = services.dataforseo_api.login;
@@ -1046,22 +1069,48 @@
             return false;
         }
 
+        let _lastChatProvider = '', _lastImageProvider = '';
         function updateAiDefaults() {
             const chat=document.getElementById('v-chat-provider').value, image=document.getElementById('v-image-provider').value;
-            const chatModel={gemini:'gemini-2.5-flash-lite',openai:'gpt-4o-mini',anthropic:'claude-3-5-sonnet-latest',huggingface:'meta-llama/Llama-3.1-8B-Instruct',openrouter:'openai/gpt-4o-mini',zenmux:'moonshotai/kimi-k3',pollinations:'openai',custom:''}[chat]||'';
-            const imageModel={huggingface:'black-forest-labs/FLUX.1-schnell',openai:'gpt-image-1',gemini:'gemini-3.1-flash-image-preview',stability:'stable-image-ultra',replicate:'black-forest-labs/flux-schnell',pollinations:'flux',custom:''}[image]||'';
-            document.getElementById('v-chat-model').value=chatModel; document.getElementById('v-image-model').value=imageModel;
+            // Show/hide Pollinations manual model inputs
+            const chatPollWrap = document.getElementById('pollinations-chat-model-wrap');
+            const imgPollWrap = document.getElementById('pollinations-image-model-wrap');
+            if (chatPollWrap) chatPollWrap.style.display = (chat === 'pollinations') ? 'block' : 'none';
+            if (imgPollWrap) imgPollWrap.style.display = (image === 'pollinations') ? 'block' : 'none';
+            // Auto-set model ONLY for non-Pollinations providers (Gemini, OpenAI have dropdowns)
+            const chatModel={gemini:'gemini-2.5-flash-lite',openai:'gpt-5.4-nano',anthropic:'claude-3-5-sonnet-latest',huggingface:'meta-llama/Llama-3.1-8B-Instruct',openrouter:'openai/gpt-4o-mini',zenmux:'moonshotai/kimi-k3',custom:''}[chat]||'';
+            const imageModel={huggingface:'black-forest-labs/FLUX.1-schnell',openai:'gpt-image-1-mini',gemini:'gemini-3.1-flash-image-preview',stability:'stable-image-ultra',replicate:'black-forest-labs/flux-schnell',custom:''}[image]||'';
+            // Only reset model if the PROVIDER actually changed (not just a form reload)
+            if (chat !== _lastChatProvider) { document.getElementById('v-chat-model').value=chatModel; _lastChatProvider=chat; }
+            if (image !== _lastImageProvider) { document.getElementById('v-image-model').value=imageModel; _lastImageProvider=image; }
             const chatEndpoints={gemini:'',openai:'https://api.openai.com/v1/chat/completions',anthropic:'https://api.anthropic.com/v1/messages',huggingface:'https://router.huggingface.co/v1/chat/completions',openrouter:'https://openrouter.ai/api/v1/chat/completions',zenmux:'https://zenmux.ai/api/v1/chat/completions',pollinations:'https://gen.pollinations.ai/v1/chat/completions',custom:''};
-            const imageEndpoints={huggingface:'',openai:'https://api.openai.com/v1/images/generations',gemini:'',stability:'',replicate:'',pollinations:'',custom:''};
+            const imageEndpoints={huggingface:'',openai:'https://api.openai.com/v1/images/generations',gemini:'',stability:'',replicate:'',custom:''};
             document.getElementById('v-chat-endpoint').value=chatEndpoints[chat]||'';
             document.getElementById('v-image-endpoint').value=imageEndpoints[image]||'';
         }
-        async function testAi(service) { updateAiDefaults(); const el=document.getElementById('ai-test-status'); el.innerText='Testing '+service+'...'; const isChat=service==='chat_api'; const res=await fetch('/api/vault/test-ai',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({service_name:service,provider:document.getElementById(isChat?'v-chat-provider':'v-image-provider').value,api_key:document.getElementById(isChat?'v-chat-key':'v-image-key').value,model:document.getElementById(isChat?'v-chat-model':'v-image-model').value,endpoint:document.getElementById(isChat?'v-chat-endpoint':'v-image-endpoint').value})}); const data=await res.json(); el.innerText=res.ok?'🟢 '+service+' connected successfully.':'🔴 '+(data.error||'API test failed.'); }
+        // Helper: get the actual model value, using manual input for Pollinations
+        function getChatModelValue() {
+            const provider = document.getElementById('v-chat-provider').value;
+            if (provider === 'pollinations') {
+                const manual = (document.getElementById('v-pollinations-chat-model').value || '').trim();
+                return manual || 'openai'; // fallback to 'openai' if empty
+            }
+            return document.getElementById('v-chat-model').value;
+        }
+        function getImageModelValue() {
+            const provider = document.getElementById('v-image-provider').value;
+            if (provider === 'pollinations') {
+                const manual = (document.getElementById('v-pollinations-image-model').value || '').trim();
+                return manual || 'flux'; // fallback to 'flux' if empty
+            }
+            return document.getElementById('v-image-model').value;
+        }
+        async function testAi(service) { updateAiDefaults(); const el=document.getElementById('ai-test-status'); el.innerText='Testing '+service+'...'; const isChat=service==='chat_api'; const modelVal=isChat?getChatModelValue():getImageModelValue(); const res=await fetch('/api/vault/test-ai',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({service_name:service,provider:document.getElementById(isChat?'v-chat-provider':'v-image-provider').value,api_key:document.getElementById(isChat?'v-chat-key':'v-image-key').value,model:modelVal,endpoint:document.getElementById(isChat?'v-chat-endpoint':'v-image-endpoint').value})}); const data=await res.json(); el.innerText=res.ok?'🟢 '+service+' connected successfully.':'🔴 '+(data.error||'API test failed.'); }
 
         async function handleSaveAiApis(e) {
             e.preventDefault();
-            const geminiPool=[...document.querySelectorAll('.gemini-model-option:checked')].map(x=>x.value); await saveVaultService('chat_api',{account_alias:document.getElementById('v-chat-alias').value||'Primary Chat Model',auto_model:document.getElementById('gemini-auto-model').checked,model_pool:geminiPool,provider:document.getElementById('v-chat-provider').value,endpoint:document.getElementById('v-chat-endpoint').value,api_key:document.getElementById('v-chat-key').value,model:document.getElementById('v-chat-model').value});
-            await saveVaultService('image_api',{account_alias:document.getElementById('v-image-alias').value||'Primary Image Model',provider:document.getElementById('v-image-provider').value,endpoint:document.getElementById('v-image-endpoint').value,api_key:document.getElementById('v-image-key').value,model:document.getElementById('v-image-model').value});
+            const geminiPool=[...document.querySelectorAll('.gemini-model-option:checked')].map(x=>x.value); await saveVaultService('chat_api',{account_alias:document.getElementById('v-chat-alias').value||'Primary Chat Model',auto_model:document.getElementById('gemini-auto-model').checked,model_pool:geminiPool,provider:document.getElementById('v-chat-provider').value,endpoint:document.getElementById('v-chat-endpoint').value,api_key:document.getElementById('v-chat-key').value,model:getChatModelValue()});
+            await saveVaultService('image_api',{account_alias:document.getElementById('v-image-alias').value||'Primary Image Model',provider:document.getElementById('v-image-provider').value,endpoint:document.getElementById('v-image-endpoint').value,api_key:document.getElementById('v-image-key').value,model:getImageModelValue()});
             return false;
         }
 
@@ -1178,52 +1227,6 @@
             } catch(e) { alert('Request error: ' + e.message); }
         }
 
-        async function deleteItem(itemId) {
-            if(!confirm('Delete this blog item? This cannot be undone.')) return;
-            try {
-                const res = await fetch('/api/delete-item', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({item_id:itemId})});
-                const data = await res.json();
-                if(res.ok && data.success) { alert('✅ Deleted.'); } else { alert('🔴 ' + (data.error||'Delete failed.')); }
-                loadDemoProgress(); loadStats();
-            } catch(e) { alert('Error: ' + e.message); }
-        }
-
-        async function runCronNow() {
-            if(!confirm('Run the scheduler cron job now? This will publish any scheduled items that are due.')) return;
-            try {
-                const res = await fetch('/api/run-scheduler', {method:'POST', headers:{'Content-Type':'application/json'}});
-                const data = await res.json();
-                if(data.success) { alert('✅ Cron ran!\n\n' + (data.output || data.message || '')); } else { alert('🔴 ' + (data.error||'Cron failed.')); }
-                loadDemoProgress(); loadStats();
-            } catch(e) { alert('Error: ' + e.message); }
-        }
-
-        async function generateAllHTML() {
-            const statusDiv = document.getElementById('generate-all-status');
-            statusDiv.style.display = 'block';
-            statusDiv.style.background = '#fef3c7';
-            statusDiv.style.color = '#92400e';
-            statusDiv.innerText = '⏳ Generating HTML for all approved items... This may take a few minutes.';
-            try {
-                const res = await fetch('/api/generate-all-html', {method:'POST', headers:{'Content-Type':'application/json'}});
-                const data = await res.json();
-                if(data.success) {
-                    statusDiv.style.background = '#f0fdf4';
-                    statusDiv.style.color = '#166534';
-                    statusDiv.innerText = '✅ ' + data.message + (data.articles ? ' (' + data.articles.map(a => a.title).join(', ') + ')' : '');
-                    loadDemoProgress(); loadStats();
-                } else {
-                    statusDiv.style.background = '#fef2f2';
-                    statusDiv.style.color = '#991b1b';
-                    statusDiv.innerText = '🔴 Error: ' + (data.error || 'Unknown error');
-                }
-            } catch(e) {
-                statusDiv.style.background = '#fef2f2';
-                statusDiv.style.color = '#991b1b';
-                statusDiv.innerText = '🔴 Request error: ' + e.message;
-            }
-        }
-
         function showScheduleModal(itemId, schedDate, schedTime, platform) {
             const today = new Date().toISOString().split('T')[0];
             const dateVal = schedDate || today;
@@ -1242,6 +1245,45 @@
             const old = document.getElementById('schedule-modal');
             if(old) old.remove();
             document.body.insertAdjacentHTML('beforeend', modalHtml);
+        }
+
+        async function generateAllHtml() {
+            const btn = document.getElementById('btn-gen-all-html');
+            btn.innerText = '⏳ Generating...'; btn.disabled = true;
+            try {
+                const statusRes = await fetch('/api/demo/campaign-status');
+                const statusData = await statusRes.json();
+                if (!statusData.campaign) { alert('No active campaign found.'); btn.innerText='⚡ Generate All HTML'; btn.disabled=false; return; }
+                const res = await fetch('/api/demo/generate-html/' + statusData.campaign.id, {method:'POST'});
+                const data = await res.json();
+                alert(res.ok ? '✅ ' + data.message : '🔴 ' + (data.error || 'Generation failed.'));
+                loadDemoProgress(); loadStats();
+            } catch(e) { alert('Error: ' + e.message); }
+            btn.innerText = '⚡ Generate All HTML'; btn.disabled = false;
+        }
+
+        async function runCronNow() {
+            if(!confirm('Run the scheduler and approval timer now? This will generate HTML for approved items and publish any due scheduled posts.')) return;
+            try {
+                const res = await fetch('/api/run-scheduler', {method:'POST'});
+                const data = await res.json();
+                alert(res.ok ? '✅ Cron executed! ' + (data.message||'') : '🔴 ' + (data.error||'Failed'));
+                loadDemoProgress(); loadStats();
+            } catch(e) { alert('Error: ' + e.message); }
+        }
+
+        async function deleteCampaignItem(itemId) {
+            if(!confirm('Are you sure you want to delete this item? This cannot be undone.')) return;
+            try {
+                const res = await fetch('/api/campaign-item/delete/' + itemId, {method:'POST'});
+                const data = await res.json();
+                alert(res.ok ? '✅ Item deleted.' : '🔴 ' + (data.error||'Delete failed.'));
+                loadDemoProgress(); loadStats();
+            } catch(e) { alert('Error: ' + e.message); }
+        }
+
+        async function downloadItemHtml(itemId) {
+            window.open('/api/campaign-item/download-html/' + itemId, '_blank');
         }
 
         async function submitSchedule(itemId) {
@@ -1263,8 +1305,8 @@
         async function loadDemoProgress() { try { const data=await (await fetch('/api/demo/campaign-status')).json(); const body=document.getElementById('demo-progress-tbody'); const approvedBody=document.getElementById('approved-scheduled-tbody'); const approvedCard=document.getElementById('approved-scheduled-card'); if(!data.items||!data.items.length){body.innerHTML='<tr><td colspan="9">No campaign loaded.</td></tr>';approvedCard.style.display='none';return;} 
             const pendingItems=[];const approvedItems=[];
             data.items.forEach(x=>{if(x.plan_status==='Approved'||x.plan_status==='Provisional Approved'||x.article_status==='HTML Ready'||x.article_status==='Final Article Approved'){approvedItems.push(x);}else{pendingItems.push(x);}});
-            body.innerHTML=pendingItems.length?pendingItems.map(x=>`<tr><td>Day ${x.day_number} / Slot ${x.post_number}</td><td>${escapeHtml(x.title)}</td><td><span class="badge badge-purple">${x.plan_status}</span></td><td><span class="badge badge-purple">${x.article_status}</span></td><td>${x.scheduled_date||'—'}</td><td>${x.scheduled_time||'—'}</td><td><span class="badge badge-success">${(x.target_platform||'local').toUpperCase()}</span></td><td>${x.html_path?`<a href="${x.html_path}" target="_blank">View</a> <a href="/api/download-html/${x.id}" target="_blank">⬇ Download</a>`:'—'}</td><td>${x.approval_token?`<button class="btn btn-purple" onclick="dashboardDecision('${x.approval_token}','approve')">Approve</button> <button class="btn btn-danger" onclick="dashboardDecision('${x.approval_token}','reject')">Disapprove</button>`:''} <button class="btn btn-danger" style="font-size:0.75rem;padding:4px 8px;" onclick="deleteItem(${x.id})">🗑</button></td></tr>`).join(''):'<tr><td colspan="9" style="text-align:center;color:var(--accent-green);font-weight:700;">✅ All items approved! Check Approved & Scheduled section below.</td></tr>';
-            if(approvedItems.length){approvedCard.style.display='block';approvedBody.innerHTML=approvedItems.map(x=>`<tr><td>Day ${x.day_number}</td><td><strong>${escapeHtml(x.title)}</strong></td><td>${x.scheduled_date||'—'}</td><td>${x.scheduled_time||'—'}</td><td><span class="badge badge-success">${(x.target_platform||'local').toUpperCase()}</span></td><td><span class="badge badge-success">${x.article_status}</span></td><td>${x.html_path?`<a href="${x.html_path}" target="_blank">View</a> <a href="/api/download-html/${x.id}" target="_blank">⬇ Download</a>`:'—'}</td><td style="white-space:nowrap;">${x.article_status!=='Published'?`<button class="btn btn-accent" style="font-size:0.8rem;padding:6px 12px;" onclick="publishNow(${x.id},'${x.target_platform||'blogger'}')">🚀 Publish Now</button> <button class="btn btn-purple" style="font-size:0.8rem;padding:6px 12px;" onclick="showScheduleModal(${x.id},'${x.scheduled_date||''}','${x.scheduled_time||''}','${x.target_platform||'blogger'}')">📅 Schedule</button>`:'<span style="color:#10b981;font-weight:700;">✅ Published</span>'} <button class="btn btn-danger" style="font-size:0.75rem;padding:4px 8px;" onclick="deleteItem(${x.id})">🗑</button></td></tr>`).join('');}else{approvedCard.style.display='none';}
+            body.innerHTML=pendingItems.length?pendingItems.map(x=>`<tr><td>Day ${x.day_number} / Slot ${x.post_number}</td><td>${escapeHtml(x.title)}</td><td><span class="badge badge-purple">${x.plan_status}</span></td><td><span class="badge badge-purple">${x.article_status}</span></td><td>${x.scheduled_date||'—'}</td><td>${x.scheduled_time||'—'}</td><td><span class="badge badge-success">${(x.target_platform||'local').toUpperCase()}</span></td><td>${x.html_path?`<a href="${x.html_path}" target="_blank">View</a> <button class="btn btn-danger" style="font-size:0.7rem;padding:3px 8px;" onclick="downloadItemHtml(${x.id})">⬇</button>`:'—'}</td><td style="white-space:nowrap;">${x.approval_token?`<button class="btn btn-purple" style="font-size:0.75rem;padding:4px 10px;" onclick="dashboardDecision('${x.approval_token}','approve')">Approve</button> <button class="btn btn-danger" style="font-size:0.75rem;padding:4px 10px;" onclick="dashboardDecision('${x.approval_token}','reject')">Disapprove</button>`:''}${x.html_approval_token?` <button class="btn btn-accent" style="font-size:0.75rem;padding:4px 10px;" onclick="htmlDecision('${x.html_approval_token}','approve')">✅ Approve HTML</button> <button class="btn btn-danger" style="font-size:0.75rem;padding:4px 10px;" onclick="htmlDecision('${x.html_approval_token}','reject')">🔄 Rewrite</button>`:''}${x.article_status!=='Published'?` <button class="btn btn-danger" style="font-size:0.7rem;padding:3px 8px;" onclick="deleteCampaignItem(${x.id})">🗑️</button>`:''}${(!x.approval_token&&!x.html_approval_token&&x.article_status!=='Published')?'—':''}</td></tr>`).join(''):'<tr><td colspan="9" style="text-align:center;color:var(--accent-green);font-weight:700;">✅ All items approved! Check Approved & Scheduled section below.</td></tr>';
+            if(approvedItems.length){approvedCard.style.display='block';approvedBody.innerHTML=approvedItems.map(x=>`<tr><td>Day ${x.day_number}</td><td><strong>${escapeHtml(x.title)}</strong></td><td>${x.scheduled_date||'—'}</td><td>${x.scheduled_time||'—'}</td><td><span class="badge badge-success">${(x.target_platform||'local').toUpperCase()}</span></td><td><span class="badge badge-success">${x.article_status}</span></td><td>${x.html_path?`<a href="${x.html_path}" target="_blank">View</a> <button class="btn btn-danger" style="font-size:0.7rem;padding:3px 8px;" onclick="downloadItemHtml(${x.id})">⬇</button>`:'—'}</td><td style="white-space:nowrap;">${x.article_status!=='Published'?`<button class="btn btn-accent" style="font-size:0.8rem;padding:6px 12px;" onclick="publishNow(${x.id},'${x.target_platform||'blogger'}')">🚀 Publish Now</button> <button class="btn btn-purple" style="font-size:0.8rem;padding:6px 12px;" onclick="showScheduleModal(${x.id},'${x.scheduled_date||''}','${x.scheduled_time||''}','${x.target_platform||'blogger'}')">📅 Schedule</button> <button class="btn btn-danger" style="font-size:0.7rem;padding:4px 8px;" onclick="deleteCampaignItem(${x.id})">🗑️</button>`:'<span style="color:#10b981;font-weight:700;">✅ Published</span>'}</td></tr>`).join('');}else{approvedCard.style.display='none';}
         } catch(e){} }
         async function createDemoCampaign() {
             const status=document.getElementById('project-research-status'); status.innerText='Creating local demo roadmap without paid SEO, Chat, or Image requests...';
@@ -1534,6 +1576,19 @@
         loadScheduleQueue();
         renderScheduleTimes();
         updateCalendarDates();
+
+        async function loadTopicsHistory() {
+            try {
+                const res = await fetch('/api/topics-csv');
+                const data = await res.json();
+                const tbody = document.getElementById('topics-history-body');
+                if (!data.success || !data.topics || data.topics.length === 0) { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-muted);">No topics yet.</td></tr>'; return; }
+                tbody.innerHTML = data.topics.map(t => { const sc = t.status==='published'?'#10b981':t.status==='approved'?'#3b82f6':t.status==='scheduled'?'#f59e0b':t.status==='rejected'?'#ef4444':'#64748b'; return `<tr><td>${t.sno}</td><td style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${t.topic}</td><td>${t.keyword}</td><td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${t.domain}</td><td><span style="color:${sc};font-weight:700;text-transform:uppercase;">${t.status}</span></td><td>${t.campaign_id}</td><td>${t.date}</td></tr>`; }).join('');
+            } catch (e) { document.getElementById('topics-history-body').innerHTML = '<tr><td colspan="7" style="text-align:center;color:#ef4444;">Error: '+e.message+'</td></tr>'; }
+        }
+        async function syncTopicsCsv() { try { const res = await fetch('/api/topics-csv/sync',{method:'POST'}); const data = await res.json(); alert(data.success?'Synced! '+data.count+' topics.':'Error: '+(data.error||'Failed')); loadTopicsHistory(); } catch(e) { alert('Error: '+e.message); } }
+        const origSwitchTab = switchTab;
+        switchTab = function(tabId) { origSwitchTab(tabId); if (tabId === 'topics') loadTopicsHistory(); };
     </script>
 </body>
 </html>

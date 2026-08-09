@@ -89,8 +89,7 @@ class ContentGenerator {
     public static function generateHumanArticle1000Words($keyword, $category = 'General', $targetLink = null, $targetAnchor = null, $userId = 1, $slotNumber = 1, $enableYoutube = true, $enableFaqSchema = true) {
         $keywordCap = ucwords($keyword);
         $nowYear = date('Y');
-        $nowMonth = date('F');
-        $title = "How to Master $keywordCap: Practical Strategies for $nowMonth $nowYear";
+        $title = "How to Master $keywordCap: Practical Strategies for $nowYear";
         $slug = slugify($title);
 
         $numImages = [2, 3, 4][array_rand([2, 3, 4])];
@@ -136,7 +135,7 @@ class ContentGenerator {
     $faqSchemaHtml
     
     <header style="margin-bottom:28px;">
-        <h1 style="font-size:2.5rem; font-weight:800; color:#0f172a; margin-bottom:12px; line-height:1.2; letter-spacing:-0.02em; text-align:center;">$title</h1>
+        <h1 style="font-size:2.5rem; font-weight:800; color:#0f172a; margin-bottom:12px; line-height:1.2; letter-spacing:-0.02em;">$title</h1>
         <p style="font-size:1.1rem; color:#475569; font-weight:500; margin-bottom:20px; line-height:1.6;">Learn key operational strategies for $keywordCap ($nowYear update). Understand core frameworks, compare performance data, and implement best practices.</p>
         <div style="display:flex; align-items:center; justify-content:space-between; border-top:1px solid #e2e8f0; border-bottom:1px solid #e2e8f0; padding:12px 0; font-size:0.85rem; color:#64748b; font-weight:600; flex-wrap:wrap; gap:12px;">
             <div style="display:flex; align-items:center; gap:12px;">
@@ -315,7 +314,6 @@ HTML;
     public static function publishBlogger($userId, $blogId, $title, $content, $clientId = null, $clientSecret = null, $refreshToken = null, $publishDate = null) {
         // Blogger API v3: POST (create post) requires OAuth 2.0 Bearer token.
         // We must have OAuth refresh credentials to publish.
-        // If $publishDate is set (RFC 3339), Blogger schedules the post for that date.
         
         if (empty($blogId)) {
             return ['success' => false, 'error' => 'Missing Blogger Blog ID.'];
@@ -346,17 +344,64 @@ HTML;
             return ['success' => false, 'error' => 'OAuth credentials required. Save Client ID, Client Secret, and Refresh Token in the Blogger vault.'];
         }
 
-        // KEEP our H1 from content — it's styled and center-aligned, looks great.
-        // Blogger title hiding CSS is now included directly in the <style> block above.
-        // No need to add separate hide rules here.
+        // ========== BLOGGER CSS OVERRIDES ==========
+        // Inject CSS to make Blogger article look same-to-same as local HTML preview.
+        // Hides Blogger's default title (our H1 is center-aligned in the article).
+        // Forces full-width layout, scoped with !important to override Blogger templates.
+        $bloggerOverrides = <<<CSS
+<style>
+/* === AUTOBLOG BLOGGER OVERRIDES — Scoped to article, !important to beat template === */
+/* Hide Blogger's default post title — we use our own H1 inside the article */
+.post-title, .post-title.entry-title, h3.post-title, .entry-title, .blog-post h3.post-title, .post h3.post-title, .post-title.entry-title.a, .post-title { display:none!important; }
+/* Make the article container full-width */
+.content-outer, .content-inner, .post-outer, .post, .blog-posts, .post-body, .entry-content, #content, .region-inner, .post-body.entry-content { max-width:100%!important; width:100%!important; padding:0!important; margin:0 auto!important; }
+/* Article styling — match local HTML preview exactly */
+article.monochrome-editorial-article, article { max-width:960px!important; margin:0 auto!important; padding:24px 20px!important; font-family:'Montserrat',-apple-system,sans-serif!important; line-height:1.85!important; color:#334155!important; background:#ffffff!important; border-radius:0!important; box-shadow:none!important; }
+/* Center-align our H1 */
+article h1, article .monochrome-editorial-article h1 { text-align:center!important; font-size:2.2rem!important; font-weight:800!important; color:#0f172a!important; margin-bottom:16px!important; line-height:1.2!important; }
+article h2 { font-size:1.5rem!important; font-weight:800!important; color:#0f172a!important; margin-top:36px!important; margin-bottom:16px!important; border-bottom:1px solid #e2e8f0!important; padding-bottom:8px!important; }
+article h3 { font-size:1.15rem!important; font-weight:700!important; color:#0f172a!important; margin-top:24px!important; margin-bottom:12px!important; }
+article p { margin-bottom:18px!important; font-size:1.02rem!important; }
+article a { color:#1b57f6!important; font-weight:600!important; text-decoration:none!important; }
+article a:hover { text-decoration:underline!important; }
+article ul, article ol { margin:16px 0!important; padding-left:22px!important; line-height:2!important; }
+article blockquote { border-left:4px solid #1b57f6!important; padding:16px 20px!important; margin:24px 0!important; background:#f8fafc!important; border-radius:0 8px 8px 0!important; }
+article table { width:100%!important; border-collapse:collapse!important; margin:20px 0!important; display:block!important; overflow-x:auto!important; -webkit-overflow-scrolling:touch!important; }
+article td, article th { border:1px solid #e2e8f0!important; padding:12px 14px!important; text-align:left!important; }
+article th { background:#f1f5f9!important; font-weight:700!important; }
+article figure { margin:24px 0!important; }
+article img { max-width:100%!important; height:auto!important; border-radius:12px!important; display:block!important; }
+/* Thumbnail must fill full article width — no blank space */
+article .blog-thumbnail { width:100%!important; max-width:100%!important; margin:0 0 24px 0!important; }
+article .blog-thumbnail img { width:100%!important; display:block!important; object-fit:cover!important; border-radius:12px!important; }
+article footer { margin-top:48px!important; font-size:0.85rem!important; text-align:center!important; color:#64748b!important; font-weight:600!important; }
+/* Mobile responsive for Blogger */
+@media(max-width:768px) {
+  article { padding:16px 12px!important; }
+  article h1 { font-size:1.6rem!important; }
+  article h2 { font-size:1.25rem!important; margin-top:24px!important; }
+  article h3 { font-size:1.05rem!important; }
+  article p { font-size:0.95rem!important; margin-bottom:14px!important; }
+  article ul, article ol { padding-left:18px!important; font-size:0.95rem!important; }
+  article td, article th { padding:8px 10px!important; font-size:0.85rem!important; }
+  article blockquote { padding:12px 16px!important; }
+  article figure { margin:16px 0!important; }
+  article img { border-radius:8px!important; }
+}
+@media(max-width:480px) {
+  article h1 { font-size:1.4rem!important; }
+  article h2 { font-size:1.15rem!important; }
+  article { padding:12px 8px!important; }
+}
+/* Load Montserrat font in Blogger */
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+CSS;
 
-        // Blogger has a content size limit — warn if content is very large
-        $contentLength = strlen($content);
-        if ($contentLength > 1000000) {
-            // Truncate to 1MB max (Blogger limit)
-            $content = substr($content, 0, 1000000);
-            error_log("[Blogger] Content truncated from $contentLength to 1000000 bytes");
-        }
+        // Prepend Blogger CSS overrides to the content
+        $content = $bloggerOverrides . "\n" . $content;
 
         $payload = [
             'kind' => 'blogger#post',
@@ -365,14 +410,54 @@ HTML;
             'content' => $content
         ];
 
-        // If publishDate is provided and is in the future, schedule via Blogger
-        // Blogger API: set isDraft=false + published = RFC 3339 date to schedule
+        // If a future publish date is provided, create as DRAFT first, then publish
         if (!empty($publishDate)) {
-            $payload['published'] = $publishDate;
-            $payload['status'] = 'SCHEDULED';
+            $publishTs = strtotime($publishDate);
+            if ($publishTs !== false && $publishTs > time()) {
+                // Step 1: Create as DRAFT
+                $payload['status'] = 'DRAFT';
+                $result = curlPost($url, $payload, ['Content-Type: application/json', $authHeader], 15);
+                $data = $result['data'] ?? [];
+                
+                if ($result['success'] && in_array($result['http_code'], [200, 201]) && !empty($data['id'])) {
+                    $postId = $data['id'];
+                    // Step 2: Update to PUBLISH with scheduled date
+                    $updateUrl = "https://www.googleapis.com/blogger/v3/blogs/" . trim($blogId) . "/posts/" . $postId;
+                    $payload['status'] = 'LIVE';
+                    $payload['published'] = gmdate('Y-m-d\TH:i:s\Z', $publishTs);
+                    $payload['id'] = $postId;
+                    
+                    $ch = curl_init($updateUrl);
+                    curl_setopt_array($ch, [
+                        CURLOPT_CUSTOMREQUEST => 'PUT',
+                        CURLOPT_POSTFIELDS => json_encode($payload),
+                        CURLOPT_RETURNTRANSFER => true,
+                        CURLOPT_TIMEOUT => 15,
+                        CURLOPT_HTTPHEADER => ['Content-Type: application/json', $authHeader],
+                        CURLOPT_SSL_VERIFYPEER => false,
+                    ]);
+                    $response = curl_exec($ch);
+                    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                    curl_close($ch);
+                    $updateData = json_decode($response, true);
+                    
+                    if (in_array($httpCode, [200, 201])) {
+                        $bloggerUrl = $updateData['url'] ?? '';
+                        $db = getDB();
+                        $now = nowString();
+                        $stmt = $db->prepare('INSERT INTO posts (user_id, title, slug, content, keyword_or_source, category, source_type, status, published_url, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+                        $stmt->execute([$userId, $title, slugify($title), $content, $blogId, 'Blogger Post', 'Blogger REST API', 'Scheduled', $bloggerUrl, $now]);
+                        return ['success' => true, 'url' => $bloggerUrl, 'message' => 'Scheduled on Blogger for ' . $publishDate];
+                    }
+                    // If scheduling failed, the draft still exists - return partial success
+                    return ['success' => true, 'url' => $data['url'] ?? '', 'message' => 'Created as draft on Blogger. Scheduling may need manual publish.', 'draft_id' => $postId];
+                }
+                $errorMsg = $data['error']['message'] ?? ($result['raw'] ?? 'Unknown error');
+                return ['success' => false, 'error' => "Blogger API Error creating draft ({$result['http_code']}): $errorMsg"];
+            }
         }
 
-        $result = curlPost($url, $payload, ['Content-Type: application/json', $authHeader], 12);
+        $result = curlPost($url, $payload, ['Content-Type: application/json', $authHeader], 15);
 
         $data = $result['data'] ?? [];
         if ($result['success'] && in_array($result['http_code'], [200, 201])) {
@@ -385,14 +470,7 @@ HTML;
         }
 
         $errorMsg = $data['error']['message'] ?? ($result['raw'] ?? 'Unknown error');
-        $hint = '';
-        if ($result['http_code'] === 403) {
-            $hint = ' — Ensure Blogger API v3 is enabled AND your OAuth scope includes "https://www.googleapis.com/auth/blogger" (not just read-only). Get a new Refresh Token from OAuth Playground with the full Blogger scope.';
-        }
-        if ($result['http_code'] === 401) {
-            $hint = ' — Access token may be invalid. The refresh token may have been created with wrong scope. Get a new one from OAuth Playground.';
-        }
-        return ['success' => false, 'error' => "Blogger API Error ({$result['http_code']}): $errorMsg$hint"];
+        return ['success' => false, 'error' => "Blogger API Error ({$result['http_code']}): $errorMsg"];
     }
 
     public static function publishWordpress($userId, $wpSiteUrl, $username, $appPassword, $title, $content, $status = 'publish') {
@@ -581,7 +659,6 @@ function splitLongParagraphs($html, $minWords = 45, $maxWords = 50) {
  * Validate external links in HTML content.
  * Replaces broken/unreachable <a> links with plain text.
  * Only validates external links (http/https), skips internal and anchor links.
- * Checks ALL links including trusted domains — only skips internal/relative links.
  */
 function validateAndFixExternalLinks($html) {
     return preg_replace_callback('#<a[^>]*href=["\']?(https?://[^"\'>\s]+)["\']?[^>]*>(.*?)</a>#is', function($match) {
@@ -589,50 +666,32 @@ function validateAndFixExternalLinks($html) {
         $linkText = $match[2];
         $fullTag = $match[0];
         
-        // Skip relative/anchor/internal links (shouldn't match due to regex, but safety check)
-        if (strpos($url, '://') === false) return $fullTag;
-        
-        // Trusted domains that are KNOWN to work — skip HTTP check for speed
+        // Skip known working domains (whitelist)
         $trustedDomains = ['wikipedia.org', 'developers.google.com', 'developer.mozilla.org', 
             'schema.org', 'www.w3.org', 'support.google.com', 'moz.com', 'ahrefs.com',
             'searchengineland.com', 'neilpatel.com', 'hubspot.com', 'backlinko.com',
             'semrush.com', 'yoast.com', 'google.com', 'github.com', 'stackoverflow.com',
-            'www.nngroup.com', 'opensource.google', 'ai.google', 'platform.openai.com',
-            'cloud.google.com', 'youtube.com', 'www.youtube.com', 'linkedin.com',
-            'www.linkedin.com', 'medium.com', 'dev.to', 'hbr.org'];
+            'www.nngroup.com', 'opensource.google', 'ai.google'];
         
         $host = parse_url($url, PHP_URL_HOST) ?? '';
-        $isTrusted = false;
         foreach ($trustedDomains as $trusted) {
             if (str_ends_with($host, $trusted) || $host === $trusted) {
-                $isTrusted = true;
-                break;
+                return $fullTag; // Trust it, keep the link
             }
         }
         
-        // Even for trusted domains, verify the specific URL path exists
-        // (e.g. wikipedia.org/wiki/RandomNonexistentPage should be caught)
-        // But skip for homepage-level URLs on trusted domains
-        $path = parse_url($url, PHP_URL_PATH) ?? '';
-        if ($isTrusted && (empty($path) || $path === '/' || strlen($path) <= 2)) {
-            return $fullTag; // Trusted domain homepage — always works
-        }
-        
-        // For ALL URLs (trusted or not), do a quick HEAD/GET check
-        // This catches: non-existent wiki pages, moved Google docs, 404s on any domain
+        // For non-whitelisted URLs, do a quick HEAD check
         $ch = curl_init($url);
         curl_setopt_array($ch, [
             CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_TIMEOUT => 5,
+            CURLOPT_TIMEOUT => 4,
             CURLOPT_NOBODY => true,
             CURLOPT_SSL_VERIFYPEER => false,
             CURLOPT_FOLLOWLOCATION => true,
-            CURLOPT_MAXREDIRS => 3,
-            CURLOPT_USERAGENT => 'Mozilla/5.0 (compatible; AutoBlog/1.0; +https://autoblog.app)',
+            CURLOPT_USERAGENT => 'Mozilla/5.0 (compatible; AutoBlog/1.0)',
         ]);
         curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $error = curl_error($ch);
         curl_close($ch);
         
         // Keep link if it returns 200 or 301/302 (redirect is OK)
@@ -640,8 +699,7 @@ function validateAndFixExternalLinks($html) {
             return $fullTag;
         }
         
-        // Link is broken or unreachable — replace with just the text (remove link)
-        error_log("[AutoBlog] Broken external link removed: $url (HTTP $httpCode, error: $error)");
+        // Link is broken — replace with plain text + warning
         return $linkText;
     }, $html);
 }
@@ -657,6 +715,31 @@ function insertThumbnailAfterH1($content, $thumbHtml) {
         return substr($content, 0, $pos) . "\n" . $thumbHtml . "\n" . substr($content, $pos);
     }
     return $thumbHtml . "\n" . $content;
+}
+
+/**
+ * Insert content (e.g. a content image) after the 2nd H2 tag in HTML.
+ */
+function insertContentAfterSecondH2($content, $insertHtml) {
+    if (empty($insertHtml)) return $content;
+    // Find the 2nd <h2> tag
+    $count = 0;
+    $offset = 0;
+    while (preg_match('#<h2[^>]*>.*?</h2>#is', $content, $match, PREG_OFFSET_CAPTURE, $offset)) {
+        $count++;
+        if ($count === 2) {
+            $pos = $match[0][1] + strlen($match[0][0]);
+            return substr($content, 0, $pos) . "\n" . $insertHtml . "\n" . substr($content, $pos);
+        }
+        $offset = $match[0][1] + strlen($match[0][0]);
+    }
+    // No 2nd H2 found — insert after first H2
+    if (preg_match('#<h2[^>]*>.*?</h2>#is', $content, $match, PREG_OFFSET_CAPTURE)) {
+        $pos = $match[0][1] + strlen($match[0][0]);
+        return substr($content, 0, $pos) . "\n" . $insertHtml . "\n" . substr($content, $pos);
+    }
+    // No H2 found — just append
+    return $content . "\n" . $insertHtml;
 }
 
 /**
@@ -719,9 +802,9 @@ function generateArticleHtmlFromCampaignItem($item, $userId, $activeSlot, $db, $
         $h2List = implode(' | ', $h2s);
         $angleNote = $contentAngle ? "\nCONTENT ANGLE: $contentAngle" : '';
 
-        $nowYear = date('Y');
         $nowMonth = date('F');
-        $prompt = "Write a complete, publication-ready HTML blog article about \"$keyword\".\n\nTITLE: $title\nH1: $h1\nH2 SECTIONS: $h2List\nSUPPORTING KEYWORDS: $kwList\nINTERNAL LINKS (weave naturally into the text):\n$intLinkList\nEXTERNAL REFERENCES (cite naturally):\n$extLinkList\nIMAGE PROMPTS: " . implode('; ', $prompts) . "\n$angleNote\n\nREQUIREMENTS:\n- 1,800 to 2,200 words of original, researched content\n- Use semantic HTML: proper H1, H2, H3, H4, p, ul, li, table, figure, blockquote tags\n- CRITICAL: Keep paragraphs SHORT — strictly 45 to 50 words per paragraph. Every <p> tag must have between 45 and 50 words. Break long paragraphs into multiple short <p> tags. Readers skim; short paragraphs improve readability and mobile experience.\n- Write in a natural, authoritative human voice - no AI cliches or banned phrases\n- Include a FAQ section at the end with 3 real questions and answers about $keyword\n- Include at least 2 internal links with natural anchor text to client website pages\n- Include at least 4 external authority references — ONLY use the URLs provided in EXTERNAL REFERENCES above. Do NOT invent or make up any URLs. If you need more, use Wikipedia (en.wikipedia.org/wiki/...) or Google developer docs that you are CERTAIN exist.\n- Also include up to 2 links to the client website pages listed in internal links\n- Include at least 2 <figure><img> tags with descriptive alt text at different points in the article (not consecutive — spread them out after different sections)\n- Add a comparison data table where relevant\n- Write about CURRENT trends in $nowMonth $nowYear — not outdated 2023 or older information. Reference the latest year ($nowYear) naturally.\n- Do NOT include html/head/body tags - only the article content\n- Do NOT invent facts, statistics, or quotes\n- Do NOT make up URLs — only use real, verified external URLs\n- Return ONLY the article HTML, no markdown fences";
+        $nowYear = date('Y');
+        $prompt = "Write a complete, publication-ready HTML blog article about \"$keyword\".\n\nTITLE: $title\nH1: $h1\nH2 SECTIONS: $h2List\nSUPPORTING KEYWORDS: $kwList\nINTERNAL LINKS (weave naturally into the text):\n$intLinkList\nEXTERNAL REFERENCES (cite naturally — at least 4 required):\n$extLinkList\nIMAGE PROMPTS: " . implode('; ', $prompts) . "\n$angleNote\n\nREQUIREMENTS:\n- 1,800 to 2,200 words of original, researched content\n- Use semantic HTML: proper H1, H2, H3, H4, p, ul, li, table, figure, blockquote tags\n- CRITICAL: Keep paragraphs SHORT — strictly 45 to 50 words per paragraph. Every <p> tag must have between 45 and 50 words. Break long paragraphs into multiple short <p> tags. Readers skim; short paragraphs improve readability and mobile experience.\n- Write in a natural, authoritative human voice - no AI cliches or banned phrases\n- Include a FAQ section at the end with 3 real questions and answers about $keyword\n- Include 1-2 internal links with natural anchor text to the client website pages\n- MANDATORY: Include at least 4 external authority references with REAL working URLs to well-known sites (Wikipedia, official docs, authority blogs like Moz, Ahrefs, Neil Patel, HubSpot, Backlinko, Schema.org, Google support, etc.). Verify the URLs are correct and related to the topic. This is a strict minimum — not optional.\n- Also include up to 2 links to the client website pages listed in internal links\n- Add a comparison data table where relevant\n- Use current year $nowYear throughout the article. NEVER use outdated years like 2023 or older. Do NOT mention the current month ($nowMonth) in the H1 title or any heading. You may use the year in headings where it feels natural.\n- Do NOT include html/head/body tags - only the article content\n- Do NOT invent facts, statistics, or quotes\n- Do NOT make up URLs — only use real, verified external URLs\n- Return ONLY the article HTML, no markdown fences";
 
         $chatResult = AIProviderClient::chat($chatVault, $prompt);
         if (!empty($chatResult['success']) && !empty($chatResult['content'])) {
@@ -747,6 +830,7 @@ function generateArticleHtmlFromCampaignItem($item, $userId, $activeSlot, $db, $
     }
 
     // Featured THUMBNAIL image via Image API — 9:16 ratio, MANDATORY first image
+    // This is the ONLY image we generate. Retries up to 3 times.
     $featuredImgUrl = '';
     if (!empty($imageVault['api_key'])) {
         for ($imgAttempt = 1; $imgAttempt <= 3; $imgAttempt++) {
@@ -758,21 +842,6 @@ function generateArticleHtmlFromCampaignItem($item, $userId, $activeSlot, $db, $
                     break;
                 }
                 error_log("[Image Validation] Thumbnail attempt $imgAttempt URL not accessible: " . $imgResult['url']);
-            }
-        }
-    }
-
-    // SECOND content image — landscape, inserted after the 2nd H2 section
-    $contentImgUrl = '';
-    if (!empty($imageVault['api_key'])) {
-        for ($imgAttempt = 1; $imgAttempt <= 3; $imgAttempt++) {
-            $contentImgPrompt = "Professional editorial photograph illustrating $keyword in practice. Landscape 16:9, 1024x576. Natural lighting, real-world setting, authentic people or objects. No text, no logos, no watermarks. Magazine quality.";
-            $imgResult2 = AIProviderClient::image($imageVault, $contentImgPrompt);
-            if (!empty($imgResult2['success']) && !empty($imgResult2['url'])) {
-                if (validateImageUrl($imgResult2['url'])) {
-                    $contentImgUrl = $imgResult2['url'];
-                    break;
-                }
             }
         }
     }
@@ -793,25 +862,32 @@ function generateArticleHtmlFromCampaignItem($item, $userId, $activeSlot, $db, $
     $escKw = escapeHtml($keyword);
     if ($featuredImgUrl) {
         $escImgUrl = escapeHtml($featuredImgUrl);
-        $thumbHtml = "<figure class=\"blog-thumbnail\" style=\"margin:0 0 24px 0;border-radius:12px;overflow:hidden;aspect-ratio:9/16;max-height:520px;\"><img class=\"blog-thumb-img\" data-kw=\"{$escKw}\" src=\"{$escImgUrl}\" alt=\"{$escKw} - Blog Thumbnail\" style=\"width:100%;height:100%;display:block;object-fit:cover;\" loading=\"eager\"></figure>";
+        $thumbHtml = "<figure class=\"blog-thumbnail\" style=\"margin:0 0 24px 0;border-radius:12px;overflow:hidden;width:100%;\"><img class=\"blog-thumb-img\" data-kw=\"{$escKw}\" src=\"{$escImgUrl}\" alt=\"{$escKw} - Blog Thumbnail\" style=\"width:100%;display:block;object-fit:cover;\" loading=\"eager\"></figure>";
     } else {
-        $thumbHtml = "<figure class=\"blog-thumbnail\" style=\"margin:0 0 24px 0;border-radius:12px;overflow:hidden;aspect-ratio:9/16;max-height:520px;\"><div style=\"aspect-ratio:9/16;background:linear-gradient(135deg,#1b57f6,#8b5cf6);display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.5rem;font-weight:800;padding:40px;text-align:center;min-height:300px;\">{$escKw}</div></figure>";
+        $thumbHtml = "<figure class=\"blog-thumbnail\" style=\"margin:0 0 24px 0;border-radius:12px;overflow:hidden;width:100%;\"><div style=\"background:linear-gradient(135deg,#1b57f6,#8b5cf6);display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.5rem;font-weight:800;padding:40px;text-align:center;min-height:300px;\">{$escKw}</div></figure>";
     }
     $chatContent = insertThumbnailAfterH1($chatContent, $thumbHtml);
 
-    // Insert second content image after the 2nd H2 heading
-    if ($contentImgUrl) {
-        $escContentImgUrl = escapeHtml($contentImgUrl);
-        $contentImgHtml = "<figure class=\"blog-content-img\" style=\"margin:36px 0;border-radius:12px;overflow:hidden;\"><img src=\"{$escContentImgUrl}\" alt=\"Practical illustration of {$escKw}\" style=\"width:100%;height:auto;display:block;object-fit:cover;max-height:420px;border-radius:12px;\" loading=\"lazy\"></figure>";
-        // Find the 2nd H2 and insert after it
-        $h2Count = 0;
-        $chatContent = preg_replace_callback('#<h2[^>]*>.*?</h2>#is', function($m) use (&$h2Count, $contentImgHtml) {
-            $h2Count++;
-            if ($h2Count === 2) {
-                return $m[0] . "\n" . $contentImgHtml . "\n";
+    // ===== SECOND IMAGE: Content image after the 2nd H2 tag (16:9 landscape) =====
+    // This ensures minimum 2 images per blog (thumbnail + content image)
+    $contentImgUrl = '';
+    if (!empty($imageVault['api_key'])) {
+        for ($imgAttempt2 = 1; $imgAttempt2 <= 2; $imgAttempt2++) {
+            $contentImgPrompt = "Wide landscape editorial image for a blog about $keyword. Horizontal 16:9 aspect ratio, 1200x675. Professional, relevant to the topic, no text, no logos, no watermarks. Clean magazine style.";
+            $imgResult2 = AIProviderClient::image($imageVault, $contentImgPrompt);
+            if (!empty($imgResult2['success']) && !empty($imgResult2['url'])) {
+                if ($imgResult2['url'] !== $featuredImgUrl && validateImageUrl($imgResult2['url'])) {
+                    $contentImgUrl = $imgResult2['url'];
+                    break;
+                }
             }
-            return $m[0];
-        }, $chatContent);
+        }
+    }
+    // Insert content image after the 2nd H2 tag
+    if ($contentImgUrl) {
+        $escContentImg = escapeHtml($contentImgUrl);
+        $contentImgHtml = "<figure style=\"margin:32px 0;border-radius:12px;overflow:hidden;\"><img src=\"{$escContentImg}\" alt=\"{$escKw} - Practical Overview\" style=\"width:100%;height:auto;display:block;object-fit:cover;max-height:420px;border-radius:12px;\" loading=\"lazy\"></figure>";
+        $chatContent = insertContentAfterSecondH2($chatContent, $contentImgHtml);
     }
 
     // Build the full HTML document
@@ -824,6 +900,50 @@ function generateArticleHtmlFromCampaignItem($item, $userId, $activeSlot, $db, $
     $dateStr = date('F d, Y');
     $escTitle = escapeHtml($title);
 
+    // === BUILD SHARED ARTICLE CSS (used in both local HTML and Blogger) ===
+    $sharedArticleCss = <<<CSS
+* { box-sizing: border-box; }
+article { font-family: 'Montserrat', -apple-system, sans-serif; line-height: 1.85; color: #334155; max-width: 960px; margin: 0 auto; font-size: 1.02rem; background: #ffffff; padding: 48px; border: 1px solid #e2e8f0; }
+.blog-thumbnail { width: 100%; margin: 0 0 24px 0; }
+.blog-thumbnail img { width: 100% !important; display: block !important; object-fit: cover !important; border-radius: 12px !important; }
+h1 { font-size: 2.2rem; font-weight: 800; color: #0f172a; margin-bottom: 12px; line-height: 1.2; text-align: center; }
+h2 { font-size: 1.5rem; font-weight: 800; color: #0f172a; margin-top: 36px; margin-bottom: 16px; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; }
+h3 { font-size: 1.15rem; font-weight: 700; color: #0f172a; margin-top: 24px; margin-bottom: 12px; }
+p { margin-bottom: 18px; }
+a { color: #1b57f6; font-weight: 600; text-decoration: none; }
+a:hover { text-decoration: underline; }
+ul, ol { margin: 16px 0; padding-left: 22px; line-height: 2; }
+blockquote { border-left: 4px solid #1b57f6; padding: 16px 20px; margin: 24px 0; background: #f8fafc; border-radius: 0 8px 8px 0; }
+table { width: 100%; border-collapse: collapse; margin: 20px 0; display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+thead { display: table-header-group; }
+tbody { display: table-row-group; }
+tr { display: table-row; }
+td, th { border: 1px solid #e2e8f0; padding: 12px 14px; text-align: left; display: table-cell; }
+th { background: #f1f5f9; font-weight: 700; }
+figure { margin: 24px 0; }
+img { max-width: 100%; height: auto; border-radius: 12px; display: block; }
+footer { margin-top: 48px; font-size: 0.85rem; text-align: center; color: #64748b; font-weight: 600; }
+@media (max-width: 768px) {
+    article { padding: 24px 16px; }
+    h1 { font-size: 1.6rem; }
+    h2 { font-size: 1.25rem; margin-top: 24px; }
+    h3 { font-size: 1.05rem; }
+    p { font-size: 0.95rem; margin-bottom: 14px; }
+    ul, ol { padding-left: 18px; font-size: 0.95rem; }
+    td, th { padding: 8px 10px; font-size: 0.85rem; }
+    blockquote { padding: 12px 16px; }
+    figure { margin: 16px 0; }
+    img { border-radius: 8px; }
+}
+@media (max-width: 480px) {
+    h1 { font-size: 1.4rem; }
+    h2 { font-size: 1.15rem; }
+    article { padding: 16px 12px; }
+
+}
+.thumb-placeholder { aspect-ratio: 9/16; background: linear-gradient(135deg, #1b57f6, #8b5cf6); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 1.5rem; font-weight: 800; padding: 40px; text-align: center; min-height: 300px; border-radius: 12px; }
+CSS;
+
     $fullHtml = <<<HTML
 <!DOCTYPE html>
 <html lang="en">
@@ -835,68 +955,10 @@ function generateArticleHtmlFromCampaignItem($item, $userId, $activeSlot, $db, $
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-        /* BLOGGER DESKTOP FIX: Force Blogger containers to full width */
-        .post-title,.entry-title,h3.post-title,h2.post-title,.post h3,.post-title.entry-title,.blog-post h3,.Blog .post h3,.post-title.entry-title.item,.Blog .post .post-title,.post-title.entry-title.sticky {display:none!important;}
-        /* Remove Blogger's narrow content restriction on desktop */
-        body {width:100%!important;max-width:none!important;margin:0!important;}
-        /* Force ALL Blogger wrapper containers to use available desktop width */
-        .content-outer,.content-inner,.main-outer,.main-inner,.main,.Blog,.blog-posts,.post-outer,.post,.post-body,.entry-content {width:100%!important;max-width:none!important;}
-        .post-body,.entry-content {padding:0!important;margin:0!important;overflow:visible!important;background:none!important;border:none!important;}
-        /* Hide Blogger sidebars to give article full width */
-        .column-left-outer,.column-right-outer,.sidebar,.blog-sidebar,#sidebar-wrapper,.sidebar-wrapper {display:none!important;}
-        /* Article: comfortable reading width, centered */
-        article { font-family: 'Montserrat', sans-serif!important; line-height: 1.8!important; background: #ffffff!important; padding: 48px 52px!important; border-radius: 20px!important; box-shadow: 0 10px 30px rgba(0,0,0,0.04)!important; border: 1px solid #e2e8f0!important; width: 100%!important; max-width: 960px!important; margin-left: auto!important; margin-right: auto!important; overflow-wrap: break-word!important; word-wrap: break-word!important; color: #0f172a!important; box-sizing: border-box!important; }
-        article * { box-sizing: border-box!important; }
-        article .blog-thumbnail { width: 100%!important; }
-        article h1 { font-size: 2.4rem!important; font-weight: 800!important; color: #0f172a!important; margin: 0 0 12px 0!important; line-height: 1.2!important; text-align: center!important; }
-        article h2 { font-size: 1.6rem!important; font-weight: 800!important; color: #0f172a!important; margin: 36px 0 16px 0!important; border-bottom: 1px solid #e2e8f0!important; padding: 0 0 8px 0!important; }
-        article h3 { font-size: 1.2rem!important; font-weight: 700!important; color: #0f172a!important; margin: 24px 0 12px 0!important; }
-        article h4 { font-size: 1.05rem!important; font-weight: 700!important; color: #0f172a!important; margin: 20px 0 10px 0!important; }
-        article p { margin: 0 0 18px 0!important; text-align: justify!important; font-size: 1.05rem!important; line-height: 1.8!important; }
-        article a { color: #1b57f6!important; font-weight: 600!important; text-decoration: none!important; }
-        article a:hover { text-decoration: underline!important; }
-        article ul, article ol { margin: 16px 0!important; padding: 0 0 0 22px!important; line-height: 2!important; text-align: justify!important; }
-        article li { margin-bottom: 6px!important; }
-        article blockquote { border-left: 4px solid #1b57f6!important; padding: 16px 20px!important; margin: 24px 0!important; background: #f8fafc!important; border-radius: 0 8px 8px 0!important; text-align: justify!important; }
-        article table { width: 100%!important; border-collapse: collapse!important; margin: 20px 0!important; }
-        article td, article th { border: 1px solid #e2e8f0!important; padding: 12px 14px!important; text-align: left!important; }
-        article th { background: #f1f5f9!important; font-weight: 700!important; }
-        article figure { margin: 24px 0!important; width: 100%!important; }
-        article img { max-width: 100%!important; height: auto!important; border-radius: 12px!important; display: block!important; margin: 0 auto!important; }
-        article .nav-back { display: none!important; }
-        article footer { margin-top: 48px!important; font-size: 0.85rem!important; text-align: center!important; color: #64748b!important; font-weight: 600!important; }
-        article .thumb-placeholder { aspect-ratio: 9/16!important; background: linear-gradient(135deg, #1b57f6, #8b5cf6)!important; display: flex!important; align-items: center!important; justify-content: center!important; color: #fff!important; font-size: 1.5rem!important; font-weight: 800!important; padding: 40px!important; text-align: center!important; min-height: 300px!important; border-radius: 12px!important; }
-        /* Desktop Blogger layout fix */
-        @media (min-width: 769px) {
-            body {width:100%!important;max-width:none!important;margin:0!important;padding:40px 30px!important;}
-            .content-outer,.content-inner,.main-outer,.main-inner,.main,.Blog,.blog-posts,.post-outer,.post,.post-body,.entry-content {width:100%!important;max-width:none!important;}
-            article {width:100%!important;max-width:960px!important;margin-left:auto!important;margin-right:auto!important;padding:48px 52px!important;}
-            article h1 {font-size:2.4rem!important;}
-            article h2 {font-size:1.6rem!important;}
-            article p {font-size:1.05rem!important;}
-        }
-        /* Tablet */
-        @media (min-width: 481px) and (max-width: 768px) {
-            article { padding: 32px 24px!important; max-width: 100%!important; }
-            article h1 { font-size: 1.8rem!important; }
-            article h2 { font-size: 1.35rem!important; }
-            article p { font-size: 1rem!important; }
-        }
-        /* Mobile */
-        @media (max-width: 480px) {
-            body {padding:16px 12px!important;}
-            article { padding: 20px 16px!important; border-radius: 14px!important; max-width: 100%!important; }
-            article h1 { font-size: 1.5rem!important; }
-            article h2 { font-size: 1.2rem!important; margin-top: 24px!important; }
-            article h3 { font-size: 1.05rem!important; }
-            article p { font-size: 0.95rem!important; margin-bottom: 14px!important; }
-            article ul, article ol { padding-left: 18px!important; font-size: 0.95rem!important; }
-            article td, article th { padding: 8px 10px!important; font-size: 0.85rem!important; }
-            article blockquote { padding: 12px 16px!important; }
-            article .blog-thumbnail { max-height: 360px!important; }
-            article figure { margin: 16px 0!important; }
-            article img { border-radius: 8px!important; }
-        }
+        html { scroll-behavior: smooth; }
+        body { font-family: 'Montserrat', sans-serif; max-width: 960px; margin: 0 auto; padding: 36px 20px; color: #0f172a; background: #fafafa; }
+        .nav-back { margin-bottom: 24px; display: inline-block; color: #0f172a; font-weight: 800; text-decoration: underline; font-size: 0.9rem; }
+        $sharedArticleCss
     </style>
     <script>
         // Image error handler
@@ -989,7 +1051,7 @@ function generateFallbackArticleHtml($title, $keyword, $h1, $h2s, $h3s, $kws, $l
 
     $html = <<<ARTICLE
 <header style="margin-bottom:28px;">
-    <h1 style="text-align:center;">$escH1</h1>
+    <h1>$escH1</h1>
     <p style="font-size:1.1rem;color:#475569;font-weight:500;margin-bottom:16px;">Comprehensive analysis and practical strategies for $escKw - updated $dateStr.</p>
     <div style="display:flex;align-items:center;gap:12px;border-top:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0;padding:12px 0;font-size:0.85rem;color:#64748b;font-weight:600;">
         <div style="background:#0f172a;color:#fff;font-weight:800;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.85rem;">ED</div>

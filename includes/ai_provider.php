@@ -61,6 +61,12 @@ class AIProviderClient {
                 'pollinations' => 'https://gen.pollinations.ai/v1/chat/completions',
             ];
             $endpoint = $credentials['endpoint'] ?: ($defaultEndpoints[$provider] ?? 'https://api.openai.com/v1/chat/completions');
+            
+            // For Pollinations, ensure the model is properly set
+            // Pollinations accepts: openai, openai-fast, openai-large, gemini, gemini-fast, claude, deepseek, grok, mistral, qwen, llama
+            if ($provider === 'pollinations' && (empty($model) || $model === 'gpt-4o-mini' || $model === 'gpt-4o')) {
+                $model = 'openai'; // Default Pollinations model
+            }
 
             if ($provider === 'anthropic') {
                 $headers = ['x-api-key: ' . $key, 'anthropic-version: 2023-06-01', 'Content-Type: application/json'];
@@ -164,8 +170,19 @@ class AIProviderClient {
             }
 
             if ($provider === 'pollinations') {
-                // Pollinations.ai image generation — GET request with prompt in URL
-                $imgModel = $model ?: 'flux';
+                // Pollinations.ai image — GET request with prompt in URL
+                // Supported models: flux, flux-pro, flux-realism, flux-anime, flux-3d, flux-cablyai, 
+                // turbo, gptimage, gptimage-large, kontext, seedream5, nanobanana, imagen-4, grok-imagine
+                // Map short names to full model names
+                $modelMap = [
+                    'zimage' => 'turbo',
+                    'dreamshaper-8-lcm' => 'flux',
+                    'flux' => 'flux',
+                    'klein' => 'flux',
+                    'gptimage' => 'gptimage',
+                ];
+                $imgModel = $modelMap[$model] ?? $model;
+                if (empty($imgModel)) $imgModel = 'flux';
                 $width = 1024;
                 $height = 1024;
                 $seed = rand(1000, 9999);
@@ -173,10 +190,10 @@ class AIProviderClient {
                 if (!empty($key)) {
                     $imageUrl .= "&key=" . urlencode($key);
                 }
-                // Pollinations returns the image directly at this URL
-                // We return the URL itself — the browser will fetch it
                 return ['success' => true, 'url' => $imageUrl, 'error' => ''];
             }
+
+            // OpenAI-compatible
             $endpoint = $credentials['endpoint'] ?: 'https://api.openai.com/v1/images/generations';
             $headers = ['Authorization: Bearer ' . $key, 'Content-Type: application/json'];
             $payload = ['model' => $model, 'prompt' => $prompt, 'size' => $credentials['size'] ?? '1536x1024', 'n' => 1];

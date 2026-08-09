@@ -4,7 +4,7 @@ RewriteEngine On
 RewriteBase /
 
 RewriteRule ^includes/ - [F,L]
-RewriteRule ^cron/ - [F,L]
+# cron/ needs web access for "Run Cron Now" button and URL-based cron
 
 <FilesMatch "\.(db|sqlite,sqlite3)$">
     Order allow,deny

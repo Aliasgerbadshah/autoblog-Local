@@ -137,26 +137,201 @@ function validateImageUrl($url, $timeout = 5) {
     return true;
 }
 
-/**
- * Update a topic's status in the persistent used_topics.json file.
- * This file survives code redeployment — the database may be reset but this file persists.
- */
-function updateTopicStatusInFile($topicTitle, $status) {
+function getTopicsCsvPath() {
+    return dirname(__DIR__) . '/data/used_topics.csv';
+}
+
+function addTopicToCsv($topic, $keyword, $domain, $status, $campaignId, $date = null) {
+    if (!$date) $date = date('Y-m-d H:i:s');
+    $csvPath = getTopicsCsvPath();
+    $writeHeader = !file_exists($csvPath) || filesize($csvPath) === 0;
+    $fp = fopen($csvPath, 'a');
+    if ($writeHeader) fputcsv($fp, ['S.No', 'Topic (Blog Title)', 'Primary Keyword', 'Domain/Website', 'Status', 'Campaign ID', 'Created Date']);
+    $sno = 1;
+    if (file_exists($csvPath)) { $lines = file($csvPath); $sno = count($lines); }
+    fputcsv($fp, [$sno, $topic, $keyword, $domain, $status, $campaignId, $date]);
+    fclose($fp);
+}
+
+function syncTopicsCsv() {
+    $csvPath = getTopicsCsvPath();
+    $db = getDB();
+    $allTopics = [];
+    // Source 1: JSON file
     $topicFilePath = dirname(__DIR__) . '/data/used_topics.json';
-    if (!file_exists($topicFilePath)) return;
-    $topicFileData = json_decode(file_get_contents($topicFilePath), true);
-    if (empty($topicFileData['topics'])) return;
-    $titleLower = strtolower(trim($topicTitle));
-    $updated = false;
-    foreach ($topicFileData['topics'] as &$t) {
-        if (strtolower(trim($t['topic'] ?? '')) === $titleLower) {
-            $t['status'] = $status;
-            $updated = true;
+    if (file_exists($topicFilePath)) {
+        $topicFile = json_decode(file_get_contents($topicFilePath), true);
+        if (!empty($topicFile['topics'])) {
+            foreach ($topicFile['topics'] as $t) {
+                $key = strtolower(trim($t['topic'] ?? '')) . '|' . strtolower(trim($t['keyword'] ?? ''));
+                $allTopics[$key] = ['topic' => $t['topic'] ?? '', 'keyword' => $t['keyword'] ?? '', 'domain' => $t['domain'] ?? '', 'status' => $t['status'] ?? 'unknown', 'campaign_id' => $t['campaign_id'] ?? '', 'date' => $t['date'] ?? ''];
+            }
         }
     }
-    unset($t);
-    if ($updated) {
-        $topicFileData['_last_updated'] = date('Y-m-d H:i:s');
-        file_put_contents($topicFilePath, json_encode($topicFileData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+    // Source 2: DB created_blog_topics
+    try {
+        $stmt = $db->query('SELECT cbt.title, cbt.primary_keyword, cbt.domain_url, cbt.campaign_id, cbt.created_at, ci.article_status FROM created_blog_topics cbt LEFT JOIN campaign_items ci ON ci.campaign_id = cbt.campaign_id AND ci.title = cbt.title ORDER BY cbt.created_at ASC');
+        foreach ($stmt->fetchAll() as $row) {
+            $key = strtolower(trim($row['title'])) . '|' . strtolower(trim($row['primary_keyword']));
+            $status = $row['article_status'] ?? 'unknown';
+            if ($status === 'Published') $status = 'published'; elseif ($status === 'Final Article Approved' || $status === 'HTML Ready') $status = 'approved'; elseif ($status === 'Scheduled') $status = 'scheduled'; elseif (strpos($status, 'Reject') !== false) $status = 'rejected'; elseif ($status === 'Not Created' || $status === '') $status = 'pending';
+            $allTopics[$key] = ['topic' => $row['title'], 'keyword' => $row['primary_keyword'], 'domain' => $row['domain_url'] ?? '', 'status' => $status, 'campaign_id' => $row['campaign_id'] ?? '', 'date' => $row['created_at'] ?? ''];
+        }
+    } catch (Exception $e) {}
+    // Source 3: campaign_items
+    try {
+        $stmt = $db->query('SELECT ci.title, ci.primary_keyword, ci.article_status, ci.campaign_id, c.domain_url, c.created_at as camp_created FROM campaign_items ci JOIN campaigns c ON c.id = ci.campaign_id ORDER BY ci.id ASC');
+        foreach ($stmt->fetchAll() as $row) {
+            $key = strtolower(trim($row['title'])) . '|' . strtolower(trim($row['primary_keyword']));
+            if (isset($allTopics[$key])) continue;
+            $status = $row['article_status'] ?? 'unknown';
+            if ($status === 'Published') $status = 'published'; elseif ($status === 'Final Article Approved' || $status === 'HTML Ready') $status = 'approved'; elseif ($status === 'Scheduled') $status = 'scheduled'; elseif (strpos($status, 'Reject') !== false) $status = 'rejected'; elseif ($status === 'Not Created' || $status === '') $status = 'pending';
+            $allTopics[$key] = ['topic' => $row['title'], 'keyword' => $row['primary_keyword'], 'domain' => $row['domain_url'] ?? '', 'status' => $status, 'campaign_id' => $row['campaign_id'] ?? '', 'date' => $row['camp_created'] ?? ''];
+        }
+    } catch (Exception $e) {}
+    uasort($allTopics, function($a, $b) { return strcmp($a['date'] ?? '', $b['date'] ?? ''); });
+    $fp = fopen($csvPath, 'w');
+    fputcsv($fp, ['S.No', 'Topic (Blog Title)', 'Primary Keyword', 'Domain/Website', 'Status', 'Campaign ID', 'Created Date']);
+    $sno = 1;
+    foreach ($allTopics as $t) { fputcsv($fp, [$sno++, $t['topic'], $t['keyword'], $t['domain'], $t['status'], $t['campaign_id'], $t['date']]); }
+    fclose($fp);
+    return count($allTopics);
+}
+
+function getUsedTopicsFromCsv() {
+    $csvPath = getTopicsCsvPath();
+    if (!file_exists($csvPath)) return [];
+    $topics = [];
+    $fp = fopen($csvPath, 'r');
+    fgetcsv($fp);
+    while (($row = fgetcsv($fp)) !== false) {
+        if (count($row) >= 3) $topics[] = ['topic' => $row[1] ?? '', 'keyword' => $row[2] ?? '', 'domain' => $row[3] ?? '', 'status' => $row[4] ?? '', 'campaign_id' => $row[5] ?? '', 'date' => $row[6] ?? ''];
     }
+    fclose($fp);
+    return $topics;
+}
+
+/**
+ * Get ALL used topics from ALL sources: JSON file, DB created_blog_topics, 
+ * campaign_items, and CSV. Returns array of ['topic' => ..., 'keyword' => ...].
+ */
+function getAllUsedTopics($db, $userId = null) {
+    $allTopics = [];
+    
+    // Source 1: JSON file (persistent, survives redeployment)
+    $topicFilePath = dirname(__DIR__) . '/data/used_topics.json';
+    if (file_exists($topicFilePath)) {
+        $topicFile = json_decode(file_get_contents($topicFilePath), true);
+        if (!empty($topicFile['topics'])) {
+            foreach ($topicFile['topics'] as $t) {
+                $key = strtolower(trim($t['topic'] ?? ''));
+                if (!empty($key)) $allTopics[$key] = ['topic' => $t['topic'] ?? '', 'keyword' => $t['keyword'] ?? ''];
+            }
+        }
+    }
+    
+    // Source 2: campaign_items table (most reliable)
+    try {
+        $sql = 'SELECT title, primary_keyword FROM campaign_items';
+        if ($userId) $sql .= ' ci JOIN campaigns c ON c.id = ci.campaign_id WHERE c.user_id = ' . intval($userId);
+        $stmt = $db->query($sql);
+        foreach ($stmt->fetchAll() as $row) {
+            $key = strtolower(trim($row['title'] ?? ''));
+            if (!empty($key)) $allTopics[$key] = ['topic' => $row['title'], 'keyword' => $row['primary_keyword'] ?? ''];
+        }
+    } catch (Exception $e) {}
+    
+    // Source 3: created_blog_topics table
+    try {
+        $sql = 'SELECT title, primary_keyword FROM created_blog_topics';
+        if ($userId) $sql .= ' WHERE user_id = ' . intval($userId);
+        $stmt = $db->query($sql);
+        foreach ($stmt->fetchAll() as $row) {
+            $key = strtolower(trim($row['title'] ?? ''));
+            if (!empty($key)) $allTopics[$key] = ['topic' => $row['title'], 'keyword' => $row['primary_keyword'] ?? ''];
+        }
+    } catch (Exception $e) {}
+    
+    // Source 4: CSV file
+    $csvTopics = getUsedTopicsFromCsv();
+    foreach ($csvTopics as $t) {
+        $key = strtolower(trim($t['topic'] ?? ''));
+        if (!empty($key)) $allTopics[$key] = ['topic' => $t['topic'], 'keyword' => $t['keyword'] ?? ''];
+    }
+    
+    return array_values($allTopics);
+}
+
+/**
+ * Check if a topic is a duplicate of any existing topic.
+ * Uses both exact match and fuzzy matching (levenshtein/similar_text).
+ * Returns true if the topic is a duplicate.
+ */
+function isTopicDuplicate($newTitle, $newKeyword, $existingTopics, $threshold = 0.78) {
+    $newTitleLower = strtolower(trim($newTitle));
+    $newKeywordLower = strtolower(trim($newKeyword));
+    
+    foreach ($existingTopics as $existing) {
+        $existingTitleLower = strtolower(trim($existing['topic'] ?? ''));
+        $existingKeywordLower = strtolower(trim($existing['keyword'] ?? ''));
+        
+        // Exact title match
+        if ($newTitleLower === $existingTitleLower) return true;
+        
+        // Exact keyword match
+        if (!empty($newKeywordLower) && !empty($existingKeywordLower) && $newKeywordLower === $existingKeywordLower) return true;
+        
+        // Fuzzy title match using similar_text
+        if (!empty($newTitleLower) && !empty($existingTitleLower)) {
+            similar_text($newTitleLower, $existingTitleLower, $percent);
+            if ($percent >= ($threshold * 100)) return true;
+        }
+        
+        // Fuzzy keyword match
+        if (!empty($newKeywordLower) && !empty($existingKeywordLower)) {
+            similar_text($newKeywordLower, $existingKeywordLower, $kwPercent);
+            if ($kwPercent >= 85) return true; // Keywords must be very similar to be duplicate
+        }
+        
+        // Levenshtein check for near-duplicates (edit distance)
+        if (!empty($newTitleLower) && !empty($existingTitleLower)) {
+            $maxLen = max(strlen($newTitleLower), strlen($existingTitleLower));
+            if ($maxLen > 0) {
+                $levDist = levenshtein($newTitleLower, $existingTitleLower);
+                $similarity = 1 - ($levDist / $maxLen);
+                if ($similarity >= $threshold) return true;
+            }
+        }
+    }
+    
+    return false;
+}
+
+/**
+ * Add a topic to the persistent JSON file (survives redeployment).
+ */
+function addTopicToJsonFile($topic, $keyword, $domain, $status = 'pending', $campaignId = '') {
+    $topicFilePath = dirname(__DIR__) . '/data/used_topics.json';
+    $data = ['_instructions' => '', 'topics' => []];
+    if (file_exists($topicFilePath)) {
+        $data = json_decode(file_get_contents($topicFilePath), true) ?: ['topics' => []];
+    }
+    $data['_last_updated'] = date('Y-m-d');
+    $data['topics'][] = [
+        'topic' => $topic,
+        'keyword' => $keyword,
+        'domain' => $domain!=='published_posts'? $domain : '',
+        'status' => $status,
+        'campaign_id' => $campaignId,
+        'date' => date('Y-m-d')
+    ];
+    file_put_contents($topicFilePath, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+}
+
+/**
+ * Sync all topics to both JSON file and CSV (auto-sync on campaign creation).
+ */
+function syncAllTopics($db, $userId = null) {
+    $csvCount = syncTopicsCsv();
+    return $csvCount;
 }

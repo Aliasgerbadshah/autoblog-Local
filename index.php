@@ -4,6 +4,9 @@
  * Hostinger Shared Hosting Compatible
  */
 
+// Set timezone — Hostinger server may not match user timezone
+date_default_timezone_set('Asia/Kolkata');
+
 // PHP 8.0 polyfills for older PHP versions
 if (!function_exists('str_starts_with')) {
     function str_starts_with($haystack, $needle) {
@@ -690,7 +693,10 @@ function handleApiRoute($uri) {
         if (empty($chat['api_key'])) jsonResponse(['error' => 'Save and select a Chat API before live research.'], 400);
 
         $pageContext = implode("\n", array_map(fn($p) => "URL: {$p['page_url']} | Page topic: {$p['page_title']}", array_slice($pages, 0, 100)));
-        $prompt = "You are an SEO research strategist. Research the current web for the business website $domain in target country $country, language $language. Create exactly " . ($days * $postsPerDay) . " article plans for a $days-day campaign with $postsPerDay article(s) per day. Return ONLY valid JSON with this shape: {\"articles\":[{\"title\":\"...\",\"primary_keyword\":\"...\",\"keywords\":[{\"keyword\":\"...\",\"volume\":\"AI estimate\",\"difficulty\":\"Low/Medium/High\",\"intent\":\"...\"}],\"internal_links\":[{\"url\":\"...\",\"anchor_text\":\"...\",\"reason\":\"...\"}],\"external_links\":[{\"url\":\"...\",\"anchor_text\":\"...\",\"reason\":\"...\"}],\"headings\":{\"H1\":\"...\",\"H2\":[\"...\"],\"H3\":[\"...\"]},\"image_prompts\":[\"...\"]}]}. IMPORTANT for external_links: Provide 2-3 REAL working URLs to well-known authority sites (Wikipedia, Google docs, Mozilla MDN, Schema.org, Moz, etc.) that are RELATED to each article topic. Do NOT invent or guess URLs — only use URLs you are certain exist. Also include 1-2 of the client's crawled pages in internal_links. Crawled pages:\n$pageContext";
+        $nowYear = date('Y');
+        $nowMonth = date('F');
+        $countryNote = ($country !== 'India' && $country !== '') ? " The target country is $country — topics MUST be relevant to $country's market, culture, regulations, and business landscape. Do NOT reuse generic topics that could apply to any country. Make them specific to $country." : "";
+        $prompt = "You are an SEO research strategist. Search the web broadly for the business website $domain in target country $country, language $language. The current year is $nowYear — use it in content but do NOT mention the current month in article titles. Create exactly " . ($days * $postsPerDay) . " UNIQUE article plans for a $days-day campaign with $postsPerDay article(s) per day. Each article MUST cover a DIFFERENT angle — do not repeat the same concept with slight wording changes. Think broadly: search different blogs, industry reports, competitor analysis, trending news, how-to guides, comparison reviews, case studies, tool roundups, expert opinions, FAQ compilations, myth-busting articles, beginner tutorials, advanced strategies, cost analyses, ROI discussions, compliance/legal aspects, regional opportunities, technology integrations, workflow optimizations, and productivity hacks. Return ONLY valid JSON with this shape: {\"articles\":[{\"title\":\"...\",\"primary_keyword\":\"...\",\"keywords\":[{\"keyword\":\"...\",\"volume\":\"AI estimate\",\"difficulty\":\"Low/Medium/High\",\"intent\":\"...\"}],\"internal_links\":[{\"url\":\"...\",\"anchor_text\":\"...\",\"reason\":\"...\"}],\"external_links\":[{\"url\":\"...\",\"anchor_text\":\"...\",\"reason\":\"...\"}],\"headings\":{\"H1\":\"...\",\"H2\":[\"...\"],\"H3\":[\"...\"]},\"image_prompts\":[\"...\"]}]}. IMPORTANT: (1) Each article title must be UNIQUE in concept — not just different wording of the same idea. (2) Do NOT include the month name in any title. (3) Include the year $nowYear in titles only when natural. (4) Do NOT mention the country in the title unless it specifically adds targeting value. (5) For external_links: Provide at least 4 REAL working URLs to well-known authority sites (Wikipedia, Google docs, Mozilla MDN, Schema.org, Moz, Ahrefs, Neil Patel, HubSpot, Backlinko, etc.) that are RELATED to each article topic. Do NOT invent or guess URLs. (6) Include 1-2 of the client's crawled pages in internal_links.$countryNote Crawled pages:\n$pageContext";
 
         $result = AIProviderClient::chat($chat, $prompt);
         if (!$result['success']) jsonResponse(['error' => 'Chat research failed: ' . ($result['error'] ?? 'Unknown error')], 400);
@@ -702,10 +708,48 @@ function handleApiRoute($uri) {
 
         $db = getDB();
         $now = nowString();
-        // CLEAN UP: Delete old unapproved items, keep approved/published
-        $db->exec("DELETE FROM campaign_items WHERE user_id = $userId AND plan_status NOT IN ('Approved','Provisional Approved') AND article_status NOT IN ('HTML Ready','Final Article Approved','Published','Scheduled') AND campaign_id IN (SELECT id FROM campaigns WHERE user_id = $userId AND status != 'Archived')");
-        $db->exec("DELETE FROM approval_tokens WHERE user_id = $userId AND campaign_item_id NOT IN (SELECT id FROM campaign_items)");
-        $db->exec("UPDATE campaigns SET status = 'Archived' WHERE user_id = $userId AND status = 'Roadmap Review' AND id NOT IN (SELECT DISTINCT campaign_id FROM campaign_items WHERE plan_status IN ('Approved','Provisional Approved') OR article_status IN ('HTML Ready','Final Article Approved','Published'))");
+        
+        // ===== STRICT TOPIC DEDUP: Load ALL existing topics before creating campaign =====
+        $existingTopics = getAllUsedTopics($db, $userId);
+        $dedupStats = ['total_proposed' => count($plans), 'duplicates_removed' => 0];
+        $plans = array_filter($plans, function($plan) use ($existingTopics, &$dedupStats) {
+            $title = $plan['title'] ?? '';
+            $keyword = $plan['primary_keyword'] ?? '';
+            if (isTopicDuplicate($title, $keyword, $existingTopics)) {
+                $dedupStats['duplicates_removed']++;
+                return false;
+            }
+            return true;
+        });
+        $plans = array_values($plans);
+        // If too many duplicates were removed, request MORE topics from AI
+        $neededCount = $days * $postsPerDay;
+        if (count($plans) < $neededCount) {
+            $extraNeeded = $neededCount - count($plans);
+            $usedTitles = array_map(fn($p) => $p['title'] ?? '', $plans);
+            $usedTitlesStr = implode(', ', $usedTitles);
+            $extraPrompt = "I already have these article topics planned: $usedTitlesStr. I need $extraNeeded MORE completely different article topics for the website $domain in country $country. Each must be a UNIQUE angle not covered by the existing topics. Think of different blogs, industry angles, tool reviews, case studies, comparisons, FAQs, myths, regional opportunities, technology trends, compliance aspects, ROI analysis, workflow tips. Do NOT repeat any concept from the existing list. Return ONLY valid JSON: {\"articles\":[{\"title\":\"...\",\"primary_keyword\":\"...\",\"keywords\":[{\"keyword\":\"...\",\"volume\":\"AI estimate\",\"difficulty\":\"Low/Medium/High\",\"intent\":\"...\"}],\"internal_links\":[{\"url\":\"...\",\"anchor_text\":\"...\",\"reason\":\"...\"}],\"external_links\":[{\"url\":\"...\",\"anchor_text\":\"...\",\"reason\":\"...\"}],\"headings\":{\"H1\":\"...\",\"H2\":[\"...\"],\"H3\":[\"...\"]},\"image_prompts\":[\"...\"]}]}. Do NOT include month in titles. Include year $nowYear only when natural.";
+            $extraResult = AIProviderClient::chat($chat, $extraPrompt);
+            if (!empty($extraResult['success']) && !empty($extraResult['content'])) {
+                $extraRaw = trim($extraResult['content']);
+                $extraRaw = str_replace(['```json', '```'], '', $extraRaw);
+                $extraPlans = json_decode(trim($extraRaw), true)['articles'] ?? [];
+                foreach ($extraPlans as $ep) {
+                    if (count($plans) >= $neededCount) break;
+                    $et = $ep['title'] ?? '';
+                    $ek = $ep['primary_keyword'] ?? '';
+                    if (!isTopicDuplicate($et, $ek, $existingTopics)) {
+                        $plans[] = $ep;
+                        // Also add to existingTopics so next iteration checks against it
+                        $existingTopics[] = ['topic' => $et, 'keyword' => $ek];
+                    }
+                }
+            }
+        }
+        if (empty($plans)) jsonResponse(['error' => 'ALL proposed topics are duplicates of existing blogs. The software has covered this niche extensively. Try a different website or industry angle.', 'dedup_stats' => $dedupStats], 400);
+        // PRESERVE APPROVED ITEMS: Only archive campaigns with NO approved/finalized items
+        $db->exec("UPDATE approval_tokens SET decision = 'Expired' WHERE user_id = $userId AND decision IN ('Pending','Provisional') AND campaign_item_id NOT IN (SELECT id FROM campaign_items WHERE plan_status IN ('Approved','Provisional Approved') OR article_status IN ('HTML Ready','Final Article Approved'))");
+        $db->exec("UPDATE campaigns SET status = 'Archived' WHERE user_id = $userId AND status = 'Roadmap Review' AND id NOT IN (SELECT DISTINCT campaign_id FROM campaign_items WHERE plan_status IN ('Approved','Provisional Approved') OR article_status IN ('HTML Ready','Final Article Approved'))");
 
         $startDate = $input['start_date'] ?? date('Y-m-d');
         $postingTimes = $input['posting_times'] ?? ['10:00'];
@@ -737,7 +781,19 @@ function handleApiRoute($uri) {
             $stmt->execute([$userId, $itemId, 'roadmap', $token, $now]);
 
             $roadmapRows[] = ['plan_id' => $itemId, 'day' => intval($i / $postsPerDay) + 1, 'topic' => $plan['title'] ?? '', 'keyword' => $plan['primary_keyword'] ?? '', 'competition' => 'AI researched', 'target_link' => '', 'target_anchor' => 'See approved research in email'];
+            
+            // Record topic to persistent JSON + CSV for dedup
+            addTopicToJsonFile($plan['title'] ?? 'Untitled', $plan['primary_keyword'] ?? '', $domain, 'pending', $campaignId);
+            addTopicToCsv($plan['title'] ?? 'Untitled', $plan['primary_keyword'] ?? '', $domain, 'pending', $campaignId, $now);
+            // Also record to DB table for faster dedup queries
+            try {
+                $stmt = $db->prepare('INSERT OR IGNORE INTO created_blog_topics (user_id, title, primary_keyword, domain_url, campaign_id, created_at) VALUES (?, ?, ?, ?, ?, ?)');
+                $stmt->execute([$userId, $plan['title'] ?? 'Untitled', $plan['primary_keyword'] ?? '', $domain, $campaignId, $now]);
+            } catch (Exception $e) {}
         }
+
+        // Auto-sync all topics to CSV after campaign creation
+        syncTopicsCsv();
 
         // Build and send rich approval email with full draft content
         $stmt = $db->prepare('SELECT * FROM campaign_items WHERE campaign_id = ? ORDER BY day_number, post_number');
@@ -785,135 +841,89 @@ function handleApiRoute($uri) {
             if (strlen($clean) > 4 && !in_array(strtolower($clean), array_map('strtolower', $base))) $base[] = $clean;
         }
         if (empty($base)) $base = [$seed];
-        // Add current year/month to ALL base topics so they're always fresh
         $nowYear = date('Y');
         $nowMonth = date('F');
-        $base = array_merge($base, [
-            "$seed strategies $nowMonth $nowYear",
-            "best $seed solutions $nowYear",
-            "$seed complete guide $nowYear",
-            "$seed tips and tricks $nowMonth $nowYear",
-            "$seed common mistakes to avoid $nowYear"
-        ]);
-
-        // Avoid duplicate topics: check ALL sources — database + persistent JSON file
-        // Normalize domain for matching: strip protocol, www, trailing slash
-        $domainNorm = preg_replace('#^(https?://)?(www\.)?#', '', strtolower(rtrim($domain, '/')));
-        $db = getDB();
-        $usedTopics = [];
-        
-        // SOURCE 1: Persistent JSON file (survives redeployment!)
-        $topicFilePath = dirname(__DIR__) . '/data/used_topics.json';
-        if (file_exists($topicFilePath)) {
-            $topicFile = json_decode(file_get_contents($topicFilePath), true);
-            if (!empty($topicFile['topics'])) {
-                foreach ($topicFile['topics'] as $t) {
-                    $tDomain = preg_replace('#^(https?://)?(www\.)?#', '', strtolower(rtrim($t['domain'] ?? '', '/')));
-                    if ($tDomain === $domainNorm || empty($tDomain)) {
-                        $usedTopics[strtolower(trim($t['topic']))] = true;
-                        $usedTopics[strtolower(trim($t['keyword']))] = true;
-                    }
-                }
-            }
-        }
-        
-        // SOURCE 2: Database created_blog_topics table
-        $stmt = $db->prepare('SELECT title, primary_keyword, domain_url FROM created_blog_topics WHERE user_id = ?');
-        $stmt->execute([$userId]);
-        foreach ($stmt->fetchAll() as $ut) {
-            $utDomain = preg_replace('#^(https?://)?(www\.)?#', '', strtolower(rtrim($ut['domain_url'] ?? '', '/')));
-            if ($utDomain === $domainNorm || empty($utDomain)) {
-                $usedTopics[strtolower(trim($ut['title']))] = true;
-                $usedTopics[strtolower(trim($ut['primary_keyword']))] = true;
-            }
-        }
-        // SOURCE 3: ALL campaign_items for this user
-        $stmt = $db->prepare('SELECT ci.title, ci.primary_keyword, c.domain_url FROM campaign_items ci JOIN campaigns c ON c.id = ci.campaign_id WHERE c.user_id = ?');
-        $stmt->execute([$userId]);
-        foreach ($stmt->fetchAll() as $ut) {
-            $utDomain = preg_replace('#^(https?://)?(www\.)?#', '', strtolower(rtrim($ut['domain_url'] ?? '', '/')));
-            if ($utDomain === $domainNorm || empty($utDomain)) {
-                $usedTopics[strtolower(trim($ut['title']))] = true;
-                $usedTopics[strtolower(trim($ut['primary_keyword']))] = true;
-            }
-        }
-        // Filter out already-used topics (using levenshtein + substring matching)
         $nowYear = date('Y');
-        $nowMonth = date('F');
-        $freshTopics = [];
-        foreach ($base as $b) {
-            $bLower = strtolower(trim($b));
-            $isUsed = false;
-            foreach ($usedTopics as $used => $_) {
-                // Skip if either string is empty or too short for meaningful comparison
-                if (strlen($bLower) < 3 || strlen($used) < 3) continue;
-                // Match if very similar (levenshtein < 12% of longer string) OR one contains the other
-                $maxLen = max(strlen($bLower), strlen($used));
-                $levThreshold = max(8, (int)($maxLen * 0.12));
-                if (levenshtein($bLower, $used) < $levThreshold || strpos($used, $bLower) !== false || strpos($bLower, $used) !== false) {
-                    $isUsed = true;
-                    break;
-                }
-            }
-            if (!$isUsed) {
-                $freshTopics[] = $b;
-            }
+        // Generate MANY diverse topic angles — enough for days * posts_per_day
+        $neededCount = $days * $perDay;
+        $topicAngles = [
+            "benefits of $seed for businesses $nowYear",
+            "how $seed improves ROI and efficiency",
+            "$seed vs traditional methods comparison $nowYear",
+            "top $seed strategies that actually work",
+            "why $seed is trending in $nowYear",
+            "$seed implementation step by step guide",
+            "common $seed mistakes and how to avoid them",
+            "$seed cost analysis and budgeting tips",
+            "best tools and resources for $seed",
+            "how to measure $seed performance results",
+            "$seed case studies and success stories",
+            "future of $seed what experts predict",
+            "$seed for beginners complete starter guide",
+            "advanced $seed techniques for professionals",
+            "$seed automation and time saving tips",
+            "integrating $seed with existing workflows",
+            "$seed compliance and best practices",
+            "how $seed drives customer engagement",
+            "scaling $seed for enterprise growth",
+            "$seed troubleshooting and problem solving",
+            "outsourcing vs in-house $seed management",
+            "$seed data analysis and reporting methods",
+            "building a $seed focused team from scratch",
+            "$seed security considerations and safeguards",
+            "how $seed impacts long term brand positioning",
+            "$seed productivity hacks for busy teams",
+            "sustainable $seed practices for growth",
+            "maximizing $seed returns on limited budgets",
+            "$seed workflow optimization techniques",
+            "$seed expert roundup and industry insights",
+            "deep dive into $seed analytics and metrics",
+            "quick wins with $seed for immediate results",
+            "myth busting common $seed misconceptions",
+            "behind the scenes of $seed implementation",
+            "practical $seed playbook for teams",
+            "$seed decision framework for leaders",
+            "real world $seed applications and examples",
+            "$seed tool comparison and review",
+            "how to pitch $seed to stakeholders",
+            "$seed roadmap for next 12 months",
+        ];
+        // Add country-specific topics if not default
+        if (!empty($country) && $country !== 'India') {
+            $topicAngles[] = "$seed market landscape in $country $nowYear";
+            $topicAngles[] = "how $country regulations affect $seed";
+            $topicAngles[] = "$seed opportunities unique to $country";
+            $topicAngles[] = "comparing $seed approaches in $country vs global";
         }
-        // If we filtered too many, add trending/current topics with unique markers
-        $trendCounter = 0;
-        if (count($freshTopics) < $days * $perDay) {
-            $trendingAdditions = [
-                "$seed trends $nowMonth $nowYear",
-                "$seed latest updates $nowYear",
-                "$seed new strategies $nowYear",
-                "how $seed is evolving in $nowYear",
-                "$seed best practices $nowMonth $nowYear",
-                "$seed innovations $nowYear",
-                "top $seed tips for $nowMonth $nowYear",
-                "$seed future outlook $nowYear",
-                "$seed case studies $nowYear",
-                "$seed comparison guide $nowYear",
-                "$seed vs alternatives $nowYear",
-                "why $seed matters in $nowYear"
-            ];
-            foreach ($trendingAdditions as $ta) {
-                $taLower = strtolower(trim($ta));
-                $isUsed = false;
-                foreach ($usedTopics as $used => $_) {
-                    if (strlen($taLower) < 3 || strlen($used) < 3) continue;
-                    $maxLen = max(strlen($taLower), strlen($used));
-                    $levThreshold = max(8, (int)($maxLen * 0.12));
-                    if (levenshtein($taLower, $used) < $levThreshold || strpos($used, $taLower) !== false || strpos($taLower, $used) !== false) {
-                        $isUsed = true; break;
-                    }
-                }
-                // Also check it's not already in freshTopics (exact or very similar)
-                if (!$isUsed) {
-                    foreach ($freshTopics as $ft) {
-                        $ftLower = strtolower(trim($ft));
-                        if (levenshtein($taLower, $ftLower) < 8 || strpos($ftLower, $taLower) !== false || strpos($taLower, $ftLower) !== false) {
-                            $isUsed = true; break;
-                        }
-                    }
-                }
-                if (!$isUsed) {
-                    $freshTopics[] = $ta;
-                }
-            }
-        }
-        if (!empty($freshTopics)) {
-            $base = $freshTopics;
-        }
+        $base = array_merge($base, $topicAngles);
 
         $db = getDB();
         $now = nowString();
-        // CLEAN UP: Delete old unapproved items from previous campaigns
-        // Keep approved/published items, delete everything else from old campaigns
-        $db->exec("DELETE FROM campaign_items WHERE user_id = $userId AND plan_status NOT IN ('Approved','Provisional Approved') AND article_status NOT IN ('HTML Ready','Final Article Approved','Published','Scheduled') AND campaign_id IN (SELECT id FROM campaigns WHERE user_id = $userId AND status != 'Archived')");
-        // Delete orphaned approval tokens for removed items
-        $db->exec("DELETE FROM approval_tokens WHERE user_id = $userId AND campaign_item_id NOT IN (SELECT id FROM campaign_items)");
-        // Archive old campaigns that now have no items
-        $db->exec("UPDATE campaigns SET status = 'Archived' WHERE user_id = $userId AND status = 'Roadmap Review' AND id NOT IN (SELECT DISTINCT campaign_id FROM campaign_items WHERE plan_status IN ('Approved','Provisional Approved') OR article_status IN ('HTML Ready','Final Article Approved','Published'))");
+        
+        // ===== STRICT TOPIC DEDUP: Load ALL existing topics before creating campaign =====
+        $existingTopics = getAllUsedTopics($db, $userId);
+        // Filter base topics against existing ones
+        $base = array_filter($base, function($topic) use ($existingTopics) {
+            return !isTopicDuplicate($topic, $topic, $existingTopics);
+        });
+        $base = array_values($base);
+        // Ensure we have at least $neededCount topics
+        if (count($base) < $neededCount) {
+            // Generate more unique variations
+            $extraAngles = ['expert roundup', 'deep dive analysis', 'quick wins', 'myth busting', 'behind the scenes', 'industry secrets', 'practical playbook', 'decision framework', 'checklist edition', 'real world applications'];
+            $i = 0;
+            while (count($base) < $neededCount && $i < 50) {
+                $angle = $extraAngles[$i % count($extraAngles)];
+                $newTopic = "$seed $angle insights $nowYear";
+                if (!isTopicDuplicate($newTopic, $seed, $existingTopics) && !in_array(strtolower($newTopic), array_map('strtolower', $base))) {
+                    $base[] = $newTopic;
+                }
+                $i++;
+            }
+        }
+        // PRESERVE APPROVED ITEMS: Only archive campaigns with no approved/finalized items
+        $db->exec("UPDATE approval_tokens SET decision = 'Expired' WHERE user_id = $userId AND decision IN ('Pending','Provisional') AND campaign_item_id NOT IN (SELECT id FROM campaign_items WHERE plan_status IN ('Approved','Provisional Approved') OR article_status IN ('HTML Ready','Final Article Approved'))");
+        $db->exec("UPDATE campaigns SET status = 'Archived' WHERE user_id = $userId AND status = 'Roadmap Review' AND id NOT IN (SELECT DISTINCT campaign_id FROM campaign_items WHERE plan_status IN ('Approved','Provisional Approved') OR article_status IN ('HTML Ready','Final Article Approved'))");
 
         $startDate = $input['start_date'] ?? date('Y-m-d');
         $postingTimes = $input['posting_times'] ?? ['10:00'];
@@ -941,30 +951,13 @@ function handleApiRoute($uri) {
                     if (!in_array($candidate['page_url'], array_column($relatedPages, 'page_url'))) $relatedPages[] = $candidate;
                 }
                 $internal = array_map(fn($x) => ['url' => $x['page_url'], 'anchor_text' => $x['page_title'] ?: 'related website page'], $relatedPages) ?: [['url' => $domain, 'anchor_text' => 'customer website']];
-                // External links: guaranteed-working authority URLs + topic-relevant ones
-                $externalBase = [
+                $external = [
                     ['url' => 'https://en.wikipedia.org/wiki/Search_engine_optimization', 'anchor_text' => 'Wikipedia: Search Engine Optimization'],
                     ['url' => 'https://developers.google.com/search/docs/fundamentals/seo-starter-guide', 'anchor_text' => 'Google SEO Starter Guide'],
                     ['url' => 'https://moz.com/beginners-guide-to-seo', 'anchor_text' => 'Moz Beginner Guide to SEO'],
-                    ['url' => 'https://schema.org/Article', 'anchor_text' => 'Schema.org Article Structured Data'],
                     ['url' => 'https://www.nngroup.com/articles/', 'anchor_text' => 'Nielsen Norman Group UX Research'],
+                    ['url' => 'https://schema.org/Article', 'anchor_text' => 'Schema.org Article Structured Data']
                 ];
-                // Add topic-relevant external links based on keyword
-                $kwLower = strtolower($kw);
-                if (strpos($kwLower, 'marketing') !== false || strpos($kwLower, 'seo') !== false || strpos($kwLower, 'digital') !== false) {
-                    $externalBase[] = ['url' => 'https://ahrefs.com/blog/', 'anchor_text' => 'Ahrefs SEO Blog'];
-                    $externalBase[] = ['url' => 'https://searchengineland.com/', 'anchor_text' => 'Search Engine Land'];
-                } elseif (strpos($kwLower, 'web') !== false || strpos($kwLower, 'design') !== false || strpos($kwLower, 'develop') !== false) {
-                    $externalBase[] = ['url' => 'https://developer.mozilla.org/en-US/docs/Learn', 'anchor_text' => 'MDN Web Docs: Learn Web Development'];
-                    $externalBase[] = ['url' => 'https://www.w3.org/WAI/standards-guidelines/', 'anchor_text' => 'W3C Web Accessibility Standards'];
-                } elseif (strpos($kwLower, 'ai') !== false || strpos($kwLower, 'machine') !== false || strpos($kwLower, 'automat') !== false) {
-                    $externalBase[] = ['url' => 'https://platform.openai.com/docs', 'anchor_text' => 'OpenAI API Documentation'];
-                    $externalBase[] = ['url' => 'https://cloud.google.com/ai-platform', 'anchor_text' => 'Google Cloud AI Platform'];
-                } else {
-                    $externalBase[] = ['url' => 'https://www.hbr.org/', 'anchor_text' => 'Harvard Business Review'];
-                    $externalBase[] = ['url' => 'https://www.youtube.com/', 'anchor_text' => 'YouTube'];
-                }
-                $external = $externalBase;
                 $prompts = ["Editorial photograph illustrating $kw, natural lighting, no text, no logos, professional magazine style.", "Practical real-world scene related to $kw, authentic people and setting, no text or logos."];
 
                 $schedDate = (new DateTime($startDate))->modify(($day - 1) . ' days')->format('Y-m-d');
@@ -973,22 +966,23 @@ function handleApiRoute($uri) {
                 $stmt = $db->prepare('INSERT INTO campaign_items (campaign_id, day_number, post_number, title, primary_keyword, keyword_data, internal_links, external_links, headings, image_prompts, video_url, plan_status, article_status, scheduled_date, scheduled_time, target_platform, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
                 $stmt->execute([$campaignId, $day, $post, ucwords($kw), $kw, json_encode($kws), json_encode($internal), json_encode($external), json_encode($headings), json_encode($prompts), '', 'Pending', 'Not Created', $schedDate, $schedTime, $targetPlatform, $now]);
                 $itemId = $db->lastInsertId();
-                // Track this topic to avoid duplicates in future campaigns
-                $stmt = $db->prepare('INSERT OR IGNORE INTO created_blog_topics (user_id, campaign_id, title, primary_keyword, domain_url, created_at) VALUES (?, ?, ?, ?, ?, ?)');
-                $stmt->execute([$userId, $campaignId, ucwords($kw), $kw, $domain, $now]);
-                // ALSO save to persistent JSON file (survives redeployment!)
-                $topicFilePath = dirname(__DIR__) . '/data/used_topics.json';
-                $topicFileData = file_exists($topicFilePath) ? json_decode(file_get_contents($topicFilePath), true) : ['topics' => []];
-                if (!is_array($topicFileData)) $topicFileData = ['topics' => []];
-                if (!isset($topicFileData['topics'])) $topicFileData['topics'] = [];
-                $topicFileData['topics'][] = ['topic' => ucwords($kw), 'keyword' => $kw, 'domain' => $domain, 'date' => $now, 'status' => 'pending', 'user_id' => $userId, 'campaign_id' => $campaignId];
-                $topicFileData['_last_updated'] = date('Y-m-d H:i:s');
-                file_put_contents($topicFilePath, json_encode($topicFileData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
                 $token = generateToken();
                 $stmt = $db->prepare('INSERT INTO approval_tokens (user_id, campaign_item_id, approval_type, token, created_at) VALUES (?, ?, ?, ?, ?)');
                 $stmt->execute([$userId, $itemId, 'roadmap', $token, $now]);
+                
+                // Record topic to persistent JSON + CSV for dedup
+                addTopicToJsonFile(ucwords($kw), $kw, $domain, 'pending', $campaignId);
+                addTopicToCsv(ucwords($kw), $kw, $domain, 'pending', $campaignId, $now);
+                // Also record to DB table for faster dedup queries
+                try {
+                    $stmt = $db->prepare('INSERT OR IGNORE INTO created_blog_topics (user_id, title, primary_keyword, domain_url, campaign_id, created_at) VALUES (?, ?, ?, ?, ?, ?)');
+                    $stmt->execute([$userId, ucwords($kw), $kw, $domain, $campaignId, $now]);
+                } catch (Exception $e) {}
             }
         }
+
+        // Auto-sync all topics to CSV after campaign creation
+        syncTopicsCsv();
 
         // Build and send rich approval email with full draft content
         $stmt = $db->prepare('SELECT * FROM campaign_items WHERE campaign_id = ? ORDER BY day_number, post_number');
@@ -1003,49 +997,27 @@ function handleApiRoute($uri) {
     // Demo campaign status
     if ($uri === '/api/demo/campaign-status') {
         $db = getDB();
-        // Get the LATEST campaign for pending items
-        $stmt = $db->prepare('SELECT id, domain_url, days, posts_per_day, status FROM campaigns WHERE user_id = ? ORDER BY id DESC LIMIT 1');
+        $stmt = $db->prepare('SELECT id FROM campaigns WHERE user_id = ? ORDER BY id DESC LIMIT 1');
         $stmt->execute([$userId]);
-        $latestCampaign = $stmt->fetch();
-        
-        $allRows = [];
-        
-        if ($latestCampaign) {
-            // Get pending items from ONLY the latest campaign (exclude cancelled/rejected)
-            $stmt = $db->prepare('SELECT id, day_number, post_number, title, primary_keyword, plan_status, article_status, html_path, scheduled_date, scheduled_time, target_platform, campaign_id FROM campaign_items WHERE campaign_id = ? AND plan_status NOT IN ("Provisional Disapproved","Rejected","Replacement Pending") ORDER BY day_number, post_number');
-            $stmt->execute([$latestCampaign['id']]);
-            $rows = $stmt->fetchAll();
-            foreach ($rows as &$row) {
-                $stmt2 = $db->prepare("SELECT token FROM approval_tokens WHERE campaign_item_id = ? AND approval_type = 'roadmap' AND decision IN ('Pending','Provisional') ORDER BY id DESC LIMIT 1");
-                $stmt2->execute([$row['id']]);
-                $tok = $stmt2->fetch();
-                $row['approval_token'] = $tok ? $tok['token'] : '';
-                $stmt3 = $db->prepare("SELECT token FROM approval_tokens WHERE campaign_item_id = ? AND approval_type = 'html' AND decision = 'Pending' ORDER BY id DESC LIMIT 1");
-                $stmt3->execute([$row['id']]);
-                $htmlTok = $stmt3->fetch();
-                $row['html_approval_token'] = $htmlTok ? $htmlTok['token'] : '';
-                $row['campaign_domain'] = $latestCampaign['domain_url'] ?? '';
-            }
-            $allRows = $rows;
+        $campaign = $stmt->fetch();
+        if (!$campaign) jsonResponse(['campaign' => null, 'items' => []]);
+
+        $stmt = $db->prepare('SELECT id, day_number, post_number, title, primary_keyword, plan_status, article_status, html_path, scheduled_date, scheduled_time, target_platform FROM campaign_items WHERE campaign_id = ? ORDER BY day_number, post_number');
+        $stmt->execute([$campaign['id']]);
+        $rows = $stmt->fetchAll();
+        foreach ($rows as &$row) {
+            $stmt2 = $db->prepare("SELECT token FROM approval_tokens WHERE campaign_item_id = ? AND approval_type = 'roadmap' AND decision IN ('Pending','Provisional') ORDER BY id DESC LIMIT 1");
+            $stmt2->execute([$row['id']]);
+            $tok = $stmt2->fetch();
+            $row['approval_token'] = $tok ? $tok['token'] : '';
+
+            // HTML approval token for in-dashboard HTML approve/disapprove
+            $stmt3 = $db->prepare("SELECT token FROM approval_tokens WHERE campaign_item_id = ? AND approval_type = 'html' AND decision = 'Pending' ORDER BY id DESC LIMIT 1");
+            $stmt3->execute([$row['id']]);
+            $htmlTok = $stmt3->fetch();
+            $row['html_approval_token'] = $htmlTok ? $htmlTok['token'] : '';
         }
-        
-        // Also get PUBLISHED items from ALL campaigns (so user can see what's live)
-        $stmt = $db->prepare('SELECT ci.id, ci.day_number, ci.post_number, ci.title, ci.primary_keyword, ci.plan_status, ci.article_status, ci.html_path, ci.scheduled_date, ci.scheduled_time, ci.target_platform, ci.campaign_id FROM campaign_items ci JOIN campaigns c ON c.id = ci.campaign_id WHERE c.user_id = ? AND ci.article_status = "Published" ORDER BY ci.id DESC');
-        $stmt->execute([$userId]);
-        $publishedRows = $stmt->fetchAll();
-        
-        // Merge: remove duplicates (published items that are also in latest campaign)
-        $latestIds = array_column($allRows, 'id');
-        foreach ($publishedRows as $pr) {
-            if (!in_array($pr['id'], $latestIds)) {
-                $pr['approval_token'] = '';
-                $pr['html_approval_token'] = '';
-                $pr['campaign_domain'] = '';
-                $allRows[] = $pr;
-            }
-        }
-        
-        jsonResponse(['campaign' => $latestCampaign, 'items' => $allRows]);
+        jsonResponse(['campaign' => $campaign, 'items' => $rows]);
     }
 
     // ========== PUBLISH NOW — Immediately publish an approved HTML article to Blogger ==========
@@ -1084,32 +1056,14 @@ function handleApiRoute($uri) {
         }
         
         $articleContent = '';
-        $bloggerReadyContent = '';  // Version with embedded CSS for Blogger
         if ($htmlFilePath) {
             $fullHtml = file_get_contents($htmlFilePath);
-            // For Blogger: extract <style> from <head> + <article> content
-            // This makes the blog look same-to-same on Blogger
-            $styleBlock = '';
-            if (preg_match('#<style[^>]*>(.*?)</style>#is', $fullHtml, $styleMatch)) {
-                $styleBlock = '<style>' . $styleMatch[1] . '</style>';
-            }
-            $scriptBlock = '';
-            if (preg_match('#<script[^>]*>(.*?)</script>#is', $fullHtml, $scriptMatch)) {
-                $scriptBlock = '<script>' . $scriptMatch[1] . '</script>';
-            }
-            // Extract article content
-            $articleBody = '';
+            // Extract <article> content for Blogger
             if (preg_match('#<article[^>]*>(.*?)</article>#is', $fullHtml, $artMatch)) {
-                $articleBody = trim($artMatch[1]);
-            } elseif (preg_match('#<body[^>]*>(.*?)</body>#is', $fullHtml, $bodyMatch)) {
-                $articleBody = trim($bodyMatch[1]);
+                $articleContent = trim($artMatch[1]);
             } else {
-                $articleBody = $fullHtml;
+                $articleContent = $fullHtml;
             }
-            // For Blogger: embed CSS + article content (Blogger renders this as the post body)
-            $bloggerReadyContent = $styleBlock . "\n<article>\n" . $articleBody . "\n</article>\n" . $scriptBlock;
-            // Also set articleContent for non-Blogger platforms
-            $articleContent = $articleBody;
         }
         
         if (empty($articleContent)) {
@@ -1128,9 +1082,7 @@ function handleApiRoute($uri) {
             
             if (empty($blogId)) jsonResponse(['success' => false, 'error' => 'Blogger Blog ID is missing. Save it in the Vault first.'], 400);
             
-            // Use Blogger-ready content (with embedded CSS) so blog looks same-to-same
-            $contentForBlogger = !empty($bloggerReadyContent) ? $bloggerReadyContent : $articleContent;
-            $result = Publisher::publishBlogger($userId, $blogId, $title, $contentForBlogger, $clientId, $clientSecret, $refreshToken);
+            $result = Publisher::publishBlogger($userId, $blogId, $title, $articleContent, $clientId, $clientSecret, $refreshToken);
         } elseif ($platform === 'wordpress') {
             $vault = SecurityVault::getApiCredentials($userId, 'wordpress_api');
             $result = Publisher::publishWordpress($userId, $vault['wp_site_url'] ?? '', $vault['wp_username'] ?? '', $vault['wp_app_password'] ?? '', $title, $articleContent);
@@ -1201,26 +1153,11 @@ function handleApiRoute($uri) {
                 foreach ($pathPatterns as $p) { if (file_exists($p)) { $htmlFilePath = $p; break; } }
             }
             $articleContent = '';
-            $bloggerReadyContent = '';
             if ($htmlFilePath) {
                 $fullHtml = file_get_contents($htmlFilePath);
-                // Extract style + article for Blogger (same-to-same look)
-                $styleBlock = '';
-                if (preg_match('#<style[^>]*>(.*?)</style>#is', $fullHtml, $styleMatch)) {
-                    $styleBlock = '<style>' . $styleMatch[1] . '</style>';
-                }
-                $scriptBlock = '';
-                if (preg_match('#<script[^>]*>(.*?)</script>#is', $fullHtml, $scriptMatch)) {
-                    $scriptBlock = '<script>' . $scriptMatch[1] . '</script>';
-                }
-                $articleBody = '';
                 if (preg_match('#<article[^>]*>(.*?)</article>#is', $fullHtml, $artMatch)) {
-                    $articleBody = trim($artMatch[1]);
-                } elseif (preg_match('#<body[^>]*>(.*?)</body>#is', $fullHtml, $bodyMatch)) {
-                    $articleBody = trim($bodyMatch[1]);
-                } else { $articleBody = $fullHtml; }
-                $bloggerReadyContent = $styleBlock . "\n<article>\n" . $articleBody . "\n</article>\n" . $scriptBlock;
-                $articleContent = $articleBody;
+                    $articleContent = trim($artMatch[1]);
+                } else { $articleContent = $fullHtml; }
             }
             if (empty($articleContent)) jsonResponse(['success' => false, 'error' => 'HTML file not found.'], 400);
             
@@ -1233,8 +1170,7 @@ function handleApiRoute($uri) {
                 $clientSecret = $vault['client_secret'] ?? '';
                 $refreshToken = $vault['refresh_token'] ?? '';
                 if (empty($blogId)) jsonResponse(['success' => false, 'error' => 'Blogger Blog ID missing in Vault.'], 400);
-                $contentForBlogger = !empty($bloggerReadyContent) ? $bloggerReadyContent : $articleContent;
-                $result = Publisher::publishBlogger($userId, $blogId, $title, $contentForBlogger, $clientId, $clientSecret, $refreshToken);
+                $result = Publisher::publishBlogger($userId, $blogId, $title, $articleContent, $clientId, $clientSecret, $refreshToken);
             } elseif ($platform === 'wordpress') {
                 $vault = SecurityVault::getApiCredentials($userId, 'wordpress_api');
                 $result = Publisher::publishWordpress($userId, $vault['wp_site_url'] ?? '', $vault['wp_username'] ?? '', $vault['wp_app_password'] ?? '', $title, $articleContent);
@@ -1250,12 +1186,13 @@ function handleApiRoute($uri) {
             jsonResponse(['success' => false, 'error' => $result['error'] ?? 'Publishing failed.'], 400);
         }
         
-        // Future schedule — ALWAYS add to scheduled_queue first (as backup for cron)
-        // Then also try Blogger's built-in scheduler if platform is blogger
+        // Future schedule — add to scheduled_queue
+        // First check if already scheduled
         $stmt = $db->prepare("SELECT id FROM scheduled_queue WHERE topic_title = ? AND user_id = ? AND status = 'Scheduled'");
         $stmt->execute([$item['title'], $userId]);
         $existing = $stmt->fetch();
         if ($existing) {
+            // Update existing schedule
             $stmt = $db->prepare("UPDATE scheduled_queue SET scheduled_time = ?, target_platform = ? WHERE id = ?");
             $stmt->execute([$scheduledStr, $platform, $existing['id']]);
         } else {
@@ -1263,231 +1200,12 @@ function handleApiRoute($uri) {
             $stmt = $db->prepare('INSERT INTO scheduled_queue (user_id, slot_number, topic_title, keyword, category, scheduled_time, target_platform, status, created_at, target_link, target_anchor) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
             $stmt->execute([$userId, $activeSlot, $item['title'], $item['primary_keyword'] ?? '', 'Approved Article', $scheduledStr, $platform, 'Scheduled', $nowS, '', $item['primary_keyword'] ?? '']);
         }
-
-        // Update item status
-        $stmt = $db->prepare("UPDATE campaign_items SET article_status = 'Scheduled', scheduled_date = ?, scheduled_time = ? WHERE id = ?");
-        $stmt->execute([$schedDate, $schedTime, $itemId]);
-
-        // If Blogger, also schedule directly on Blogger (Blogger auto-publishes at that time)
-        if ($platform === 'blogger') {
-            $htmlFilePath = null;
-            if (!empty($item['html_path'])) {
-                $pathPatterns = [
-                    dirname(__DIR__) . ltrim($item['html_path'], '/'),
-                    OUTPUT_DIR . '/../' . ltrim($item['html_path'], '/'),
-                    OUTPUT_DIR . '/demo/' . basename($item['html_path']),
-                    dirname(__DIR__) . '/published_posts/demo/' . basename($item['html_path']),
-                ];
-                foreach ($pathPatterns as $p) { if (file_exists($p)) { $htmlFilePath = $p; break; } }
-            }
-            $bloggerReadyContent = '';
-            if ($htmlFilePath) {
-                $fullHtml = file_get_contents($htmlFilePath);
-                $styleBlock = '';
-                if (preg_match('#<style[^>]*>(.*?)</style>#is', $fullHtml, $styleMatch)) {
-                    $styleBlock = '<style>' . $styleMatch[1] . '</style>';
-                }
-                $scriptBlock = '';
-                if (preg_match('#<script[^>]*>(.*?)</script>#is', $fullHtml, $scriptMatch)) {
-                    $scriptBlock = '<script>' . $scriptMatch[1] . '</script>';
-                }
-                $articleBody = '';
-                if (preg_match('#<article[^>]*>(.*?)</article>#is', $fullHtml, $artMatch)) {
-                    $articleBody = trim($artMatch[1]);
-                } elseif (preg_match('#<body[^>]*>(.*?)</body>#is', $fullHtml, $bodyMatch)) {
-                    $articleBody = trim($bodyMatch[1]);
-                } else { $articleBody = $fullHtml; }
-                $bloggerReadyContent = $styleBlock . "\n<article>\n" . $articleBody . "\n</article>\n" . $scriptBlock;
-            }
-            if (!empty($bloggerReadyContent)) {
-                $vault = SecurityVault::getApiCredentials($userId, 'blogger_api');
-                $blogId = $vault['blogger_blog_id'] ?? '';
-                $clientId = $vault['client_id'] ?? '';
-                $clientSecret = $vault['client_secret'] ?? '';
-                $refreshToken = $vault['refresh_token'] ?? '';
-                if (!empty($blogId) && !empty($refreshToken)) {
-                    $rfc3339Date = $scheduledDate->format('Y-m-d\TH:i:sP');
-                    $result = Publisher::publishBlogger($userId, $blogId, $item['title'], $bloggerReadyContent, $clientId, $clientSecret, $refreshToken, $rfc3339Date);
-                    if ($result && !empty($result['success'])) {
-                        $stmt = $db->prepare("UPDATE scheduled_queue SET status = 'Published' WHERE topic_title = ? AND user_id = ?");
-                        $stmt->execute([$item['title'], $userId]);
-                        $stmt = $db->prepare("UPDATE campaign_items SET article_status = 'Published' WHERE id = ?");
-                        $stmt->execute([$itemId]);
-                        jsonResponse(['success' => true, 'url' => $result['url'] ?? '', 'message' => "Scheduled on Blogger for $scheduledStr. Blogger will auto-publish at that time!"]);
-                    }
-                    // If Blogger scheduling failed, item stays in scheduled_queue — cron will pick it up
-                }
-            }
-            // Blogger scheduling attempted but not confirmed — cron is backup
-            jsonResponse(['success' => true, 'message' => "Scheduled for $scheduledStr on $platform. Added to queue — cron will publish, or Blogger will auto-publish."]);
-        }
         
         // Update item status  
         $stmt = $db->prepare("UPDATE campaign_items SET article_status = 'Final Article Approved', scheduled_date = ?, scheduled_time = ? WHERE id = ?");
         $stmt->execute([$schedDate, $schedTime, $itemId]);
         
-        jsonResponse(['success' => true, 'message' => "Scheduled for $scheduledStr on $platform. " . ($platform === 'blogger' ? 'Blogger will auto-publish — no cron needed!' : 'Cron will publish at that time.')]);
-    }
-
-    // ========== CRON TEST — Check if cron/scheduler is working ==========
-    // ========== TOPIC HISTORY — Export/Import persistent topic file ==========
-    if ($uri === '/api/topic-history' && $method === 'GET') {
-        $topicFilePath = dirname(__DIR__) . '/data/used_topics.json';
-        $topicFileData = file_exists($topicFilePath) ? json_decode(file_get_contents($topicFilePath), true) : ['topics' => []];
-        // Also merge with database topics
-        $db = getDB();
-        $stmt = $db->prepare('SELECT title, primary_keyword, domain_url, created_at FROM created_blog_topics WHERE user_id = ?');
-        $stmt->execute([$userId]);
-        $dbTopics = $stmt->fetchAll();
-        jsonResponse(['success' => true, 'file_topics' => count($topicFileData['topics'] ?? []), 'db_topics' => count($dbTopics), 'topics' => $topicFileData['topics'] ?? [], 'db_rows' => $dbTopics]);
-    }
-    if ($uri === '/api/topic-history/import' && $method === 'POST') {
-        $importTopics = $input['topics'] ?? [];
-        if (empty($importTopics)) jsonResponse(['success' => false, 'error' => 'No topics array provided.'], 400);
-        $topicFilePath = dirname(__DIR__) . '/data/used_topics.json';
-        $topicFileData = file_exists($topicFilePath) ? json_decode(file_get_contents($topicFilePath), true) : ['topics' => []];
-        if (!isset($topicFileData['topics'])) $topicFileData['topics'] = [];
-        $added = 0;
-        $existingKeys = [];
-        foreach ($topicFileData['topics'] as $et) { $existingKeys[strtolower(trim($et['topic'] ?? ''))] = true; }
-        foreach ($importTopics as $t) {
-            $key = strtolower(trim($t['topic'] ?? ''));
-            if (!empty($key) && !isset($existingKeys[$key])) {
-                $topicFileData['topics'][] = $t;
-                $existingKeys[$key] = true;
-                $added++;
-            }
-        }
-        $topicFileData['_last_updated'] = date('Y-m-d H:i:s');
-        file_put_contents($topicFilePath, json_encode($topicFileData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
-        jsonResponse(['success' => true, 'added' => $added, 'total' => count($topicFileData['topics']), 'message' => "Imported $added new topics. Total: " . count($topicFileData['topics'])]);
-    }
-    if ($uri === '/api/topic-history/sync-db' && $method === 'POST') {
-        // Sync all database topics into the persistent JSON file
-        $db = getDB();
-        $stmt = $db->prepare('SELECT cbt.title, cbt.primary_keyword, cbt.domain_url, cbt.created_at, cbt.user_id, cbt.campaign_id, ci.plan_status FROM created_blog_topics cbt LEFT JOIN campaign_items ci ON ci.campaign_id = cbt.campaign_id AND ci.primary_keyword = cbt.primary_keyword WHERE cbt.user_id = ?');
-        $stmt->execute([$userId]);
-        $dbTopics = $stmt->fetchAll();
-        $topicFilePath = dirname(__DIR__) . '/data/used_topics.json';
-        $topicFileData = file_exists($topicFilePath) ? json_decode(file_get_contents($topicFilePath), true) : ['topics' => []];
-        if (!isset($topicFileData['topics'])) $topicFileData['topics'] = [];
-        $existingKeys = [];
-        foreach ($topicFileData['topics'] as $et) { $existingKeys[strtolower(trim($et['topic'] ?? ''))] = true; }
-        $added = 0;
-        foreach ($dbTopics as $t) {
-            $key = strtolower(trim($t['title'] ?? ''));
-            if (!empty($key) && !isset($existingKeys[$key])) {
-                $topicFileData['topics'][] = ['topic' => $t['title'], 'keyword' => $t['primary_keyword'], 'domain' => $t['domain_url'] ?? '', 'date' => $t['created_at'] ?? '', 'status' => strtolower($t['plan_status'] ?? 'pending'), 'user_id' => $t['user_id'], 'campaign_id' => $t['campaign_id']];
-                $existingKeys[$key] = true;
-                $added++;
-            }
-        }
-        $topicFileData['_last_updated'] = date('Y-m-d H:i:s');
-        file_put_contents($topicFilePath, json_encode($topicFileData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
-        jsonResponse(['success' => true, 'added' => $added, 'total_in_file' => count($topicFileData['topics']), 'total_in_db' => count($dbTopics), 'message' => "Synced $added new topics from database to file. File total: " . count($topicFileData['topics'])]);
-    }
-
-    // ========== DELETE ITEM — Remove a campaign item ==========
-    if ($uri === '/api/delete-item' && $method === 'POST') {
-        $itemId = intval($input['item_id'] ?? 0);
-        if (!$itemId) jsonResponse(['success' => false, 'error' => 'Item ID required.'], 400);
-        $db = getDB();
-        $stmt = $db->prepare('SELECT * FROM campaign_items WHERE id = ?');
-        $stmt->execute([$itemId]);
-        $item = $stmt->fetch();
-        if (!$item) jsonResponse(['success' => false, 'error' => 'Item not found.'], 404);
-        // Don't allow deleting published items
-        if ($item['article_status'] === 'Published') jsonResponse(['success' => false, 'error' => 'Cannot delete a published item.'], 400);
-        // Delete approval tokens, scheduled queue entries, then the item
-        $stmt = $db->prepare('DELETE FROM approval_tokens WHERE campaign_item_id = ?');
-        $stmt->execute([$itemId]);
-        $stmt = $db->prepare("DELETE FROM scheduled_queue WHERE topic_title = ? AND user_id = ?");
-        $stmt->execute([$item['title'], $userId]);
-        $stmt = $db->prepare('DELETE FROM campaign_items WHERE id = ?');
-        $stmt->execute([$itemId]);
-        // Also remove from topic history file
-        $topicFilePath = dirname(__DIR__) . '/data/used_topics.json';
-        if (file_exists($topicFilePath)) {
-            $topicFileData = json_decode(file_get_contents($topicFilePath), true);
-            if (!empty($topicFileData['topics'])) {
-                $titleLower = strtolower(trim($item['title']));
-                $topicFileData['topics'] = array_values(array_filter($topicFileData['topics'], function($t) use ($titleLower) {
-                    return strtolower(trim($t['topic'] ?? '')) !== $titleLower;
-                }));
-                $topicFileData['_last_updated'] = date('Y-m-d H:i:s');
-                file_put_contents($topicFilePath, json_encode($topicFileData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
-            }
-        }
-        jsonResponse(['success' => true, 'message' => 'Item deleted.']);
-    }
-
-    // ========== DOWNLOAD HTML — Download the HTML file for an item ==========
-    if (preg_match('#^/api/download-html/(\d+)$#', $uri, $m) && $method === 'GET') {
-        $itemId = intval($m[1]);
-        $db = getDB();
-        $stmt = $db->prepare('SELECT * FROM campaign_items WHERE id = ?');
-        $stmt->execute([$itemId]);
-        $item = $stmt->fetch();
-        if (!$item) jsonResponse(['success' => false, 'error' => 'Item not found.'], 404);
-        if (empty($item['html_path'])) jsonResponse(['success' => false, 'error' => 'No HTML generated yet.'], 400);
-        
-        // Find the HTML file
-        $htmlFilePath = null;
-        $pathPatterns = [
-            dirname(__DIR__) . ltrim($item['html_path'], '/'),
-            OUTPUT_DIR . '/../' . ltrim($item['html_path'], '/'),
-            OUTPUT_DIR . '/demo/' . basename($item['html_path']),
-            dirname(__DIR__) . '/published_posts/demo/' . basename($item['html_path']),
-        ];
-        foreach ($pathPatterns as $p) { if (file_exists($p)) { $htmlFilePath = $p; break; } }
-        
-        if (!$htmlFilePath) jsonResponse(['success' => false, 'error' => 'HTML file not found on disk.'], 404);
-        
-        // Send as downloadable file
-        $filename = slugify($item['title']) . '.html';
-        header('Content-Type: text/html; charset=utf-8');
-        header('Content-Disposition: attachment; filename="' . $filename . '"');
-        header('Content-Length: ' . filesize($htmlFilePath));
-        readfile($htmlFilePath);
-        exit;
-    }
-
-    // ========== RUN SCHEDULER — Web-accessible cron trigger ==========
-    if ($uri === '/api/run-scheduler' && $method === 'POST') {
-        // This runs the scheduler directly from the web — no cron needed
-        ob_start();
-        try {
-            require_once dirname(__DIR__) . '/cron/scheduler.php';
-        } catch (Exception $e) {
-            ob_end_clean();
-            jsonResponse(['success' => false, 'error' => $e->getMessage()]);
-        }
-        $output = ob_get_clean();
-        jsonResponse(['success' => true, 'output' => $output, 'message' => 'Scheduler run completed. Check output for details.']);
-    }
-
-    if ($uri === '/api/cron-test' && $method === 'GET') {
-        $db = getDB();
-        // Check scheduled_queue
-        $stmt = $db->prepare("SELECT COUNT(*) as total, SUM(CASE WHEN status='Scheduled' THEN 1 ELSE 0 END) as scheduled, SUM(CASE WHEN status='Published' THEN 1 ELSE 0 END) as published, SUM(CASE WHEN status='Failed' THEN 1 ELSE 0 END) as failed FROM scheduled_queue WHERE user_id = ?");
-        $stmt->execute([$userId]);
-        $queueStats = $stmt->fetch();
-        // Check last cron run (look for a marker file)
-        $cronMarker = dirname(__DIR__) . '/cron/.last_run';
-        $lastCronRun = file_exists($cronMarker) ? file_get_contents($cronMarker) : 'Never';
-        // Try to run scheduler directly and capture output
-        $schedulerPath = dirname(__DIR__) . '/cron/scheduler.php';
-        $schedulerOk = file_exists($schedulerPath);
-        jsonResponse([
-            'success' => true,
-            'queue' => $queueStats,
-            'last_cron_run' => $lastCronRun,
-            'scheduler_file_exists' => $schedulerOk,
-            'scheduler_path' => $schedulerPath,
-            'php_sapi' => php_sapi_name(),
-            'cron_command' => '*/5 * * * * php /home/u783910899/public_html/sub_apps/cron/scheduler.php',
-            'recommendation' => 'If scheduled > 0 but nothing is publishing, set up the cron job above in Hostinger Cron Jobs panel. Or use the Schedule button (uses Blogger built-in scheduler — no cron needed!).'
-        ]);
+        jsonResponse(['success' => true, 'message' => "Scheduled for $scheduledStr on $platform. Cron will publish at that time, or click Publish Now to publish immediately."]);
     }
 
     // Demo review page (HTML)
@@ -1564,13 +1282,12 @@ function handleApiRoute($uri) {
         $stmt->execute([$tok['campaign_item_id']]);
         $item = $stmt->fetch();
 
-        // Get the campaign this item belongs to (ANY campaign, not just latest)
-        $stmt = $db->prepare('SELECT * FROM campaigns WHERE id = ?');
-        $stmt->execute([$item['campaign_id']]);
+        $stmt = $db->prepare("SELECT id FROM campaigns WHERE user_id = ? AND status = 'Roadmap Review' ORDER BY id DESC LIMIT 1");
+        $stmt->execute([$tok['user_id']]);
         $active = $stmt->fetch();
-        if (!$item || !$active) {
+        if (!$item || !$active || $item['campaign_id'] != $active['id']) {
             header('Content-Type: text/html; charset=utf-8');
-            echo '<h2>This approval link is invalid or the campaign no longer exists.</h2>';
+            echo '<h2>This approval email belongs to an older campaign and is no longer active.</h2>';
             exit;
         }
 
@@ -1593,8 +1310,6 @@ function handleApiRoute($uri) {
                 $stmt->execute([$tok['id']]);
                 $stmt = $db->prepare("UPDATE campaign_items SET plan_status = 'Approved' WHERE id = ?");
                 $stmt->execute([$item['id']]);
-                // Update persistent topic file
-                updateTopicStatusInFile($item['title'], 'approved');
 
                 // Auto-generate HTML article
                 $stmt = $db->prepare('SELECT * FROM campaign_items WHERE id = ?');
@@ -1615,7 +1330,6 @@ function handleApiRoute($uri) {
                 // Disapprove: IMMEDIATELY create replacement (don't wait)
                 $stmt = $db->prepare('UPDATE campaign_items SET plan_status = ? WHERE id = ?');
                 $stmt->execute(['Provisional Disapproved', $item['id']]);
-                updateTopicStatusInFile($item['title'], 'rejected');
 
                 $newToken = generateToken();
                 $newTitle = $item['title'] . ' — New Research Angle';
@@ -1652,7 +1366,6 @@ function handleApiRoute($uri) {
         if ($decision === 'approve') {
             $stmt = $db->prepare("UPDATE campaign_items SET plan_status = 'Approved' WHERE id = ?");
             $stmt->execute([$item['id']]);
-            updateTopicStatusInFile($item['title'], 'approved');
 
             // Generate HTML article
             $stmt = $db->prepare('SELECT * FROM campaign_items WHERE id = ?');
@@ -1760,6 +1473,47 @@ function handleApiRoute($uri) {
                 $nowS = nowString();
                 $stmt = $db->prepare('INSERT INTO scheduled_queue (user_id, slot_number, topic_title, keyword, category, scheduled_time, target_platform, status, created_at, target_link, target_anchor) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
                 $stmt->execute([$tok['user_id'], $activeSlot, $ci['title'], $ci['primary_keyword'], 'Approved Article', $scheduledStr, $platform, 'Scheduled', $nowS, $ci['internal_links'] ?? '', $ci['primary_keyword'] ?? '']);
+
+                // ===== DIRECT BLOGGER SCHEDULING =====
+                // Try to schedule directly on Blogger (not just cron queue)
+                // Cron queue is backup — but we schedule on Blogger immediately if possible
+                if ($platform === 'blogger') {
+                    $bloggerVault = SecurityVault::getApiCredentials($tok['user_id'], 'blogger_api');
+                    $blogId = $bloggerVault['blogger_blog_id'] ?? '';
+                    $bClientId = $bloggerVault['client_id'] ?? '';
+                    $bClientSecret = $bloggerVault['client_secret'] ?? '';
+                    $bRefreshToken = $bloggerVault['refresh_token'] ?? '';
+                    
+                    if (!empty($blogId) && !empty($bRefreshToken)) {
+                        // Load the HTML content
+                        $bHtmlFilePath = null;
+                        if (!empty($ci['html_path'])) {
+                            $bPathPatterns = [
+                                dirname(__DIR__) . ltrim($ci['html_path'], '/'),
+                                OUTPUT_DIR . '/../' . ltrim($ci['html_path'], '/'),
+                                OUTPUT_DIR . '/demo/' . basename($ci['html_path']),
+                                dirname(__DIR__) . '/published_posts/demo/' . basename($ci['html_path']),
+                            ];
+                            foreach ($bPathPatterns as $p) { if (file_exists($p)) { $bHtmlFilePath = $p; break; } }
+                        }
+                        if ($bHtmlFilePath) {
+                            $bFullHtml = file_get_contents($bHtmlFilePath);
+                            $bArticleContent = $bFullHtml;
+                            if (preg_match('#<article[^>]*>(.*?)</article>#is', $bFullHtml, $bArtMatch)) {
+                                $bArticleContent = trim($bArtMatch[1]);
+                            }
+                            // Schedule directly on Blogger using the publishDate param
+                            $bResult = Publisher::publishBlogger($tok['user_id'], $blogId, $ci['title'], $bArticleContent, $bClientId, $bClientSecret, $bRefreshToken, $scheduledStr);
+                            if (!empty($bResult['success'])) {
+                                // Blogger scheduled successfully — update status
+                                $stmt = $db->prepare("UPDATE campaign_items SET article_status = 'Scheduled' WHERE id = ?");
+                                $stmt->execute([$tok['campaign_item_id']]);
+                                $stmt = $db->prepare("UPDATE scheduled_queue SET status = 'Published' WHERE topic_title = ? AND user_id = ? AND status = 'Scheduled'");
+                                $stmt->execute([$ci['title'], $tok['user_id']]);
+                            }
+                        }
+                    }
+                }
             }
         } else {
             $stmt = $db->prepare("UPDATE approval_tokens SET decision = 'Rejected' WHERE id = ?");
@@ -1829,64 +1583,30 @@ function handleApiRoute($uri) {
     }
 
     // Generate demo HTML
-    // Generate HTML for all approved items missing HTML (manual trigger)
+    // Generate HTML for all approved items (manual trigger)
     if (preg_match('#^/api/demo/generate-html/(\d+)$#', $uri, $m) && $method === 'POST') {
         $campaignId = $m[1];
         $db = getDB();
-        // Get ALL approved items that don't have HTML yet (any article_status except Published)
-        $stmt = $db->prepare('SELECT * FROM campaign_items WHERE campaign_id = ? AND plan_status IN ("Approved","Provisional Approved") AND (article_status = "Not Created" OR article_status = "HTML Ready" AND (html_path IS NULL OR html_path = ""))');
+        $stmt = $db->prepare('SELECT * FROM campaign_items WHERE campaign_id = ? AND plan_status = "Approved" AND (article_status IS NULL OR article_status = "" OR article_status = "Not Created" OR article_status = "Regenerating HTML" OR article_status = "HTML Ready")');
         $stmt->execute([$campaignId]);
         $items = $stmt->fetchAll();
         $generated = [];
-        $errors = [];
 
         foreach ($items as $item) {
-            try {
-                $htmlResult = generateArticleHtmlFromCampaignItem($item, $userId, $activeSlot, $db);
-                if (!empty($htmlResult['success'])) {
-                    $stmt = $db->prepare("UPDATE campaign_items SET article_status = 'HTML Ready', html_path = ? WHERE id = ?");
-                    $stmt->execute([$htmlResult['html_path'], $item['id']]);
-                    $htmlToken = generateToken();
-                    $nowG = nowString();
-                    $stmt = $db->prepare('INSERT INTO approval_tokens (user_id, campaign_item_id, approval_type, token, created_at) VALUES (?, ?, ?, ?, ?)');
-                    $stmt->execute([$userId, $item['id'], 'html', $htmlToken, $nowG]);
-                    $previewEmailHtml = buildHtmlPreviewEmailHtml($item, $htmlResult['html_path'], $htmlToken, $htmlResult['used_chat_api']);
-                    sendApprovalEmail($userId, 'Blog HTML Preview - ' . escapeHtml($item['title']), $previewEmailHtml);
-                    $generated[] = ['id' => $item['id'], 'url' => $htmlResult['html_path'], 'title' => $item['title']];
-                } else {
-                    $errors[] = ['id' => $item['id'], 'title' => $item['title'], 'error' => $htmlResult['error'] ?? 'Unknown error'];
-                }
-            } catch (Exception $e) {
-                $errors[] = ['id' => $item['id'], 'title' => $item['title'], 'error' => $e->getMessage()];
+            $htmlResult = generateArticleHtmlFromCampaignItem($item, $userId, $activeSlot, $db);
+            if (!empty($htmlResult['success'])) {
+                $stmt = $db->prepare("UPDATE campaign_items SET article_status = 'HTML Ready', html_path = ? WHERE id = ?");
+                $stmt->execute([$htmlResult['html_path'], $item['id']]);
+                $htmlToken = generateToken();
+                $nowG = nowString();
+                $stmt = $db->prepare('INSERT INTO approval_tokens (user_id, campaign_item_id, approval_type, token, created_at) VALUES (?, ?, ?, ?, ?)');
+                $stmt->execute([$userId, $item['id'], 'html', $htmlToken, $nowG]);
+                $previewEmailHtml = buildHtmlPreviewEmailHtml($item, $htmlResult['html_path'], $htmlToken, $htmlResult['used_chat_api']);
+                sendApprovalEmail($userId, 'Blog HTML Preview - ' . escapeHtml($item['title']), $previewEmailHtml);
+                $generated[] = ['id' => $item['id'], 'url' => $htmlResult['html_path'], 'title' => $item['title']];
             }
         }
-        jsonResponse(['success' => true, 'articles' => $generated, 'errors' => $errors, 'message' => count($generated) . ' articles generated.' . (count($errors) ? ' ' . count($errors) . ' errors.' : '')]);
-    }
-
-    // Generate HTML for ALL approved items across ALL campaigns (bulk trigger)
-    if ($uri === '/api/generate-all-html' && $method === 'POST') {
-        $db = getDB();
-        $stmt = $db->prepare('SELECT ci.* FROM campaign_items ci JOIN campaigns c ON c.id = ci.campaign_id WHERE c.user_id = ? AND ci.plan_status IN ("Approved","Provisional Approved") AND (ci.article_status = "Not Created" OR (ci.article_status = "HTML Ready" AND (ci.html_path IS NULL OR ci.html_path = ""))) ORDER BY ci.id');
-        $stmt->execute([$userId]);
-        $items = $stmt->fetchAll();
-        $generated = [];
-        $errors = [];
-
-        foreach ($items as $item) {
-            try {
-                $htmlResult = generateArticleHtmlFromCampaignItem($item, $userId, $activeSlot, $db);
-                if (!empty($htmlResult['success'])) {
-                    $stmt = $db->prepare("UPDATE campaign_items SET article_status = 'HTML Ready', html_path = ? WHERE id = ?");
-                    $stmt->execute([$htmlResult['html_path'], $item['id']]);
-                    $generated[] = ['id' => $item['id'], 'url' => $htmlResult['html_path'], 'title' => $item['title']];
-                } else {
-                    $errors[] = ['id' => $item['id'], 'title' => $item['title'], 'error' => $htmlResult['error'] ?? 'Unknown error'];
-                }
-            } catch (Exception $e) {
-                $errors[] = ['id' => $item['id'], 'title' => $item['title'], 'error' => $e->getMessage()];
-            }
-        }
-        jsonResponse(['success' => true, 'articles' => $generated, 'errors' => $errors, 'total_found' => count($items), 'message' => count($generated) . ' of ' . count($items) . ' articles generated.' . (count($errors) ? ' ' . count($errors) . ' errors.' : '')]);
+        jsonResponse(['success' => true, 'articles' => $generated, 'message' => count($generated) . ' articles generated with preview emails sent.']);
     }
 
     // Content plans
@@ -1916,6 +1636,111 @@ function handleApiRoute($uri) {
         $stmt->execute([$now, $planId, $userId, $activeSlot]);
         if ($stmt->rowCount()) jsonResponse(['success' => true, 'status' => 'Approved', 'message' => 'Human approval recorded.']);
         jsonResponse(['error' => 'Plan not found in this workspace.'], 404);
+    }
+
+    // ========== TOPICS CSV — View/Download the Excel-compatible topics file ==========
+    if ($uri === '/api/topics-csv' && $method === 'GET') {
+        $count = syncTopicsCsv();
+        $csvPath = getTopicsCsvPath();
+        if (!file_exists($csvPath)) { jsonResponse(['success' => true, 'topics' => [], 'count' => 0]); }
+        $topics = [];
+        $fp = fopen($csvPath, 'r');
+        fgetcsv($fp);
+        while (($row = fgetcsv($fp)) !== false) {
+            if (count($row) >= 7) $topics[] = ['sno' => intval($row[0]), 'topic' => $row[1], 'keyword' => $row[2], 'domain' => $row[3], 'status' => $row[4], 'campaign_id' => $row[5], 'date' => $row[6]];
+        }
+        fclose($fp);
+        jsonResponse(['success' => true, 'topics' => $topics, 'count' => count($topics)]);
+    }
+
+    if ($uri === '/api/topics-csv/download' && $method === 'GET') {
+        syncTopicsCsv();
+        $csvPath = getTopicsCsvPath();
+        if (!file_exists($csvPath) || filesize($csvPath) === 0) { $fp = fopen($csvPath, 'w'); fputcsv($fp, ['S.No', 'Topic (Blog Title)', 'Primary Keyword', 'Domain/Website', 'Status', 'Campaign ID', 'Created Date']); fclose($fp); }
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename="autoblog_topics_' . date('Y-m-d') . '.csv"');
+        header('Content-Length: ' . filesize($csvPath));
+        readfile($csvPath);
+        exit;
+    }
+
+    if ($uri === '/api/topics-csv/sync' && $method === 'POST') {
+        $count = syncTopicsCsv();
+        jsonResponse(['success' => true, 'count' => $count, 'message' => "CSV synced with $count topics."]);
+    }
+
+    // ========== RUN CRON NOW — Trigger scheduler + approval timer via web ==========
+    if ($uri === '/api/run-scheduler' && $method === 'POST') {
+        ob_start();
+        // Run approval timer (generates HTML for approved items, auto-schedules)
+        $timerPath = __DIR__ . '/cron/approval_timer.php';
+        $timerOutput = '';
+        if (file_exists($timerPath)) {
+            // Simulate POST request environment for the cron script
+            $_SERVER['REQUEST_METHOD'] = 'POST';
+            ob_start();
+            try { include $timerPath; } catch (Exception $e) { $timerOutput .= 'Timer error: ' . $e->getMessage(); }
+            $timerOutput .= ob_get_clean();
+        }
+        // Run scheduler (publishes due items)
+        $schedulerPath = __DIR__ . '/cron/scheduler.php';
+        $schedulerOutput = '';
+        if (file_exists($schedulerPath)) {
+            $_SERVER['REQUEST_METHOD'] = 'POST';
+            ob_start();
+            try { include $schedulerPath; } catch (Exception $e) { $schedulerOutput .= 'Scheduler error: ' . $e->getMessage(); }
+            $schedulerOutput .= ob_get_clean();
+        }
+        ob_end_clean();
+        jsonResponse(['success' => true, 'timer_output' => $timerOutput, 'scheduler_output' => $schedulerOutput, 'message' => 'Cron executed: approval timer + scheduler ran.']);
+    }
+
+    // ========== DELETE CAMPAIGN ITEM ==========
+    if (preg_match('#^/api/campaign-item/delete/(\d+)$#', $uri, $m) && $method === 'POST') {
+        $itemId = $m[1];
+        $db = getDB();
+        // Only allow deleting items that are NOT published
+        $stmt = $db->prepare('SELECT * FROM campaign_items WHERE id = ?');
+        $stmt->execute([$itemId]);
+        $item = $stmt->fetch();
+        if (!$item) jsonResponse(['error' => 'Item not found.'], 404);
+        if ($item['article_status'] === 'Published') jsonResponse(['error' => 'Cannot delete a published article.'], 400);
+        // Delete related approval tokens
+        $stmt = $db->prepare('DELETE FROM approval_tokens WHERE campaign_item_id = ?');
+        $stmt->execute([$itemId]);
+        // Delete the item
+        $stmt = $db->prepare('DELETE FROM campaign_items WHERE id = ?');
+        $stmt->execute([$itemId]);
+        jsonResponse(['success' => true, 'message' => 'Item deleted successfully.']);
+    }
+
+    // ========== DOWNLOAD HTML ==========
+    if (preg_match('#^api/campaign-item/download-html/(\d+)$#', $uri, $m)) {
+        $itemId = $m[1];
+        $db = getDB();
+        $stmt = $db->prepare('SELECT * FROM campaign_items WHERE id = ?');
+        $stmt->execute([$itemId]);
+        $item = $stmt->fetch();
+        if (!$item || empty($item['html_path'])) jsonResponse(['error' => 'No HTML file for this item.'], 404);
+        
+        $htmlFilePath = null;
+        $pathPatterns = [
+            dirname(__DIR__) . ltrim($item['html_path'], '/'),
+            OUTPUT_DIR . '/../' . ltrim($item['html_path'], '/'),
+            OUTPUT_DIR . '/demo/' . basename($item['html_path']),
+            dirname(__DIR__) . '/published_posts/demo/' . basename($item['html_path']),
+        ];
+        foreach ($pathPatterns as $p) {
+            if (file_exists($p)) { $htmlFilePath = $p; break; }
+        }
+        if (!$htmlFilePath) jsonResponse(['error' => 'HTML file not found on disk.'], 404);
+        
+        $filename = slugify($item['title']) . '.html';
+        header('Content-Type: text/html; charset=utf-8');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Content-Length: ' . filesize($htmlFilePath));
+        readfile($htmlFilePath);
+        exit;
     }
 
     // 404 for unmatched API routes
