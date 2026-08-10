@@ -1186,13 +1186,62 @@ function handleApiRoute($uri) {
             jsonResponse(['success' => false, 'error' => $result['error'] ?? 'Publishing failed.'], 400);
         }
         
-        // Future schedule — add to scheduled_queue
-        // First check if already scheduled
+        // Future schedule — schedule DIRECTLY on Blogger (skip cron since it doesn't work)
+        // Load the HTML content
+        $schedHtmlFilePath = null;
+        if (!empty($item['html_path'])) {
+            $schedPathPatterns = [
+                dirname(__DIR__) . ltrim($item['html_path'], '/'),
+                OUTPUT_DIR . '/../' . ltrim($item['html_path'], '/'),
+                OUTPUT_DIR . '/demo/' . basename($item['html_path']),
+                dirname(__DIR__) . '/published_posts/demo/' . basename($item['html_path']),
+            ];
+            foreach ($schedPathPatterns as $p) { if (file_exists($p)) { $schedHtmlFilePath = $p; break; } }
+        }
+        $schedArticleContent = '';
+        if ($schedHtmlFilePath) {
+            $schedFullHtml = file_get_contents($schedHtmlFilePath);
+            if (preg_match('#<article[^>]*>(.*?)</article>#is', $schedFullHtml, $schedArtMatch)) {
+                $schedArticleContent = trim($schedArtMatch[1]);
+            } else { $schedArticleContent = $schedFullHtml; }
+        }
+        
+        $schedTitle = $item['title'];
+        $schedDirectResult = null;
+        
+        if ($platform === 'blogger' && !empty($schedArticleContent)) {
+            $schedVault = SecurityVault::getApiCredentials($userId, 'blogger_api');
+            $schedBlogId = $schedVault['blogger_blog_id'] ?? '';
+            $schedClientId = $schedVault['client_id'] ?? '';
+            $schedClientSecret = $schedVault['client_secret'] ?? '';
+            $schedRefreshToken = $schedVault['refresh_token'] ?? '';
+            
+            if (!empty($schedBlogId) && !empty($schedRefreshToken)) {
+                // Schedule DIRECTLY on Blogger with publishDate
+                $schedDirectResult = Publisher::publishBlogger($userId, $schedBlogId, $schedTitle, $schedArticleContent, $schedClientId, $schedClientSecret, $schedRefreshToken, $scheduledStr);
+                if (!empty($schedDirectResult['success'])) {
+                    $stmt = $db->prepare("UPDATE campaign_items SET article_status = 'Scheduled', scheduled_date = ?, scheduled_time = ? WHERE id = ?");
+                    $stmt->execute([$schedDate, $schedTime, $itemId]);
+                    $stmt = $db->prepare("UPDATE scheduled_queue SET status = 'Published' WHERE topic_title = ? AND user_id = ? AND status = 'Scheduled'");
+                    $stmt->execute([$schedTitle, $userId]);
+                    jsonResponse(['success' => true, 'message' => "Scheduled directly on Blogger for $scheduledStr. " . ($schedDirectResult['message'] ?? ''), 'url' => $schedDirectResult['url'] ?? '']);
+                }
+            }
+        } elseif ($platform === 'wordpress' && !empty($schedArticleContent)) {
+            $schedWpVault = SecurityVault::getApiCredentials($userId, 'wordpress_api');
+            $schedDirectResult = Publisher::publishWordpress($userId, $schedWpVault['wp_site_url'] ?? '', $schedWpVault['wp_username'] ?? '', $schedWpVault['wp_app_password'] ?? '', $schedTitle, $schedArticleContent);
+            if (!empty($schedDirectResult['success'])) {
+                $stmt = $db->prepare("UPDATE campaign_items SET article_status = 'Published' WHERE id = ?");
+                $stmt->execute([$itemId]);
+                jsonResponse(['success' => true, 'message' => 'Published to WordPress.', 'url' => $schedDirectResult['url'] ?? '']);
+            }
+        }
+        
+        // Fallback: add to scheduled_queue as backup
         $stmt = $db->prepare("SELECT id FROM scheduled_queue WHERE topic_title = ? AND user_id = ? AND status = 'Scheduled'");
         $stmt->execute([$item['title'], $userId]);
         $existing = $stmt->fetch();
         if ($existing) {
-            // Update existing schedule
             $stmt = $db->prepare("UPDATE scheduled_queue SET scheduled_time = ?, target_platform = ? WHERE id = ?");
             $stmt->execute([$scheduledStr, $platform, $existing['id']]);
         } else {
@@ -1205,7 +1254,9 @@ function handleApiRoute($uri) {
         $stmt = $db->prepare("UPDATE campaign_items SET article_status = 'Final Article Approved', scheduled_date = ?, scheduled_time = ? WHERE id = ?");
         $stmt->execute([$schedDate, $schedTime, $itemId]);
         
-        jsonResponse(['success' => true, 'message' => "Scheduled for $scheduledStr on $platform. Cron will publish at that time, or click Publish Now to publish immediately."]);
+        $schedExtraMsg = !empty($schedDirectResult['error']) ? ' Direct Blogger scheduling failed: ' . $schedDirectResult['error'] . ' - added to cron queue as backup.' : '';
+        jsonResponse(['success' => true, 'message' => "Scheduled for $scheduledStr on $platform. Click Publish Now to publish immediately." . $schedExtraMsg]);
+
     }
 
     // Demo review page (HTML)
@@ -1667,6 +1718,199 @@ function handleApiRoute($uri) {
     if ($uri === '/api/topics-csv/sync' && $method === 'POST') {
         $count = syncTopicsCsv();
         jsonResponse(['success' => true, 'count' => $count, 'message' => "CSV synced with $count topics."]);
+    }
+
+    // ========== CUSTOM TOPICS CSV — User-provided topics for blog generation ==========
+    if ($uri === '/api/custom-topics' && $method === 'GET') {
+        $csvPath = dirname(__DIR__) . '/data/custom_topics.csv';
+        if (!file_exists($csvPath)) { jsonResponse(['success' => true, 'topics' => [], 'count' => 0]); }
+        $topics = [];
+        $fp = fopen($csvPath, 'r');
+        fgetcsv($fp); // skip header
+        while (($row = fgetcsv($fp)) !== false) {
+            if (!empty($row[0]) && trim($row[0]) !== '') $topics[] = trim($row[0]);
+        }
+        fclose($fp);
+        jsonResponse(['success' => true, 'topics' => $topics, 'count' => count($topics)]);
+    }
+
+    if ($uri === '/api/custom-topics/upload' && $method === 'POST') {
+        $topicsList = $input['topics'] ?? [];
+        if (!is_array($topicsList)) $topicsList = [$topicsList];
+        $csvPath = dirname(__DIR__) . '/data/custom_topics.csv';
+        $fp = fopen($csvPath, 'w');
+        fputcsv($fp, ['Topic']);
+        foreach ($topicsList as $t) {
+            $t = trim($t);
+            if (!empty($t)) fputcsv($fp, [$t]);
+        }
+        fclose($fp);
+        jsonResponse(['success' => true, 'count' => count($topicsList), 'message' => count($topicsList) . ' topics saved to custom topics CSV.']);
+    }
+
+    if ($uri === '/api/custom-topics/remove' && $method === 'POST') {
+        $removeTopics = $input['topics'] ?? [];
+        if (!is_array($removeTopics)) $removeTopics = [$removeTopics];
+        $csvPath = dirname(__DIR__) . '/data/custom_topics.csv';
+        $existing = [];
+        if (file_exists($csvPath)) {
+            $fp = fopen($csvPath, 'r');
+            fgetcsv($fp);
+            while (($row = fgetcsv($fp)) !== false) {
+                if (!empty($row[0])) $existing[] = trim($row[0]);
+            }
+            fclose($fp);
+        }
+        $remaining = array_values(array_filter($existing, fn($t) => !in_array($t, $removeTopics)));
+        $fp = fopen($csvPath, 'w');
+        fputcsv($fp, ['Topic']);
+        foreach ($remaining as $t) fputcsv($fp, [$t]);
+        fclose($fp);
+        jsonResponse(['success' => true, 'removed' => count($removeTopics), 'remaining' => count($remaining), 'message' => 'Removed ' . count($removeTopics) . ' topics. ' . count($remaining) . ' remaining.']);
+    }
+
+    // ========== GENERATE CAMPAIGN FROM CUSTOM TOPICS CSV ==========
+    if ($uri === '/api/custom-topics/generate-campaign' && $method === 'POST') {
+        $domain = trim($input['domain_url'] ?? '');
+        $country = $input['country'] ?? 'India';
+        $language = $input['language_code'] ?? 'en';
+        $days = intval($input['days'] ?? 7);
+        $perDay = intval($input['posts_per_day'] ?? 1);
+        $startDate = $input['start_date'] ?? date('Y-m-d');
+        $postingTimes = $input['posting_times'] ?? ['10:00'];
+        $targetPlatform = $input['target_platform'] ?? 'blogger';
+        $neededCount = $days * $perDay;
+        
+        if (empty($domain)) jsonResponse(['error' => 'Website URL is required.'], 400);
+        
+        $db = getDB();
+        $now = nowString();
+        $nowYear = date('Y');
+        
+        // Load custom topics CSV
+        $csvPath = dirname(__DIR__) . '/data/custom_topics.csv';
+        $customTopics = [];
+        if (file_exists($csvPath)) {
+            $fp = fopen($csvPath, 'r');
+            fgetcsv($fp);
+            while (($row = fgetcsv($fp)) !== false) {
+                if (!empty($row[0]) && trim($row[0]) !== '') $customTopics[] = trim($row[0]);
+            }
+            fclose($fp);
+        }
+        
+        // Dedup custom topics against existing used topics
+        $existingTopics = getAllUsedTopics($db, $userId);
+        $customTopics = array_values(array_filter($customTopics, fn($t) => !isTopicDuplicate($t, $t, $existingTopics)));
+        
+        $csvCount = min(count($customTopics), $neededCount);
+        $researchCount = max(0, $neededCount - $csvCount);
+        
+        // Take topics from custom CSV first
+        $selectedTopics = array_slice($customTopics, 0, $csvCount);
+        
+        // If we need more, do AI research
+        $researchedTopics = [];
+        if ($researchCount > 0) {
+            $chatVault = SecurityVault::getApiCredentials($userId, 'chat_api');
+            if (!empty($chatVault['api_key'])) {
+                $usedListStr = implode(', ', array_merge($selectedTopics, array_map(fn($et) => $et['topic'] ?? '', $existingTopics)));
+                $countryNote = ($country !== 'India' && $country !== '') ? " Target country is $country — make topics specific to $country's market." : "";
+                $researchPrompt = "I need $researchCount UNIQUE article topics for the website $domain. I already have these topics covered: $usedListStr. Give me $researchCount completely different topics that are NOT similar to any of the above. Think broadly: different blogs, industry angles, tool reviews, case studies, comparisons, FAQs, myths, regional opportunities, technology trends, compliance, ROI analysis, workflow tips. Return ONLY a JSON array of strings, no other text. Example: [\"topic one\",\"topic two\"]$countryNote";
+                $chatResult = AIProviderClient::chat($chatVault, $researchPrompt);
+                if (!empty($chatResult['success']) && !empty($chatResult['content'])) {
+                    $rawRes = trim($chatResult['content']);
+                    $rawRes = str_replace(['```json', '```'], '', $rawRes);
+                    $researchedRaw = json_decode(trim($rawRes), true);
+                    if (is_array($researchedRaw)) {
+                        foreach ($researchedRaw as $rt) {
+                            if (count($researchedTopics) >= $researchCount) break;
+                            if (is_string($rt) && strlen($rt) > 3 && !isTopicDuplicate($rt, $rt, array_merge($existingTopics, [['topic' => $rt, 'keyword' => $rt]]))) {
+                                $researchedTopics[] = $rt;
+                            }
+                        }
+                    }
+                }
+            }
+            // If AI research didn't give enough, generate generic ones
+            while (count($researchedTopics) < $researchCount) {
+                $i = count($researchedTopics) + 1;
+                $genTopic = "$domain topic $i $nowYear unique angle";
+                if (!isTopicDuplicate($genTopic, $genTopic, $existingTopics)) {
+                    $researchedTopics[] = $genTopic;
+                } else { break; }
+            }
+        }
+        
+        $allTopics = array_merge($selectedTopics, $researchedTopics);
+        if (empty($allTopics)) jsonResponse(['error' => 'No topics available. Add topics to the Custom Topics CSV first.'], 400);
+        
+        // Create campaign
+        $pages = ResearchAgent::crawlAndExtractSitePages($domain, $userId);
+        
+        $stmt = $db->prepare('INSERT INTO campaigns (user_id, slot_number, domain_url, target_country, language_code, days, posts_per_day, status, start_date, posting_times, target_platform, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+        $stmt->execute([$userId, $activeSlot, $domain, $country, $language, $days, $perDay, 'Roadmap Review', $startDate, json_encode($postingTimes), $targetPlatform, $now]);
+        $campaignId = $db->lastInsertId();
+        
+        for ($day = 1; $day <= $days; $day++) {
+            for ($post = 1; $post <= $perDay; $post++) {
+                $idx = ($day - 1) * $perDay + ($post - 1);
+                $topicTitle = $allTopics[$idx % count($allTopics)] ?? ($allTopics[0] ?? 'Blog Article');
+                $kw = $topicTitle;
+                $page = $pages[$idx % max(1, count($pages))] ?? ['page_url' => $domain, 'page_title' => 'relevant page'];
+                
+                $kws = [['keyword' => $kw, 'volume' => 'Custom topic', 'difficulty' => 'Medium', 'intent' => 'Informational']];
+                $headings = ['H1' => ucwords($kw), 'H2' => ['Overview and practical context', 'What research reveals', 'How to apply the insights', 'Frequently Asked Questions'], 'H3' => ['Key findings', 'Common misconceptions', 'Action steps']];
+                $internal = [['url' => $page['page_url'] ?? $domain, 'anchor_text' => $page['page_title'] ?? 'related website page']];
+                $external = [
+                    ['url' => 'https://en.wikipedia.org/wiki/Search_engine_optimization', 'anchor_text' => 'Wikipedia: SEO'],
+                    ['url' => 'https://developers.google.com/search/docs/fundamentals/seo-starter-guide', 'anchor_text' => 'Google SEO Guide'],
+                    ['url' => 'https://moz.com/beginners-guide-to-seo', 'anchor_text' => 'Moz SEO Guide'],
+                    ['url' => 'https://schema.org/Article', 'anchor_text' => 'Schema.org Article'],
+                ];
+                $prompts = ["Editorial image for $kw, professional, no text.", "Practical scene for $kw, authentic style."];
+                
+                $schedDate = (new DateTime($startDate))->modify(($day - 1) . ' days')->format('Y-m-d');
+                $schedTime = $postingTimes[min($post - 1, count($postingTimes) - 1)] ?? '10:00';
+                
+                $stmt = $db->prepare('INSERT INTO campaign_items (campaign_id, day_number, post_number, title, primary_keyword, keyword_data, internal_links, external_links, headings, image_prompts, video_url, plan_status, article_status, scheduled_date, scheduled_time, target_platform, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+                $stmt->execute([$campaignId, $day, $post, ucwords($topicTitle), $kw, json_encode($kws), json_encode($internal), json_encode($external), json_encode($headings), json_encode($prompts), '', 'Approved', 'Not Created', $schedDate, $schedTime, $targetPlatform, $now]);
+                $itemId = $db->lastInsertId();
+                
+                // Generate HTML immediately since items are auto-approved
+                $stmt = $db->prepare('SELECT * FROM campaign_items WHERE id = ?');
+                $stmt->execute([$itemId]);
+                $freshItem = $stmt->fetch();
+                $htmlResult = generateArticleHtmlFromCampaignItem($freshItem, $userId, $activeSlot, $db);
+                if (!empty($htmlResult['success'])) {
+                    $stmt = $db->prepare("UPDATE campaign_items SET article_status = 'HTML Ready', html_path = ? WHERE id = ?");
+                    $stmt->execute([$htmlResult['html_path'], $itemId]);
+                    $htmlToken = generateToken();
+                    $stmt = $db->prepare('INSERT INTO approval_tokens (user_id, campaign_item_id, approval_type, token, created_at) VALUES (?, ?, ?, ?, ?)');
+                    $stmt->execute([$userId, $itemId, 'html', $htmlToken, $now]);
+                }
+                
+                // Record topic
+                addTopicToJsonFile(ucwords($topicTitle), $kw, $domain, 'approved', $campaignId);
+                addTopicToCsv(ucwords($topicTitle), $kw, $domain, 'approved', $campaignId, $now);
+                try {
+                    $stmt = $db->prepare('INSERT OR IGNORE INTO created_blog_topics (user_id, title, primary_keyword, domain_url, campaign_id, created_at) VALUES (?, ?, ?, ?, ?, ?)');
+                    $stmt->execute([$userId, ucwords($topicTitle), $kw, $domain, $campaignId, $now]);
+                } catch (Exception $e) {}
+            }
+        }
+        
+        // Remove used topics from custom CSV
+        $remainCustom = array_slice($customTopics, $csvCount);
+        $fp = fopen($csvPath, 'w');
+        fputcsv($fp, ['Topic']);
+        foreach ($remainCustom as $t) fputcsv($fp, [$t]);
+        fclose($fp);
+        
+        syncTopicsCsv();
+        
+        $msg = "Campaign created with $neededCount blogs. $csvCount from Custom Topics CSV, $researchCount from AI Research.";
+        jsonResponse(['success' => true, 'campaign_id' => $campaignId, 'from_csv' => $csvCount, 'from_research' => $researchCount, 'total' => count($allTopics), 'remaining_in_csv' => count($remainCustom), 'message' => $msg]);
     }
 
     // ========== RUN CRON NOW — Trigger scheduler + approval timer via web ==========

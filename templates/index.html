@@ -426,6 +426,7 @@
             <button class="tab-btn" onclick="switchTab('social')">Social Auto-Poster</button>
             <button class="tab-btn" onclick="switchTab('backlinks')">🌐 Backlink Watchdog</button>
             <button class="tab-btn" onclick="switchTab('topics')">📋 Topics History</button>
+            <button class="tab-btn" onclick="switchTab('custom-topics')">📝 Custom Topics</button>
         </div>
 
         <!-- STATS BAR -->
@@ -880,9 +881,48 @@
             </div>
         </div>
 
-    </div>
+        <!-- TAB: CUSTOM TOPICS — User-provided topics for blog generation -->
+        <div id="tab-custom-topics" class="tab-content">
+            <div class="card" style="border-top:4px solid #8b5cf6;">
+                <div class="card-header">
+                    <h2 class="card-title">📝 Custom Topics — Your Topic List</h2>
+                    <div style="display:flex;gap:8px;align-items:center;">
+                        <span id="custom-topics-count" style="font-weight:700;color:var(--accent-purple);font-size:1.1rem;">0</span>
+                        <span style="color:var(--text-muted);font-size:0.85rem;">topics in CSV</span>
+                    </div>
+                </div>
+                <p style="color:var(--text-muted);margin-bottom:16px;font-size:0.9rem;">Add your topics below (one per line). The software reads these first when creating a campaign. Used topics are automatically removed. If CSV has fewer topics than needed, AI research fills the rest.</p>
+                <div class="form-grid" style="margin-bottom:16px;">
+                    <div class="form-group" style="grid-column:1/-1;">
+                        <label>Enter Topics (one per line)</label>
+                        <textarea id="custom-topics-input" rows="10" placeholder="How to optimize supply chain management&#10;Best CRM tools for small business 2026&#10;Digital marketing strategies for e-commerce&#10;..." style="font-size:0.9rem;line-height:1.6;"></textarea>
+                    </div>
+                </div>
+                <div style="display:flex;gap:8px;margin-bottom:20px;">
+                    <button class="btn btn-purple" onclick="saveCustomTopics()">💾 Save Topics to CSV</button>
+                    <button class="btn" style="background:#0f172a;" onclick="loadCustomTopics()">🔄 Reload from CSV</button>
+                    <button class="btn btn-danger" onclick="clearCustomTopics()">🗑️ Clear All</button>
+                </div>
+                <div style="background:var(--inner-bg);padding:16px 20px;border-radius:12px;border:1px solid var(--border-light);margin-bottom:20px;">
+                    <h3 style="font-size:1rem;font-weight:800;color:var(--accent-purple);margin-bottom:12px;">🚀 Create Campaign from Custom Topics</h3>
+                    <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:12px;">Select days, articles per day, and click Create. The software takes topics from your CSV first, then fills remaining with AI research. Used topics are automatically removed from CSV.</p>
+                    <form onsubmit="generateFromCustomTopics(event)">
+                        <div class="form-grid">
+                            <div class="form-group"><label>Website URL</label><input type="url" id="ct-domain" placeholder="https://yourwebsite.com" required></div>
+                            <div class="form-group"><label>Country</label><select id="ct-country"><option value="India">India</option><option value="United States">United States</option><option value="United Kingdom">United Kingdom</option><option value="Canada">Canada</option><option value="Australia">Australia</option><option value="UAE">UAE</option></select></div>
+                            <div class="form-group"><label>Days</label><select id="ct-days"><option value="7">7</option><option value="10">10</option><option value="15">15</option><option value="30">30</option></select></div>
+                            <div class="form-group"><label>Articles/Day</label><select id="ct-per-day"><option value="1">1</option><option value="2">2</option><option value="3">3</option></select></div>
+                            <div class="form-group"><label>Platform</label><select id="ct-platform"><option value="blogger">Blogger</option><option value="local">Local HTML</option><option value="wordpress">WordPress</option></select></div>
+                            <div class="form-group"><label>Start Date</label><input type="date" id="ct-start-date"></div>
+                        </div>
+                        <button type="submit" class="btn btn-accent" id="btn-ct-generate" style="margin-top:8px;">🚀 Generate Campaign from Custom Topics</button>
+                    </form>
+                    <div id="ct-status" style="margin-top:12px;font-weight:700;font-size:0.9rem;"></div>
+                </div>
+            </div>
+        </div>
 
-    <footer class="site-footer">
+    </div>
         AutoBlog & Marketing SaaS Suite &bull; Multi-Slot Active Hub
     </footer>
 
@@ -1588,7 +1628,86 @@
         }
         async function syncTopicsCsv() { try { const res = await fetch('/api/topics-csv/sync',{method:'POST'}); const data = await res.json(); alert(data.success?'Synced! '+data.count+' topics.':'Error: '+(data.error||'Failed')); loadTopicsHistory(); } catch(e) { alert('Error: '+e.message); } }
         const origSwitchTab = switchTab;
-        switchTab = function(tabId) { origSwitchTab(tabId); if (tabId === 'topics') loadTopicsHistory(); };
+        switchTab = function(tabId) { origSwitchTab(tabId); if (tabId === 'topics') loadTopicsHistory(); if (tabId === 'custom-topics') loadCustomTopics(); };
+
+        // ===== CUSTOM TOPICS FUNCTIONS =====
+        async function loadCustomTopics() {
+            try {
+                const res = await fetch('/api/custom-topics');
+                const data = await res.json();
+                document.getElementById('custom-topics-count').innerText = data.count || 0;
+                if (data.topics && data.topics.length > 0) {
+                    document.getElementById('custom-topics-input').value = data.topics.join('\n');
+                }
+            } catch(e) { console.error(e); }
+        }
+        async function saveCustomTopics() {
+            const text = document.getElementById('custom-topics-input').value;
+            const topics = text.split('\n').map(t => t.trim()).filter(t => t.length > 0);
+            if (topics.length === 0) { alert('Enter at least one topic.'); return; }
+            try {
+                const res = await fetch('/api/custom-topics/upload', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({topics})});
+                const data = await res.json();
+                alert(data.success ? '✅ ' + data.message : '🔴 ' + (data.error||'Failed'));
+                document.getElementById('custom-topics-count').innerText = topics.length;
+            } catch(e) { alert('Error: ' + e.message); }
+        }
+        async function clearCustomTopics() {
+            if (!confirm('Clear ALL custom topics?')) return;
+            try {
+                const res = await fetch('/api/custom-topics/upload', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({topics:[]})});
+                const data = await res.json();
+                document.getElementById('custom-topics-input').value = '';
+                document.getElementById('custom-topics-count').innerText = '0';
+                alert('Cleared!');
+            } catch(e) { alert('Error: ' + e.message); }
+        }
+        async function generateFromCustomTopics(e) {
+            e.preventDefault();
+            const btn = document.getElementById('btn-ct-generate');
+            const status = document.getElementById('ct-status');
+            btn.disabled = true; btn.innerText = '⏳ Generating...';
+            status.innerText = 'Creating campaign from custom topics...';
+            const startDate = document.getElementById('ct-start-date').value || new Date().toISOString().split('T')[0];
+            const perDay = Number(document.getElementById('ct-per-day').value);
+            const days = Number(document.getElementById('ct-days').value);
+            const postingTimes = Array.from({length: perDay}, (_, i) => ['10:00','18:00','20:30'][i] || '10:00');
+            try {
+                const res = await fetch('/api/custom-topics/generate-campaign', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({
+                    domain_url: document.getElementById('ct-domain').value,
+                    country: document.getElementById('ct-country').value,
+                    days: days,
+                    posts_per_day: perDay,
+                    start_date: startDate,
+                    posting_times: postingTimes,
+                    target_platform: document.getElementById('ct-platform').value
+                })});
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    status.innerHTML = `<span style="color:#10b981;">✅ ${data.message}<br>From CSV: ${data.from_csv} | From Research: ${data.from_research} | Remaining in CSV: ${data.remaining_in_csv}</span>`;
+                    loadCustomTopics(); loadDemoProgress(); loadStats();
+                } else {
+                    status.innerHTML = `<span style="color:#ef4444;">🔴 ${data.error||'Failed'}</span>`;
+                }
+            } catch(e) { status.innerHTML = `<span style="color:#ef4444;">Error: ${e.message}</span>`; }
+            btn.disabled = false; btn.innerText = '🚀 Generate Campaign from Custom Topics';
+        }
+
+        // ===== AUTO-REFRESH DASHBOARD EVERY 12 SECONDS =====
+        let _dashRefreshTimer = null;
+        function startDashRefresh() {
+            if (_dashRefreshTimer) clearInterval(_dashRefreshTimer);
+            _dashRefreshTimer = setInterval(() => {
+                loadDemoProgress();
+                loadStats();
+                // Also update custom topics count
+                fetch('/api/custom-topics').then(r=>r.json()).then(d => {
+                    const el = document.getElementById('custom-topics-count');
+                    if (el) el.innerText = d.count || 0;
+                }).catch(()=>{});
+            }, 12000);
+        }
+        startDashRefresh();
     </script>
 </body>
 </html>

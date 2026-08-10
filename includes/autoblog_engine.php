@@ -361,7 +361,7 @@ article.monochrome-editorial-article, article { max-width:960px!important; margi
 article h1, article .monochrome-editorial-article h1 { text-align:center!important; font-size:2.2rem!important; font-weight:800!important; color:#0f172a!important; margin-bottom:16px!important; line-height:1.2!important; }
 article h2 { font-size:1.5rem!important; font-weight:800!important; color:#0f172a!important; margin-top:36px!important; margin-bottom:16px!important; border-bottom:1px solid #e2e8f0!important; padding-bottom:8px!important; }
 article h3 { font-size:1.15rem!important; font-weight:700!important; color:#0f172a!important; margin-top:24px!important; margin-bottom:12px!important; }
-article p { margin-bottom:18px!important; font-size:1.02rem!important; }
+article p { margin-bottom:18px!important; font-size:1.02rem!important; text-align:justify!important; }
 article a { color:#1b57f6!important; font-weight:600!important; text-decoration:none!important; }
 article a:hover { text-decoration:underline!important; }
 article ul, article ol { margin:16px 0!important; padding-left:22px!important; line-height:2!important; }
@@ -381,7 +381,7 @@ article footer { margin-top:48px!important; font-size:0.85rem!important; text-al
   article h1 { font-size:1.6rem!important; }
   article h2 { font-size:1.25rem!important; margin-top:24px!important; }
   article h3 { font-size:1.05rem!important; }
-  article p { font-size:0.95rem!important; margin-bottom:14px!important; }
+  article p { font-size:0.95rem!important; margin-bottom:14px!important; text-align:justify!important; }
   article ul, article ol { padding-left:18px!important; font-size:0.95rem!important; }
   article td, article th { padding:8px 10px!important; font-size:0.85rem!important; }
   article blockquote { padding:12px 16px!important; }
@@ -909,7 +909,7 @@ article { font-family: 'Montserrat', -apple-system, sans-serif; line-height: 1.8
 h1 { font-size: 2.2rem; font-weight: 800; color: #0f172a; margin-bottom: 12px; line-height: 1.2; text-align: center; }
 h2 { font-size: 1.5rem; font-weight: 800; color: #0f172a; margin-top: 36px; margin-bottom: 16px; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; }
 h3 { font-size: 1.15rem; font-weight: 700; color: #0f172a; margin-top: 24px; margin-bottom: 12px; }
-p { margin-bottom: 18px; }
+p { margin-bottom: 18px; text-align: justify; }
 a { color: #1b57f6; font-weight: 600; text-decoration: none; }
 a:hover { text-decoration: underline; }
 ul, ol { margin: 16px 0; padding-left: 22px; line-height: 2; }
@@ -928,7 +928,7 @@ footer { margin-top: 48px; font-size: 0.85rem; text-align: center; color: #64748
     h1 { font-size: 1.6rem; }
     h2 { font-size: 1.25rem; margin-top: 24px; }
     h3 { font-size: 1.05rem; }
-    p { font-size: 0.95rem; margin-bottom: 14px; }
+    p { font-size: 0.95rem; margin-bottom: 14px; text-align: justify; }
     ul, ol { padding-left: 18px; font-size: 0.95rem; }
     td, th { padding: 8px 10px; font-size: 0.85rem; }
     blockquote { padding: 12px 16px; }
