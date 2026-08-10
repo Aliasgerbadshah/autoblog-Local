@@ -1,0 +1,16 @@
+DirectoryIndex index.php
+
+RewriteEngine On
+RewriteBase /
+
+RewriteRule ^includes/ - [F,L]
+# cron/ needs web access for "Run Cron Now" button and URL-based cron
+
+<FilesMatch "\.(db|sqlite,sqlite3)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ index.php [QSA,L]
