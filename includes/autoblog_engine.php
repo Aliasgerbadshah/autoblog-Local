@@ -299,7 +299,7 @@ class Publisher {
 </html>
 HTML;
 
-        file_put_contents($filePath, $htmlTemplate);
+        @file_put_contents($filePath, $htmlTemplate);
 
         $publishedUrl = "/published_posts/$fileName";
         $db = getDB();
@@ -410,47 +410,88 @@ CSS;
             'content' => $content
         ];
 
-        // If a future publish date is provided, create as DRAFT first, then publish
+        // If a future publish date is provided, create as DRAFT then use /publish endpoint
+        // Blogger API v3 correct scheduling flow:
+        //   Step 1: POST /blogs/{blogId}/posts?isDraft=true  → creates draft, returns postId
+        //   Step 2: POST /blogs/{blogId}/posts/{postId}/publish?publishDate={RFC3339}  → schedules it
         if (!empty($publishDate)) {
             $publishTs = strtotime($publishDate);
             if ($publishTs !== false && $publishTs > time()) {
-                // Step 1: Create as DRAFT
-                $payload['status'] = 'DRAFT';
-                $result = curlPost($url, $payload, ['Content-Type: application/json', $authHeader], 15);
+                // Step 1: Create as DRAFT using ?isDraft=true query param (NOT status in body)
+                $draftUrl = $url . "?isDraft=true";
+                $result = curlPost($draftUrl, $payload, ['Content-Type: application/json', $authHeader], 15);
                 $data = $result['data'] ?? [];
                 
                 if ($result['success'] && in_array($result['http_code'], [200, 201]) && !empty($data['id'])) {
                     $postId = $data['id'];
-                    // Step 2: Update to PUBLISH with scheduled date
-                    $updateUrl = "https://www.googleapis.com/blogger/v3/blogs/" . trim($blogId) . "/posts/" . $postId;
-                    $payload['status'] = 'LIVE';
-                    $payload['published'] = gmdate('Y-m-d\TH:i:s\Z', $publishTs);
-                    $payload['id'] = $postId;
                     
-                    $ch = curl_init($updateUrl);
+                    // Step 2: Call dedicated /publish endpoint with publishDate query param
+                    // Format: RFC 3339 with timezone offset (Asia/Kolkata = +05:30)
+                    $dt = new DateTime('@' . $publishTs);
+                    $dt->setTimezone(new DateTimeZone('Asia/Kolkata'));
+                    $rfc3339 = $dt->format('Y-m-d\TH:i:sP'); // e.g. 2025-08-15T10:00:00+05:30
+                    
+                    $publishEndpoint = "https://www.googleapis.com/blogger/v3/blogs/" . trim($blogId) . "/posts/" . $postId . "/publish?publishDate=" . urlencode($rfc3339);
+                    
+                    $ch = curl_init($publishEndpoint);
                     curl_setopt_array($ch, [
-                        CURLOPT_CUSTOMREQUEST => 'PUT',
-                        CURLOPT_POSTFIELDS => json_encode($payload),
+                        CURLOPT_POST => true,
+                        CURLOPT_POSTFIELDS => '',  // No body per API docs
                         CURLOPT_RETURNTRANSFER => true,
                         CURLOPT_TIMEOUT => 15,
-                        CURLOPT_HTTPHEADER => ['Content-Type: application/json', $authHeader],
+                        CURLOPT_HTTPHEADER => ['Content-Length: 0', $authHeader],
                         CURLOPT_SSL_VERIFYPEER => false,
                     ]);
                     $response = curl_exec($ch);
                     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                    $curlErr = curl_error($ch);
                     curl_close($ch);
-                    $updateData = json_decode($response, true);
+                    $publishData = json_decode($response, true);
                     
-                    if (in_array($httpCode, [200, 201])) {
-                        $bloggerUrl = $updateData['url'] ?? '';
+                    if (in_array($httpCode, [200, 201]) && !empty($publishData['url'])) {
+                        // Successfully scheduled on Blogger
+                        $bloggerUrl = $publishData['url'];
                         $db = getDB();
                         $now = nowString();
                         $stmt = $db->prepare('INSERT INTO posts (user_id, title, slug, content, keyword_or_source, category, source_type, status, published_url, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
                         $stmt->execute([$userId, $title, slugify($title), $content, $blogId, 'Blogger Post', 'Blogger REST API', 'Scheduled', $bloggerUrl, $now]);
-                        return ['success' => true, 'url' => $bloggerUrl, 'message' => 'Scheduled on Blogger for ' . $publishDate];
+                        return ['success' => true, 'url' => $bloggerUrl, 'message' => 'Scheduled on Blogger for ' . $rfc3339 . ' (post status: ' . ($publishData['status'] ?? 'scheduled') . ')'];
                     }
-                    // If scheduling failed, the draft still exists - return partial success
-                    return ['success' => true, 'url' => $data['url'] ?? '', 'message' => 'Created as draft on Blogger. Scheduling may need manual publish.', 'draft_id' => $postId];
+                    
+                    // If /publish endpoint failed, try fallback: isDraft=false + published date on insert
+                    // This is the alternative approach from StackOverflow: insert with isDraft=false & published date
+                    // First, delete the draft we just created (to avoid duplicates)
+                    $deleteUrl = "https://www.googleapis.com/blogger/v3/blogs/" . trim($blogId) . "/posts/" . $postId;
+                    $delCh = curl_init($deleteUrl);
+                    curl_setopt_array($delCh, [
+                        CURLOPT_CUSTOMREQUEST => 'DELETE',
+                        CURLOPT_RETURNTRANSFER => true,
+                        CURLOPT_TIMEOUT => 10,
+                        CURLOPT_HTTPHEADER => [$authHeader],
+                        CURLOPT_SSL_VERIFYPEER => false,
+                    ]);
+                    curl_exec($delCh);
+                    curl_close($delCh);
+                    
+                    $fallbackUrl = $url . "?isDraft=false";
+                    $payload['published'] = $rfc3339;
+                    $fbResult = curlPost($fallbackUrl, $payload, ['Content-Type: application/json', $authHeader], 15);
+                    $fbData = $fbResult['data'] ?? [];
+                    
+                    if ($fbResult['success'] && in_array($fbResult['http_code'], [200, 201]) && !empty($fbData['url'])) {
+                        $bloggerUrl = $fbData['url'];
+                        $db = getDB();
+                        $now = nowString();
+                        $stmt = $db->prepare('INSERT INTO posts (user_id, title, slug, content, keyword_or_source, category, source_type, status, published_url, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+                        $stmt->execute([$userId, $title, slugify($title), $content, $blogId, 'Blogger Post', 'Blogger REST API', 'Scheduled', $bloggerUrl, $now]);
+                        return ['success' => true, 'url' => $bloggerUrl, 'message' => 'Scheduled on Blogger for ' . $rfc3339 . ' (fallback method, status: ' . ($fbData['status'] ?? 'unknown') . ')'];
+                    }
+                    
+                    // Both methods failed — but draft exists, return partial success with the draft URL
+                    $draftUrl_web = $data['url'] ?? '';
+                    $apiError = !empty($publishData['error']['message']) ? $publishData['error']['message'] : ($curlErr ?: "HTTP $httpCode");
+                    $fbError = !empty($fbData['error']['message']) ? $fbData['error']['message'] : ("HTTP " . ($fbResult['http_code'] ?? 0));
+                    return ['success' => true, 'url' => $draftUrl_web, 'message' => "Created as draft on Blogger. Auto-schedule failed (publish API: $apiError; fallback: $fbError). Please schedule manually in Blogger.", 'draft_id' => $postId, 'partial' => true];
                 }
                 $errorMsg = $data['error']['message'] ?? ($result['raw'] ?? 'Unknown error');
                 return ['success' => false, 'error' => "Blogger API Error creating draft ({$result['http_code']}): $errorMsg"];
@@ -569,7 +610,7 @@ ITEM;
 </html>
 HTML;
 
-        file_put_contents(OUTPUT_DIR . '/index.html', $indexHtml);
+        @file_put_contents(OUTPUT_DIR . '/index.html', $indexHtml);
     }
 }
 
@@ -996,7 +1037,7 @@ CSS;
 </html>
 HTML;
 
-    file_put_contents($filePath, $fullHtml);
+    @file_put_contents($filePath, $fullHtml);
 
     return [
         'success' => true,
