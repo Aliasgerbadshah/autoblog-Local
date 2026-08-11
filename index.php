@@ -687,7 +687,29 @@ function handleApiRoute($uri) {
         $language = $input['language_code'] ?? 'en';
         $days = intval($input['days'] ?? 7);
         $postsPerDay = intval($input['posts_per_day'] ?? 1);
+        $neededCount = $days * $postsPerDay;
         if (!$domain) jsonResponse(['error' => 'Website URL is required.'], 400);
+
+        // ===== READ CUSTOM TOPICS CSV FIRST =====
+        $csvPath = dirname(__DIR__) . '/data/custom_topics.csv';
+        $customTopics = [];
+        if (file_exists($csvPath)) {
+            $fp = @fopen($csvPath, 'r');
+            if ($fp) {
+                fgetcsv($fp); // skip header
+                while (($row = fgetcsv($fp)) !== false) {
+                    if (!empty($row[0]) && trim($row[0]) !== '') $customTopics[] = trim($row[0]);
+                }
+                fclose($fp);
+            }
+        }
+        // Dedup custom topics against existing used topics
+        $db = getDB();
+        $existingTopics = getAllUsedTopics($db, $userId);
+        $customTopics = array_values(array_filter($customTopics, fn($t) => !isTopicDuplicate($t, $t, $existingTopics)));
+        $csvCount = min(count($customTopics), $neededCount);
+        $researchCount = max(0, $neededCount - $csvCount);
+        $selectedCsvTopics = array_slice($customTopics, 0, $csvCount);
 
         $pages = ResearchAgent::crawlAndExtractSitePages($domain, $userId);
         $info = ResearchAgent::analyzeCustomerWebsite($domain);
@@ -698,7 +720,7 @@ function handleApiRoute($uri) {
         $nowYear = date('Y');
         $nowMonth = date('F');
         $countryNote = ($country !== 'India' && $country !== '') ? " The target country is $country — topics MUST be relevant to $country's market, culture, regulations, and business landscape. Do NOT reuse generic topics that could apply to any country. Make them specific to $country." : "";
-        $prompt = "You are an SEO research strategist. Search the web broadly for the business website $domain in target country $country, language $language. The current year is $nowYear — use it in content but do NOT mention the current month in article titles. Create exactly " . ($days * $postsPerDay) . " UNIQUE article plans for a $days-day campaign with $postsPerDay article(s) per day. Each article MUST cover a DIFFERENT angle — do not repeat the same concept with slight wording changes. Think broadly: search different blogs, industry reports, competitor analysis, trending news, how-to guides, comparison reviews, case studies, tool roundups, expert opinions, FAQ compilations, myth-busting articles, beginner tutorials, advanced strategies, cost analyses, ROI discussions, compliance/legal aspects, regional opportunities, technology integrations, workflow optimizations, and productivity hacks. Return ONLY valid JSON with this shape: {\"articles\":[{\"title\":\"...\",\"primary_keyword\":\"...\",\"keywords\":[{\"keyword\":\"...\",\"volume\":\"AI estimate\",\"difficulty\":\"Low/Medium/High\",\"intent\":\"...\"}],\"internal_links\":[{\"url\":\"...\",\"anchor_text\":\"...\",\"reason\":\"...\"}],\"external_links\":[{\"url\":\"...\",\"anchor_text\":\"...\",\"reason\":\"...\"}],\"headings\":{\"H1\":\"...\",\"H2\":[\"...\"],\"H3\":[\"...\"]},\"image_prompts\":[\"...\"]}]}. IMPORTANT: (1) Each article title must be UNIQUE in concept — not just different wording of the same idea. (2) Do NOT include the month name in any title. (3) Include the year $nowYear in titles only when natural. (4) Do NOT mention the country in the title unless it specifically adds targeting value. (5) For external_links: Provide at least 4 REAL working URLs to well-known authority sites (Wikipedia, Google docs, Mozilla MDN, Schema.org, Moz, Ahrefs, Neil Patel, HubSpot, Backlinko, etc.) that are RELATED to each article topic. Do NOT invent or guess URLs. (6) Include 1-2 of the client's crawled pages in internal_links.$countryNote Crawled pages:\n$pageContext";
+        $prompt = "You are an SEO research strategist. Search the web broadly for the business website $domain in target country $country, language $language. The current year is $nowYear — use it in content but do NOT mention the current month in article titles. Create exactly $researchCount UNIQUE article plans for a $days-day campaign with $postsPerDay article(s) per day. Each article MUST cover a DIFFERENT angle — do not repeat the same concept with slight wording changes. Think broadly: search different blogs, industry reports, competitor analysis, trending news, how-to guides, comparison reviews, case studies, tool roundups, expert opinions, FAQ compilations, myth-busting articles, beginner tutorials, advanced strategies, cost analyses, ROI discussions, compliance/legal aspects, regional opportunities, technology integrations, workflow optimizations, and productivity hacks. Return ONLY valid JSON with this shape: {\"articles\":[{\"title\":\"...\",\"primary_keyword\":\"...\",\"keywords\":[{\"keyword\":\"...\",\"volume\":\"AI estimate\",\"difficulty\":\"Low/Medium/High\",\"intent\":\"...\"}],\"internal_links\":[{\"url\":\"...\",\"anchor_text\":\"...\",\"reason\":\"...\"}],\"external_links\":[{\"url\":\"...\",\"anchor_text\":\"...\",\"reason\":\"...\"}],\"headings\":{\"H1\":\"...\",\"H2\":[\"...\"],\"H3\":[\"...\"]},\"image_prompts\":[\"...\"]}]}. IMPORTANT: (1) Each article title must be UNIQUE in concept — not just different wording of the same idea. (2) Do NOT include the month name in any title. (3) Include the year $nowYear in titles only when natural. (4) Do NOT mention the country in the title unless it specifically adds targeting value. (5) For external_links: Provide at least 4 REAL working URLs to well-known authority sites (Wikipedia, Google docs, Mozilla MDN, Schema.org, Moz, Ahrefs, Neil Patel, HubSpot, Backlinko, etc.) that are RELATED to each article topic. Do NOT invent or guess URLs. (6) Include 1-2 of the client's crawled pages in internal_links.$countryNote Crawled pages:\n$pageContext";
 
         $result = AIProviderClient::chat($chat, $prompt);
         if (!$result['success']) jsonResponse(['error' => 'Chat research failed: ' . ($result['error'] ?? 'Unknown error')], 400);
@@ -706,7 +728,28 @@ function handleApiRoute($uri) {
         $raw = trim($result['content']);
         $raw = str_replace(['```json', '```'], '', $raw);
         $plans = json_decode(trim($raw), true)['articles'] ?? [];
-        if (empty($plans)) jsonResponse(['error' => 'Chat API did not return valid JSON roadmap.', 'raw_preview' => substr($raw, 0, 1000)], 400);
+        
+        // ===== PREPEND CUSTOM CSV TOPICS AS PLAN OBJECTS =====
+        $csvPlanObjects = [];
+        foreach ($selectedCsvTopics as $csvTopic) {
+            $csvPlanObjects[] = [
+                'title' => $csvTopic,
+                'primary_keyword' => $csvTopic,
+                'keywords' => [['keyword' => $csvTopic, 'volume' => 'Custom topic', 'difficulty' => 'Medium', 'intent' => 'Informational']],
+                'internal_links' => [['url' => $domain, 'anchor_text' => 'client website']],
+                'external_links' => [
+                    ['url' => 'https://en.wikipedia.org/wiki/Search_engine_optimization', 'anchor_text' => 'Wikipedia: SEO'],
+                    ['url' => 'https://developers.google.com/search/docs/fundamentals/seo-starter-guide', 'anchor_text' => 'Google SEO Guide'],
+                    ['url' => 'https://moz.com/beginners-guide-to-seo', 'anchor_text' => 'Moz SEO Guide'],
+                    ['url' => 'https://schema.org/Article', 'anchor_text' => 'Schema.org Article'],
+                ],
+                'headings' => ['H1' => $csvTopic, 'H2' => ['Overview', 'Key Insights', 'How to Apply', 'FAQ'], 'H3' => ['Details', 'Common Questions']],
+                'image_prompts' => ["Editorial image for $csvTopic, professional, no text."]
+            ];
+        }
+        $plans = array_merge($csvPlanObjects, $plans);
+        
+        if (empty($plans)) jsonResponse(['error' => 'Chat API did not return valid JSON roadmap and no custom topics available.', 'raw_preview' => substr($raw, 0, 1000)], 400);
 
         $db = getDB();
         $now = nowString();
@@ -804,7 +847,20 @@ function handleApiRoute($uri) {
         $campaignRow = ['domain_url' => $domain, 'days' => $days, 'posts_per_day' => $postsPerDay];
         $richEmailHtml = buildRichApprovalEmailHtml($allCampaignItems, $campaignRow, $db);
         $sent = sendApprovalEmail($userId, 'Your AI Research Roadmap Draft — Approve or Disapprove Each Article', $richEmailHtml);
-        jsonResponse(['success' => true, 'campaign_id' => $campaignId, 'articles' => count($roadmapRows), 'email_sent' => $sent, 'suggested_roadmap' => $roadmapRows, 'message' => $sent ? 'Live Chat research roadmap created and approval email sent with full draft content.' : 'Live Chat research roadmap created. Brevo email was not sent.']);
+        
+        // ===== REMOVE USED TOPICS FROM CUSTOM CSV =====
+        if ($csvCount > 0) {
+            $remainCustom = array_slice($customTopics, $csvCount);
+            $fp = @fopen($csvPath, 'w');
+            if ($fp) {
+                fputcsv($fp, ['Topic']);
+                foreach ($remainCustom as $t) fputcsv($fp, [$t]);
+                fclose($fp);
+            }
+        }
+        
+        $csvMsg = $csvCount > 0 ? " ($csvCount from Custom Topics CSV, $researchCount from AI Research)" : '';
+        jsonResponse(['success' => true, 'campaign_id' => $campaignId, 'articles' => count($roadmapRows), 'email_sent' => $sent, 'from_csv' => $csvCount, 'from_research' => $researchCount, 'suggested_roadmap' => $roadmapRows, 'message' => ($sent ? 'Roadmap created and approval email sent.' : 'Roadmap created. Brevo email not sent.') . $csvMsg]);
     }
 
     // SEO Research
@@ -830,6 +886,21 @@ function handleApiRoute($uri) {
         $perDay = intval($input['posts_per_day'] ?? 2);
         if (!$domain) jsonResponse(['error' => 'Website URL is required.'], 400);
         if ($days < 1 || $days > 30 || !in_array($perDay, [1, 2, 3])) jsonResponse(['error' => 'Demo mode supports 1-30 days and 1-3 posts per day.'], 400);
+        $neededCount = $days * $perDay;
+
+        // ===== READ CUSTOM TOPICS CSV FIRST =====
+        $csvPath = dirname(__DIR__) . '/data/custom_topics.csv';
+        $customTopics = [];
+        if (file_exists($csvPath)) {
+            $fpCt = @fopen($csvPath, 'r');
+            if ($fpCt) {
+                fgetcsv($fpCt);
+                while (($rowCt = fgetcsv($fpCt)) !== false) {
+                    if (!empty($rowCt[0]) && trim($rowCt[0]) !== '') $customTopics[] = trim($rowCt[0]);
+                }
+                fclose($fpCt);
+            }
+        }
 
         $info = ResearchAgent::analyzeCustomerWebsite($domain);
         $pages = ResearchAgent::crawlAndExtractSitePages($domain, $userId);
@@ -904,11 +975,18 @@ function handleApiRoute($uri) {
         
         // ===== STRICT TOPIC DEDUP: Load ALL existing topics before creating campaign =====
         $existingTopics = getAllUsedTopics($db, $userId);
+        // Dedup custom CSV topics against existing ones
+        $customTopics = array_values(array_filter($customTopics, fn($t) => !isTopicDuplicate($t, $t, $existingTopics)));
+        $csvCount = min(count($customTopics), $neededCount);
+        $selectedCsvTopics = array_slice($customTopics, 0, $csvCount);
+        $researchCount = max(0, $neededCount - $csvCount);
         // Filter base topics against existing ones
         $base = array_filter($base, function($topic) use ($existingTopics) {
             return !isTopicDuplicate($topic, $topic, $existingTopics);
         });
         $base = array_values($base);
+        // Prepend CSV topics to base (they get used first)
+        $base = array_merge($selectedCsvTopics, $base);
         // Ensure we have at least $neededCount topics
         if (count($base) < $neededCount) {
             // Generate more unique variations
@@ -993,7 +1071,20 @@ function handleApiRoute($uri) {
         $campaignRow = ['domain_url' => $domain, 'days' => $days, 'posts_per_day' => $perDay];
         $richEmailHtml = buildRichApprovalEmailHtml($allItems, $campaignRow, $db);
         $sent = sendApprovalEmail($userId, 'Your AutoBlog Roadmap Draft — Approve or Disapprove Each Article', $richEmailHtml);
-        jsonResponse(['success' => true, 'campaign_id' => $campaignId, 'items' => $days * $perDay, 'email_sent' => $sent, 'base_url' => APP_BASE_URL, 'message' => $sent ? 'Roadmap created and Brevo approval email sent with full draft content.' : 'Roadmap created locally. Brevo email was not sent.']);
+        
+        // ===== REMOVE USED TOPICS FROM CUSTOM CSV =====
+        if ($csvCount > 0) {
+            $remainCustom = array_slice($customTopics, $csvCount);
+            $fpRm = @fopen($csvPath, 'w');
+            if ($fpRm) {
+                fputcsv($fpRm, ['Topic']);
+                foreach ($remainCustom as $t) fputcsv($fpRm, [$t]);
+                fclose($fpRm);
+            }
+        }
+        
+        $csvMsg = $csvCount > 0 ? " ($csvCount from Custom Topics CSV, " . ($days * $perDay - $csvCount) . " from Demo)" : '';
+        jsonResponse(['success' => true, 'campaign_id' => $campaignId, 'items' => $days * $perDay, 'email_sent' => $sent, 'from_csv' => $csvCount, 'base_url' => APP_BASE_URL, 'message' => ($sent ? 'Roadmap created and approval email sent.' : 'Roadmap created locally.') . $csvMsg]);
     }
 
     // Demo campaign status
