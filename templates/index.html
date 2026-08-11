@@ -440,6 +440,10 @@
                 <span class="stat-value" id="stat-scheduled">0</span>
             </div>
             <div class="stat-card">
+                <span class="stat-title">Custom Topics</span>
+                <span class="stat-value" id="stat-custom-topics" style="color:var(--accent-purple);">0</span>
+            </div>
+            <div class="stat-card">
                 <span class="stat-title">Social Shares</span>
                 <span class="stat-value" id="stat-social">0</span>
             </div>
@@ -560,9 +564,10 @@
             </div>
             <div class="card" id="demo-progress-card">
                 <div class="card-header"><h2 class="card-title">✅ Roadmap Approval Progress</h2>
-                    <div style="display:flex;gap:8px;">
+                    <div style="display:flex;gap:8px;align-items:center;">
                         <button class="btn btn-accent" onclick="generateAllHtml()" id="btn-gen-all-html">⚡ Generate All HTML</button>
                         <button class="btn" style="background:#0f172a;" onclick="runCronNow()">⏱️ Run Cron Now</button>
+                        <span id="custom-topics-available-banner" style="font-weight:800;color:var(--accent-purple);font-size:0.95rem;margin-left:12px;"></span>
                     </div>
                 </div>
                 <table><thead><tr><th>Day/Slot</th><th>Blog</th><th>Roadmap Status</th><th>Article Status</th><th>Schedule Date</th><th>Time</th><th>Platform</th><th>HTML</th><th>Action</th></tr></thead><tbody id="demo-progress-tbody"><tr><td colspan="9">No campaign loaded.</td></tr></tbody></table>
@@ -902,22 +907,6 @@
                     <button class="btn btn-purple" onclick="saveCustomTopics()">💾 Save Topics to CSV</button>
                     <button class="btn" style="background:#0f172a;" onclick="loadCustomTopics()">🔄 Reload from CSV</button>
                     <button class="btn btn-danger" onclick="clearCustomTopics()">🗑️ Clear All</button>
-                </div>
-                <div style="background:var(--inner-bg);padding:16px 20px;border-radius:12px;border:1px solid var(--border-light);margin-bottom:20px;">
-                    <h3 style="font-size:1rem;font-weight:800;color:var(--accent-purple);margin-bottom:12px;">🚀 Create Campaign from Custom Topics</h3>
-                    <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:12px;">Select days, articles per day, and click Create. The software takes topics from your CSV first, then fills remaining with AI research. Used topics are automatically removed from CSV.</p>
-                    <form onsubmit="generateFromCustomTopics(event)">
-                        <div class="form-grid">
-                            <div class="form-group"><label>Website URL</label><input type="url" id="ct-domain" placeholder="https://yourwebsite.com" required></div>
-                            <div class="form-group"><label>Country</label><select id="ct-country"><option value="India">India</option><option value="United States">United States</option><option value="United Kingdom">United Kingdom</option><option value="Canada">Canada</option><option value="Australia">Australia</option><option value="UAE">UAE</option></select></div>
-                            <div class="form-group"><label>Days</label><select id="ct-days"><option value="7">7</option><option value="10">10</option><option value="15">15</option><option value="30">30</option></select></div>
-                            <div class="form-group"><label>Articles/Day</label><select id="ct-per-day"><option value="1">1</option><option value="2">2</option><option value="3">3</option></select></div>
-                            <div class="form-group"><label>Platform</label><select id="ct-platform"><option value="blogger">Blogger</option><option value="local">Local HTML</option><option value="wordpress">WordPress</option></select></div>
-                            <div class="form-group"><label>Start Date</label><input type="date" id="ct-start-date"></div>
-                        </div>
-                        <button type="submit" class="btn btn-accent" id="btn-ct-generate" style="margin-top:8px;">🚀 Generate Campaign from Custom Topics</button>
-                    </form>
-                    <div id="ct-status" style="margin-top:12px;font-weight:700;font-size:0.9rem;"></div>
                 </div>
             </div>
         </div>
@@ -1421,6 +1410,18 @@
                 document.getElementById('stat-backlinks').innerText = data.total_backlinks;
                 document.getElementById('stat-dofollow').innerText = data.active_dofollow;
             } catch (e) { console.error(e); }
+            // Fetch custom topics count and update stat + banner
+            try {
+                const ctRes = await fetch('/api/custom-topics');
+                const ctData = await ctRes.json();
+                const ctCount = ctData.count || 0;
+                const statEl = document.getElementById('stat-custom-topics');
+                if (statEl) statEl.innerText = ctCount;
+                const bannerEl = document.getElementById('custom-topics-available-banner');
+                if (bannerEl) bannerEl.innerText = ctCount > 0 ? '📝 ' + ctCount + ' Custom Topics Available' : '';
+                const ctCountEl = document.getElementById('custom-topics-count');
+                if (ctCountEl) ctCountEl.innerText = ctCount;
+            } catch (e) {}
         }
 
         async function loadPosts() {
@@ -1662,49 +1663,13 @@
                 alert('Cleared!');
             } catch(e) { alert('Error: ' + e.message); }
         }
-        async function generateFromCustomTopics(e) {
-            e.preventDefault();
-            const btn = document.getElementById('btn-ct-generate');
-            const status = document.getElementById('ct-status');
-            btn.disabled = true; btn.innerText = '⏳ Generating...';
-            status.innerText = 'Creating campaign from custom topics...';
-            const startDate = document.getElementById('ct-start-date').value || new Date().toISOString().split('T')[0];
-            const perDay = Number(document.getElementById('ct-per-day').value);
-            const days = Number(document.getElementById('ct-days').value);
-            const postingTimes = Array.from({length: perDay}, (_, i) => ['10:00','18:00','20:30'][i] || '10:00');
-            try {
-                const res = await fetch('/api/custom-topics/generate-campaign', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({
-                    domain_url: document.getElementById('ct-domain').value,
-                    country: document.getElementById('ct-country').value,
-                    days: days,
-                    posts_per_day: perDay,
-                    start_date: startDate,
-                    posting_times: postingTimes,
-                    target_platform: document.getElementById('ct-platform').value
-                })});
-                const data = await res.json();
-                if (res.ok && data.success) {
-                    status.innerHTML = `<span style="color:#10b981;">✅ ${data.message}<br>From CSV: ${data.from_csv} | From Research: ${data.from_research} | Remaining in CSV: ${data.remaining_in_csv}</span>`;
-                    loadCustomTopics(); loadDemoProgress(); loadStats();
-                } else {
-                    status.innerHTML = `<span style="color:#ef4444;">🔴 ${data.error||'Failed'}</span>`;
-                }
-            } catch(e) { status.innerHTML = `<span style="color:#ef4444;">Error: ${e.message}</span>`; }
-            btn.disabled = false; btn.innerText = '🚀 Generate Campaign from Custom Topics';
-        }
-
         // ===== AUTO-REFRESH DASHBOARD EVERY 12 SECONDS =====
         let _dashRefreshTimer = null;
         function startDashRefresh() {
             if (_dashRefreshTimer) clearInterval(_dashRefreshTimer);
             _dashRefreshTimer = setInterval(() => {
                 loadDemoProgress();
-                loadStats();
-                // Also update custom topics count
-                fetch('/api/custom-topics').then(r=>r.json()).then(d => {
-                    const el = document.getElementById('custom-topics-count');
-                    if (el) el.innerText = d.count || 0;
-                }).catch(()=>{});
+                loadStats(); // loadStats now also fetches custom topics count
             }, 12000);
         }
         startDashRefresh();
