@@ -2064,6 +2064,52 @@ function handleApiRoute($uri) {
         jsonResponse(['success' => true, 'message' => 'Item deleted successfully.']);
     }
 
+    // ========== RESEND TOPIC TO CUSTOM TOPICS CSV ==========
+    if (preg_match('#^/api/campaign-item/resend-topic/(\d+)$#', $uri, $m) && $method === 'POST') {
+        $itemId = $m[1];
+        $db = getDB();
+        $stmt = $db->prepare('SELECT * FROM campaign_items WHERE id = ?');
+        $stmt->execute([$itemId]);
+        $item = $stmt->fetch();
+        if (!$item) jsonResponse(['error' => 'Item not found.'], 404);
+        if ($item['article_status'] === 'Published') jsonResponse(['error' => 'Cannot resend a published article.'], 400);
+        
+        $topicTitle = trim($item['title'] ?? '');
+        if (empty($topicTitle)) jsonResponse(['error' => 'Item has no title to resend.'], 400);
+        
+        // Add topic back to custom_topics.csv
+        $csvPath = dirname(__DIR__) . '/data/custom_topics.csv';
+        $existingTopics = [];
+        if (file_exists($csvPath)) {
+            $fpR = @fopen($csvPath, 'r');
+            if ($fpR) {
+                fgetcsv($fpR); // skip header
+                while (($row = fgetcsv($fpR)) !== false) {
+                    if (!empty($row[0]) && trim($row[0]) !== '') $existingTopics[] = trim($row[0]);
+                }
+                fclose($fpR);
+            }
+        }
+        // Don't add if already in CSV
+        if (!in_array($topicTitle, $existingTopics)) {
+            $existingTopics[] = $topicTitle;
+            $fpW = @fopen($csvPath, 'w');
+            if ($fpW) {
+                fputcsv($fpW, ['Topic']);
+                foreach ($existingTopics as $t) fputcsv($fpW, [$t]);
+                fclose($fpW);
+            }
+        }
+        
+        // Delete the campaign item and its tokens
+        $stmt = $db->prepare('DELETE FROM approval_tokens WHERE campaign_item_id = ?');
+        $stmt->execute([$itemId]);
+        $stmt = $db->prepare('DELETE FROM campaign_items WHERE id = ?');
+        $stmt->execute([$itemId]);
+        
+        jsonResponse(['success' => true, 'message' => "Topic '$topicTitle' resent to Custom Topics CSV. It will be available for future campaigns."]);
+    }
+
     // ========== DOWNLOAD HTML ==========
     if (preg_match('#^api/campaign-item/download-html/(\d+)$#', $uri, $m)) {
         $itemId = $m[1];
