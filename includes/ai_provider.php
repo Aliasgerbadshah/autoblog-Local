@@ -175,11 +175,15 @@ class AIProviderClient {
                 // turbo, gptimage, gptimage-large, kontext, seedream5, nanobanana, imagen-4, grok-imagine
                 // Map short names to full model names
                 $modelMap = [
+                    'z-image-turbo' => 'turbo',
                     'zimage' => 'turbo',
+                    'turbo' => 'turbo',
                     'dreamshaper-8-lcm' => 'flux',
                     'flux' => 'flux',
+                    'flux-pro' => 'flux-pro',
                     'klein' => 'flux',
                     'gptimage' => 'gptimage',
+                    'gpt-image-1-mini' => 'gptimage',
                 ];
                 $imgModel = $modelMap[$model] ?? $model;
                 if (empty($imgModel)) $imgModel = 'flux';
