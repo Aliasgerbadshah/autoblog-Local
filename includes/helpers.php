@@ -15,6 +15,10 @@ function escapeHtml($text) {
 }
 
 function jsonResponse($data, $statusCode = 200) {
+    // Clean any stray output (PHP warnings/HTML) that would corrupt JSON
+    while (ob_get_level() > 0) {
+        ob_end_clean();
+    }
     http_response_code($statusCode);
     header('Content-Type: application/json; charset=utf-8');
     echo json_encode($data, JSON_UNESCAPED_UNICODE);
@@ -144,8 +148,9 @@ function getTopicsCsvPath() {
 function addTopicToCsv($topic, $keyword, $domain, $status, $campaignId, $date = null) {
     if (!$date) $date = date('Y-m-d H:i:s');
     $csvPath = getTopicsCsvPath();
-    $writeHeader = !file_exists($csvPath) || filesize($csvPath) === 0;
-    $fp = fopen($csvPath, 'a');
+    $writeHeader = !file_exists($csvPath) || @filesize($csvPath) === 0;
+    $fp = @fopen($csvPath, 'a');
+    if (!$fp) return;
     if ($writeHeader) fputcsv($fp, ['S.No', 'Topic (Blog Title)', 'Primary Keyword', 'Domain/Website', 'Status', 'Campaign ID', 'Created Date']);
     $sno = 1;
     if (file_exists($csvPath)) { $lines = file($csvPath); $sno = count($lines); }
@@ -190,7 +195,8 @@ function syncTopicsCsv() {
         }
     } catch (Exception $e) {}
     uasort($allTopics, function($a, $b) { return strcmp($a['date'] ?? '', $b['date'] ?? ''); });
-    $fp = fopen($csvPath, 'w');
+    $fp = @fopen($csvPath, 'w');
+    if (!$fp) return count($allTopics);
     fputcsv($fp, ['S.No', 'Topic (Blog Title)', 'Primary Keyword', 'Domain/Website', 'Status', 'Campaign ID', 'Created Date']);
     $sno = 1;
     foreach ($allTopics as $t) { fputcsv($fp, [$sno++, $t['topic'], $t['keyword'], $t['domain'], $t['status'], $t['campaign_id'], $t['date']]); }
@@ -202,8 +208,8 @@ function getUsedTopicsFromCsv() {
     $csvPath = getTopicsCsvPath();
     if (!file_exists($csvPath)) return [];
     $topics = [];
-    $fp = fopen($csvPath, 'r');
-    fgetcsv($fp);
+    $fp = @fopen($csvPath, 'r');
+    if (!$fp) return [];
     while (($row = fgetcsv($fp)) !== false) {
         if (count($row) >= 3) $topics[] = ['topic' => $row[1] ?? '', 'keyword' => $row[2] ?? '', 'domain' => $row[3] ?? '', 'status' => $row[4] ?? '', 'campaign_id' => $row[5] ?? '', 'date' => $row[6] ?? ''];
     }
@@ -325,7 +331,7 @@ function addTopicToJsonFile($topic, $keyword, $domain, $status = 'pending', $cam
         'campaign_id' => $campaignId,
         'date' => date('Y-m-d')
     ];
-    file_put_contents($topicFilePath, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+    @file_put_contents($topicFilePath, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
 }
 
 /**

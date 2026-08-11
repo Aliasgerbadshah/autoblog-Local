@@ -24,9 +24,11 @@ if (!function_exists('str_contains')) {
     }
 }
 
-// Enable error display for debugging
+// Error handling — log to file, never display in output (breaks JSON API responses)
 error_reporting(E_ALL);
-ini_set('display_errors', '1');
+ini_set('display_errors', '0');
+ini_set('log_errors', '1');
+ini_set('error_log', __DIR__ . '/data/php_error.log');
 
 // Catch any fatal errors and display them
 register_shutdown_function(function() {
@@ -1695,8 +1697,8 @@ function handleApiRoute($uri) {
         $csvPath = getTopicsCsvPath();
         if (!file_exists($csvPath)) { jsonResponse(['success' => true, 'topics' => [], 'count' => 0]); }
         $topics = [];
-        $fp = fopen($csvPath, 'r');
-        fgetcsv($fp);
+        $fp = @fopen($csvPath, 'r');
+        if (!$fp) { jsonResponse(['success' => true, 'topics' => [], 'count' => 0]); }
         while (($row = fgetcsv($fp)) !== false) {
             if (count($row) >= 7) $topics[] = ['sno' => intval($row[0]), 'topic' => $row[1], 'keyword' => $row[2], 'domain' => $row[3], 'status' => $row[4], 'campaign_id' => $row[5], 'date' => $row[6]];
         }
@@ -1707,7 +1709,7 @@ function handleApiRoute($uri) {
     if ($uri === '/api/topics-csv/download' && $method === 'GET') {
         syncTopicsCsv();
         $csvPath = getTopicsCsvPath();
-        if (!file_exists($csvPath) || filesize($csvPath) === 0) { $fp = fopen($csvPath, 'w'); fputcsv($fp, ['S.No', 'Topic (Blog Title)', 'Primary Keyword', 'Domain/Website', 'Status', 'Campaign ID', 'Created Date']); fclose($fp); }
+        if (!file_exists($csvPath) || @filesize($csvPath) === 0) { $fp = @fopen($csvPath, 'w'); if ($fp) { fputcsv($fp, ['S.No', 'Topic (Blog Title)', 'Primary Keyword', 'Domain/Website', 'Status', 'Campaign ID', 'Created Date']); fclose($fp); } }
         header('Content-Type: text/csv; charset=utf-8');
         header('Content-Disposition: attachment; filename="autoblog_topics_' . date('Y-m-d') . '.csv"');
         header('Content-Length: ' . filesize($csvPath));
@@ -1725,7 +1727,8 @@ function handleApiRoute($uri) {
         $csvPath = dirname(__DIR__) . '/data/custom_topics.csv';
         if (!file_exists($csvPath)) { jsonResponse(['success' => true, 'topics' => [], 'count' => 0]); }
         $topics = [];
-        $fp = fopen($csvPath, 'r');
+        $fp = @fopen($csvPath, 'r');
+        if (!$fp) { jsonResponse(['success' => true, 'topics' => [], 'count' => 0]); }
         fgetcsv($fp); // skip header
         while (($row = fgetcsv($fp)) !== false) {
             if (!empty($row[0]) && trim($row[0]) !== '') $topics[] = trim($row[0]);
@@ -1738,14 +1741,19 @@ function handleApiRoute($uri) {
         $topicsList = $input['topics'] ?? [];
         if (!is_array($topicsList)) $topicsList = [$topicsList];
         $csvPath = dirname(__DIR__) . '/data/custom_topics.csv';
-        $fp = fopen($csvPath, 'w');
+        // Ensure data directory exists
+        $dataDir = dirname($csvPath);
+        if (!is_dir($dataDir)) mkdir($dataDir, 0755, true);
+        $fp = @fopen($csvPath, 'w');
+        if (!$fp) jsonResponse(['success' => false, 'error' => 'Cannot write to custom_topics.csv — check data/ folder permissions.'], 500);
         fputcsv($fp, ['Topic']);
+        $savedCount = 0;
         foreach ($topicsList as $t) {
             $t = trim($t);
-            if (!empty($t)) fputcsv($fp, [$t]);
+            if (!empty($t)) { fputcsv($fp, [$t]); $savedCount++; }
         }
         fclose($fp);
-        jsonResponse(['success' => true, 'count' => count($topicsList), 'message' => count($topicsList) . ' topics saved to custom topics CSV.']);
+        jsonResponse(['success' => true, 'count' => $savedCount, 'message' => $savedCount . ' topics saved to custom topics CSV.']);
     }
 
     if ($uri === '/api/custom-topics/remove' && $method === 'POST') {
@@ -1754,15 +1762,18 @@ function handleApiRoute($uri) {
         $csvPath = dirname(__DIR__) . '/data/custom_topics.csv';
         $existing = [];
         if (file_exists($csvPath)) {
-            $fp = fopen($csvPath, 'r');
-            fgetcsv($fp);
-            while (($row = fgetcsv($fp)) !== false) {
-                if (!empty($row[0])) $existing[] = trim($row[0]);
+            $fp = @fopen($csvPath, 'r');
+            if ($fp) {
+                fgetcsv($fp);
+                while (($row = fgetcsv($fp)) !== false) {
+                    if (!empty($row[0])) $existing[] = trim($row[0]);
+                }
+                fclose($fp);
             }
-            fclose($fp);
         }
         $remaining = array_values(array_filter($existing, fn($t) => !in_array($t, $removeTopics)));
-        $fp = fopen($csvPath, 'w');
+        $fp = @fopen($csvPath, 'w');
+        if (!$fp) jsonResponse(['success' => false, 'error' => 'Cannot write to custom_topics.csv'], 500);
         fputcsv($fp, ['Topic']);
         foreach ($remaining as $t) fputcsv($fp, [$t]);
         fclose($fp);
@@ -1791,12 +1802,14 @@ function handleApiRoute($uri) {
         $csvPath = dirname(__DIR__) . '/data/custom_topics.csv';
         $customTopics = [];
         if (file_exists($csvPath)) {
-            $fp = fopen($csvPath, 'r');
-            fgetcsv($fp);
-            while (($row = fgetcsv($fp)) !== false) {
-                if (!empty($row[0]) && trim($row[0]) !== '') $customTopics[] = trim($row[0]);
+            $fp = @fopen($csvPath, 'r');
+            if ($fp) {
+                fgetcsv($fp);
+                while (($row = fgetcsv($fp)) !== false) {
+                    if (!empty($row[0]) && trim($row[0]) !== '') $customTopics[] = trim($row[0]);
+                }
+                fclose($fp);
             }
-            fclose($fp);
         }
         
         // Dedup custom topics against existing used topics
@@ -1902,10 +1915,12 @@ function handleApiRoute($uri) {
         
         // Remove used topics from custom CSV
         $remainCustom = array_slice($customTopics, $csvCount);
-        $fp = fopen($csvPath, 'w');
-        fputcsv($fp, ['Topic']);
-        foreach ($remainCustom as $t) fputcsv($fp, [$t]);
-        fclose($fp);
+        $fp = @fopen($csvPath, 'w');
+        if ($fp) {
+            fputcsv($fp, ['Topic']);
+            foreach ($remainCustom as $t) fputcsv($fp, [$t]);
+            fclose($fp);
+        }
         
         syncTopicsCsv();
         

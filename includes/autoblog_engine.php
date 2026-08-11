@@ -299,7 +299,7 @@ class Publisher {
 </html>
 HTML;
 
-        file_put_contents($filePath, $htmlTemplate);
+        @file_put_contents($filePath, $htmlTemplate);
 
         $publishedUrl = "/published_posts/$fileName";
         $db = getDB();
@@ -569,7 +569,7 @@ ITEM;
 </html>
 HTML;
 
-        file_put_contents(OUTPUT_DIR . '/index.html', $indexHtml);
+        @file_put_contents(OUTPUT_DIR . '/index.html', $indexHtml);
     }
 }
 
@@ -996,7 +996,7 @@ CSS;
 </html>
 HTML;
 
-    file_put_contents($filePath, $fullHtml);
+    @file_put_contents($filePath, $fullHtml);
 
     return [
         'success' => true,
