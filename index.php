@@ -729,23 +729,42 @@ function handleApiRoute($uri) {
         $raw = str_replace(['```json', '```'], '', $raw);
         $plans = json_decode(trim($raw), true)['articles'] ?? [];
         
-        // ===== PREPEND CUSTOM CSV TOPICS AS PLAN OBJECTS =====
+        // ===== RESEARCH CUSTOM CSV TOPICS DEEPLY USING AI =====
+        // Send each CSV topic to the chat model for proper keyword research,
+        // related customer website pages, external references, headings, etc.
         $csvPlanObjects = [];
-        foreach ($selectedCsvTopics as $csvTopic) {
-            $csvPlanObjects[] = [
-                'title' => $csvTopic,
-                'primary_keyword' => $csvTopic,
-                'keywords' => [['keyword' => $csvTopic, 'volume' => 'Custom topic', 'difficulty' => 'Medium', 'intent' => 'Informational']],
-                'internal_links' => [['url' => $domain, 'anchor_text' => 'client website']],
-                'external_links' => [
-                    ['url' => 'https://en.wikipedia.org/wiki/Search_engine_optimization', 'anchor_text' => 'Wikipedia: SEO'],
-                    ['url' => 'https://developers.google.com/search/docs/fundamentals/seo-starter-guide', 'anchor_text' => 'Google SEO Guide'],
-                    ['url' => 'https://moz.com/beginners-guide-to-seo', 'anchor_text' => 'Moz SEO Guide'],
-                    ['url' => 'https://schema.org/Article', 'anchor_text' => 'Schema.org Article'],
-                ],
-                'headings' => ['H1' => $csvTopic, 'H2' => ['Overview', 'Key Insights', 'How to Apply', 'FAQ'], 'H3' => ['Details', 'Common Questions']],
-                'image_prompts' => ["Editorial image for $csvTopic, professional, no text."]
-            ];
+        if (!empty($selectedCsvTopics)) {
+            $csvTopicsList = implode("\n", array_map(fn($i, $t) => ($i + 1) . '. ' . $t, array_keys($selectedCsvTopics), $selectedCsvTopics));
+            $csvResearchPrompt = "You are an SEO research strategist. The user has provided these specific article topics for the website $domain in target country $country, language $language. The current year is $nowYear.\n\nUSER TOPICS:\n$csvTopicsList\n\nFor EACH topic above, do deep research:\n1. Find the best primary keyword and 5-8 supporting keywords with volume/difficulty estimates\n2. Find 1-2 of the client's crawled website pages that are MOST RELATED to each topic (for internal links)\n3. Find at least 4 REAL working URLs to well-known authority sites that are SPECIFICALLY RELATED to each topic (NOT generic SEO links — find Wikipedia articles, Google docs, industry reports, tool pages, etc. that match the actual topic)\n4. Create detailed headings (H1, H2s, H3s) for a comprehensive article\n5. Create 2 image prompts for editorial-style images\n\nDo NOT include the month name in any title. Include the year $nowYear only when natural. Do NOT mention the country in the title unless it adds targeting value.$countryNote\n\nCrawled website pages:\n$pageContext\n\nReturn ONLY valid JSON: {\"articles\":[{\"title\":\"...\",\"primary_keyword\":\"...\",\"keywords\":[{\"keyword\":\"...\",\"volume\":\"AI estimate\",\"difficulty\":\"Low/Medium/High\",\"intent\":\"...\"}],\"internal_links\":[{\"url\":\"...\",\"anchor_text\":\"...\",\"reason\":\"...\"}],\"external_links\":[{\"url\":\"...\",\"anchor_text\":\"...\",\"reason\":\"...\"}],\"headings\":{\"H1\":\"...\",\"H2\":[\"...\"],\"H3\":[\"...\"]},\"image_prompts\":[\"...\"]}]}";
+            
+            $csvResult = AIProviderClient::chat($chat, $csvResearchPrompt);
+            if (!empty($csvResult['success']) && !empty($csvResult['content'])) {
+                $csvRaw = trim($csvResult['content']);
+                $csvRaw = str_replace(['```json', '```'], '', $csvRaw);
+                $csvPlans = json_decode(trim($csvRaw), true)['articles'] ?? [];
+                if (!empty($csvPlans)) {
+                    $csvPlanObjects = $csvPlans;
+                }
+            }
+            // Fallback: if AI research for CSV topics failed, create basic plan objects
+            if (empty($csvPlanObjects)) {
+                foreach ($selectedCsvTopics as $csvTopic) {
+                    $csvPlanObjects[] = [
+                        'title' => $csvTopic,
+                        'primary_keyword' => $csvTopic,
+                        'keywords' => [['keyword' => $csvTopic, 'volume' => 'Custom topic', 'difficulty' => 'Medium', 'intent' => 'Informational']],
+                        'internal_links' => [['url' => $domain, 'anchor_text' => 'client website']],
+                        'external_links' => [
+                            ['url' => 'https://en.wikipedia.org/wiki/Search_engine_optimization', 'anchor_text' => 'Wikipedia: SEO'],
+                            ['url' => 'https://developers.google.com/search/docs/fundamentals/seo-starter-guide', 'anchor_text' => 'Google SEO Guide'],
+                            ['url' => 'https://moz.com/beginners-guide-to-seo', 'anchor_text' => 'Moz SEO Guide'],
+                            ['url' => 'https://schema.org/Article', 'anchor_text' => 'Schema.org Article'],
+                        ],
+                        'headings' => ['H1' => $csvTopic, 'H2' => ['Overview', 'Key Insights', 'How to Apply', 'FAQ'], 'H3' => ['Details', 'Common Questions']],
+                        'image_prompts' => ["Editorial image for $csvTopic, professional, no text."]
+                    ];
+                }
+            }
         }
         $plans = array_merge($csvPlanObjects, $plans);
         
@@ -986,7 +1005,24 @@ function handleApiRoute($uri) {
         });
         $base = array_values($base);
         // Prepend CSV topics to base (they get used first)
-        $base = array_merge($selectedCsvTopics, $base);
+        $csvResearchedPlans = []; // Will hold AI-researched plan objects for CSV topics
+        if (!empty($selectedCsvTopics)) {
+            $chatVaultDemo = SecurityVault::getApiCredentials($userId, 'chat_api');
+            if (!empty($chatVaultDemo['api_key'])) {
+                $pageContextDemo = implode("\n", array_map(fn($p) => "URL: {$p['page_url']} | Page topic: {$p['page_title']}", array_slice($pages, 0, 50)));
+                $csvTopicsListDemo = implode("\n", array_map(fn($i, $t) => ($i + 1) . '. ' . $t, array_keys($selectedCsvTopics), $selectedCsvTopics));
+                $countryNoteDemo = ($country !== 'India' && $country !== '') ? " Target country is $country." : "";
+                $csvDemoPrompt = "You are an SEO research strategist. For the website $domain, research these topics deeply:\n$csvTopicsListDemo\n\nFor EACH topic: find the best primary keyword, 5-8 supporting keywords, 1-2 most related client pages from the list below, at least 4 REAL authority site URLs SPECIFICALLY related to the topic, detailed headings (H1, H2s, H3s), and 2 image prompts. Current year: $nowYear. Do NOT include month in titles.$countryNoteDemo\n\nClient pages:\n$pageContextDemo\n\nReturn ONLY valid JSON: {\"articles\":[{\"title\":\"...\",\"primary_keyword\":\"...\",\"keywords\":[{\"keyword\":\"...\",\"volume\":\"AI estimate\",\"difficulty\":\"Low/Medium/High\",\"intent\":\"...\"}],\"internal_links\":[{\"url\":\"...\",\"anchor_text\":\"...\",\"reason\":\"...\"}],\"external_links\":[{\"url\":\"...\",\"anchor_text\":\"...\",\"reason\":\"...\"}],\"headings\":{\"H1\":\"...\",\"H2\":[\"...\"],\"H3\":[\"...\"]},\"image_prompts\":[\"...\"]}]}";
+                $csvDemoResult = AIProviderClient::chat($chatVaultDemo, $csvDemoPrompt);
+                if (!empty($csvDemoResult['success']) && !empty($csvDemoResult['content'])) {
+                    $csvDemoRaw = trim($csvDemoResult['content']);
+                    $csvDemoRaw = str_replace(['```json', '```'], '', $csvDemoRaw);
+                    $csvResearchedPlans = json_decode(trim($csvDemoRaw), true)['articles'] ?? [];
+                }
+            }
+            // Always prepend CSV topic strings to base (used as fallback if AI research fails)
+            $base = array_merge($selectedCsvTopics, $base);
+        }
         // Ensure we have at least $neededCount topics
         if (count($base) < $neededCount) {
             // Generate more unique variations
@@ -1017,7 +1053,30 @@ function handleApiRoute($uri) {
             for ($post = 1; $post <= $perDay; $post++) {
                 $idx = ($day - 1) * $perDay + ($post - 1);
                 $kw = $base[$idx % count($base)];
-                $page = $pages[$idx % count($pages)] ?? ['page_url' => $domain, 'page_title' => 'relevant service page'];
+                
+                // Check if this is a CSV topic that was AI-researched
+                $csvPlan = null;
+                if (!empty($csvResearchedPlans) && $idx < count($csvResearchedPlans)) {
+                    $csvPlan = $csvResearchedPlans[$idx];
+                }
+                
+                $page = $pages[$idx % max(1, count($pages))] ?? ['page_url' => $domain, 'page_title' => 'relevant service page'];
+                
+                // If we have AI-researched plan for this CSV topic, use its rich data
+                if (!empty($csvPlan)) {
+                    $kws = $csvPlan['keywords'] ?? [['keyword' => $kw, 'volume' => 'Custom', 'difficulty' => 'Medium', 'intent' => 'Informational']];
+                    $headings = $csvPlan['headings'] ?? ['H1' => ucwords($kw), 'H2' => ['Overview', 'Key Insights', 'How to Apply', 'FAQ'], 'H3' => ['Details', 'Common Questions']];
+                    $internal = $csvPlan['internal_links'] ?? [['url' => $domain, 'anchor_text' => 'client website']];
+                    $external = $csvPlan['external_links'] ?? [
+                        ['url' => 'https://en.wikipedia.org/wiki/Search_engine_optimization', 'anchor_text' => 'Wikipedia: SEO'],
+                        ['url' => 'https://developers.google.com/search/docs/fundamentals/seo-starter-guide', 'anchor_text' => 'Google SEO Guide'],
+                        ['url' => 'https://moz.com/beginners-guide-to-seo', 'anchor_text' => 'Moz SEO Guide'],
+                        ['url' => 'https://schema.org/Article', 'anchor_text' => 'Schema.org Article'],
+                    ];
+                    $prompts = $csvPlan['image_prompts'] ?? ["Editorial image for $kw, professional, no text.", "Practical scene for $kw, authentic style."];
+                    $title = $csvPlan['title'] ?? ucwords($kw);
+                    $primaryKw = $csvPlan['primary_keyword'] ?? $kw;
+                } else {
                 $articleKeywords = array_slice(array_merge(array_slice($base, $idx % count($base)), array_slice($base, 0, $idx % count($base))), 0, 8);
 
                 $kws = [];
@@ -1039,24 +1098,27 @@ function handleApiRoute($uri) {
                     ['url' => 'https://schema.org/Article', 'anchor_text' => 'Schema.org Article Structured Data']
                 ];
                 $prompts = ["Editorial photograph illustrating $kw, natural lighting, no text, no logos, professional magazine style.", "Practical real-world scene related to $kw, authentic people and setting, no text or logos."];
+                    $title = ucwords($kw);
+                    $primaryKw = $kw;
+                }
 
                 $schedDate = (new DateTime($startDate))->modify(($day - 1) . ' days')->format('Y-m-d');
                 $schedTime = $postingTimes[min($post - 1, count($postingTimes) - 1)] ?? '10:00';
 
                 $stmt = $db->prepare('INSERT INTO campaign_items (campaign_id, day_number, post_number, title, primary_keyword, keyword_data, internal_links, external_links, headings, image_prompts, video_url, plan_status, article_status, scheduled_date, scheduled_time, target_platform, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
-                $stmt->execute([$campaignId, $day, $post, ucwords($kw), $kw, json_encode($kws), json_encode($internal), json_encode($external), json_encode($headings), json_encode($prompts), '', 'Pending', 'Not Created', $schedDate, $schedTime, $targetPlatform, $now]);
+                $stmt->execute([$campaignId, $day, $post, $title, $primaryKw, json_encode($kws), json_encode($internal), json_encode($external), json_encode($headings), json_encode($prompts), '', 'Pending', 'Not Created', $schedDate, $schedTime, $targetPlatform, $now]);
                 $itemId = $db->lastInsertId();
                 $token = generateToken();
                 $stmt = $db->prepare('INSERT INTO approval_tokens (user_id, campaign_item_id, approval_type, token, created_at) VALUES (?, ?, ?, ?, ?)');
                 $stmt->execute([$userId, $itemId, 'roadmap', $token, $now]);
                 
                 // Record topic to persistent JSON + CSV for dedup
-                addTopicToJsonFile(ucwords($kw), $kw, $domain, 'pending', $campaignId);
-                addTopicToCsv(ucwords($kw), $kw, $domain, 'pending', $campaignId, $now);
+                addTopicToJsonFile($title, $primaryKw, $domain, 'pending', $campaignId);
+                addTopicToCsv($title, $primaryKw, $domain, 'pending', $campaignId, $now);
                 // Also record to DB table for faster dedup queries
                 try {
                     $stmt = $db->prepare('INSERT OR IGNORE INTO created_blog_topics (user_id, title, primary_keyword, domain_url, campaign_id, created_at) VALUES (?, ?, ?, ?, ?, ?)');
-                    $stmt->execute([$userId, ucwords($kw), $kw, $domain, $campaignId, $now]);
+                    $stmt->execute([$userId, $title, $primaryKw, $domain, $campaignId, $now]);
                 } catch (Exception $e) {}
             }
         }
