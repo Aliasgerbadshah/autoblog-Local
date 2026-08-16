@@ -1043,7 +1043,7 @@
                 }
 
                 if (services.chat_api) { document.getElementById('v-chat-provider').value=services.chat_api.provider||'custom'; _lastChatProvider=services.chat_api.provider||'custom'; document.getElementById('v-chat-endpoint').value=services.chat_api.endpoint||document.getElementById('v-chat-endpoint').value; document.getElementById('v-chat-key').value=services.chat_api.api_key||''; const chatMod=(services.chat_api.model==='gemini-2.0-flash'?'gemini-2.5-flash-lite':(services.chat_api.model||'')); if(services.chat_api.provider==='pollinations'){document.getElementById('v-pollinations-chat-model').value=chatMod;document.getElementById('v-chat-model').value='';}else{document.getElementById('v-chat-model').value=chatMod||document.getElementById('v-chat-model').value;} }
-                if (services.image_api) { document.getElementById('v-image-provider').value=services.image_api.provider||'custom'; _lastImageProvider=services.image_api.provider||'custom'; document.getElementById('v-image-endpoint').value=services.image_api.endpoint||document.getElementById('v-image-endpoint').value; document.getElementById('v-image-key').value=services.image_api.api_key||''; const imgMod=services.image_api.model||''; if(services.image_api.provider==='pollinations'){document.getElementById('v-pollinations-image-model').value=imgMod;document.getElementById('v-image-model').value='';}else{document.getElementById('v-image-model').value=imgMod||document.getElementById('v-image-model').value;} }
+                if (services.image_api) { document.getElementById('v-image-provider').value=services.image_api.provider||'custom'; _lastImageProvider=services.image_api.provider||'custom'; document.getElementById('v-image-endpoint').value=services.image_api.endpoint||document.getElementById('v-image-endpoint').value; document.getElementById('v-image-key').value=services.image_api.api_key||''; const imgMod=services.image_api.model||''; if(services.image_api.provider==='pollinations'){document.getElementById('v-pollinations-image-model').value=imgMod;document.getElementById('v-image-model').value=imgMod||'z-image-turbo';}else{document.getElementById('v-image-model').value=imgMod||document.getElementById('v-image-model').value;} }
 
                 if (services.dataforseo_api) {
                     if (services.dataforseo_api.login) document.getElementById('v-dfs-login').value = services.dataforseo_api.login;
@@ -1111,9 +1111,12 @@
             const imageModel={huggingface:'black-forest-labs/FLUX.1-schnell',openai:'gpt-image-1-mini',gemini:'gemini-3.1-flash-image-preview',stability:'stable-image-ultra',replicate:'black-forest-labs/flux-schnell',custom:''}[image]||'';
             // Only reset model if the PROVIDER actually changed (not just a form reload)
             if (chat !== _lastChatProvider) { document.getElementById('v-chat-model').value=chatModel; _lastChatProvider=chat; }
-            if (image !== _lastImageProvider) { document.getElementById('v-image-model').value=imageModel; _lastImageProvider=image; }
+            if (image !== _lastImageProvider) { 
+                if (image !== 'pollinations') { document.getElementById('v-image-model').value=imageModel; }
+                _lastImageProvider=image; 
+            }
             const chatEndpoints={gemini:'',openai:'https://api.openai.com/v1/chat/completions',anthropic:'https://api.anthropic.com/v1/messages',huggingface:'https://router.huggingface.co/v1/chat/completions',openrouter:'https://openrouter.ai/api/v1/chat/completions',zenmux:'https://zenmux.ai/api/v1/chat/completions',pollinations:'https://gen.pollinations.ai/v1/chat/completions',custom:''};
-            const imageEndpoints={huggingface:'',openai:'https://api.openai.com/v1/images/generations',gemini:'',stability:'',replicate:'',custom:''};
+            const imageEndpoints={huggingface:'',openai:'https://api.openai.com/v1/images/generations',gemini:'',stability:'',replicate:'',pollinations:'https://gen.pollinations.ai',custom:''};
             document.getElementById('v-chat-endpoint').value=chatEndpoints[chat]||'';
             document.getElementById('v-image-endpoint').value=imageEndpoints[image]||'';
         }
@@ -1129,8 +1132,16 @@
         function getImageModelValue() {
             const provider = document.getElementById('v-image-provider').value;
             if (provider === 'pollinations') {
+                // First check the dropdown for Pollinations models
+                const dropdownVal = document.getElementById('v-image-model').value;
+                // If dropdown has a Pollinations model selected, use it
+                const pollinationsModels = ['z-image-turbo','zimage','turbo','flux','flux-pro','dreamshaper-8-lcm','gptimage','gpt-image-1-mini'];
+                if (dropdownVal && pollinationsModels.includes(dropdownVal)) {
+                    return dropdownVal;
+                }
+                // Otherwise check manual input
                 const manual = (document.getElementById('v-pollinations-image-model').value || '').trim();
-                return manual || 'flux'; // fallback to 'flux' if empty
+                return manual || dropdownVal || 'flux';
             }
             return document.getElementById('v-image-model').value;
         }
