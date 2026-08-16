@@ -187,6 +187,7 @@ class AIProviderClient {
                 ];
                 $imgModel = $modelMap[$model] ?? $model;
                 if (empty($imgModel)) $imgModel = 'flux';
+                error_log("[Pollinations Image] Input model: $model => API model: $imgModel");
                 $width = 1024;
                 $height = 1024;
                 $seed = rand(1000, 9999);
