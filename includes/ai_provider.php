@@ -171,6 +171,7 @@ class AIProviderClient {
 
             if ($provider === 'pollinations') {
                 // Pollinations.ai image — GET request with prompt in URL
+<<<<<<< HEAD
                 // Supported models: flux, flux-pro, flux-realism, flux-anime, flux-3d, flux-cablyai, 
                 // turbo, gptimage, gptimage-large, kontext, seedream5, nanobanana, imagen-4, grok-imagine
                 // Map short names to full model names
@@ -188,6 +189,13 @@ class AIProviderClient {
                 $imgModel = $modelMap[$model] ?? $model;
                 if (empty($imgModel)) $imgModel = 'flux';
                 error_log("[Pollinations Image] Input model: $model => API model: $imgModel");
+=======
+                // User types the model name directly (e.g. flux, turbo, gptimage, flux-pro, etc.)
+                // No mapping needed — pass model name as-is to the API
+                $imgModel = $model;
+                if (empty($imgModel)) $imgModel = 'flux';
+                error_log("[Pollinations Image] Model: $imgModel | Provider: $provider | Full credentials model: $model");
+>>>>>>> 790b853 (Fix: Remove all pre-made Pollinations image models, use manual text input only)
                 $width = 1024;
                 $height = 1024;
                 $seed = rand(1000, 9999);
