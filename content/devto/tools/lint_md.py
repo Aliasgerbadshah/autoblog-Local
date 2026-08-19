@@ -121,6 +121,15 @@ def lint(path: Path, fix: bool) -> list[str]:
         if line.strip().startswith("|") and "```" in line:
             problems.append(f"triple backticks inside a table row: {line[:60]}…")
 
+    # 5b — site backlinks (informational, warns only when there are none)
+    links = re.findall(r"https://colorfiind\.com[^)\s]*", text)
+    if not links:
+        problems.append("no site links — add at least one contextual link back to the site")
+    elif len(links) > 12:
+        problems.append(f"{len(links)} site links — that reads as spam, keep it under ~10")
+    else:
+        print(f"  ℹ {len(links)} site links ({len(set(links))} unique)")
+
     # 6 — placeholders
     for bad in ("TODO", "TKTK", "lorem ipsum", "your-cdn"):
         if bad.lower() in text.lower():

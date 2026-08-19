@@ -117,7 +117,7 @@ font-family:ui-monospace,monospace;color:var(--primary);margin:1.2em 0}
         <div class="fm">published: <b>false</b> · tags: 4/4 · cover_image: none</div>
       </div>
       <div class="post"><div class='tw'><table><thead><tr><th><code>#0F172A</code></th><th><code>#00F5D4</code></th><th><code>#F15BB5</code></th><th><code>#9B5DE5</code></th></tr></thead><tbody><tr><td><img src="https://placehold.co/120x56/0F172A/0F172A.png" alt="navy swatch #0F172A" /></td><td><img src="https://placehold.co/120x56/00F5D4/00F5D4.png" alt="vivid teal swatch #00F5D4" /></td><td><img src="https://placehold.co/120x56/F15BB5/F15BB5.png" alt="vivid magenta swatch #F15BB5" /></td><td><img src="https://placehold.co/120x56/9B5DE5/9B5DE5.png" alt="indigo swatch #9B5DE5" /></td></tr></tbody></table></div>
-<blockquote><p>🎨 <strong>Palette in play</strong> — midnight, mint, magenta, violet · <code>#0F172A</code> <code>#00F5D4</code> <code>#F15BB5</code> <code>#9B5DE5</code></p></blockquote>
+<blockquote><p>🎨 <strong>Palette in play</strong> — <a href="https://colorfiind.com/palette/neon-diner-harmony" target="_blank" rel="noopener">Neon Diner Harmony</a> · <code>#0F172A</code> <code>#00F5D4</code> <code>#F15BB5</code> <code>#9B5DE5</code></p></blockquote>
 <p>Four hex codes is not a theme. A theme is four hex codes that survived a rename, a framework, a dark mode toggle and a designer asking &quot;can we make the accent 10% lighter everywhere?&quot;</p>
 <p class='spacer'>&nbsp;</p>
 <p>This post is the pipeline I run every time I pull a palette from anywhere. Same four colors, six formats, and the important part — <strong>the naming step in the middle that makes all the rest boring</strong>.</p>
@@ -306,7 +306,7 @@ module.exports = {
 <p class='spacer'>&nbsp;</p>
 <p><img src="https://placehold.co/1000x8/F15BB5/F15BB5.png" alt="Section divider bar in vivid magenta" /></p>
 <h2>6️⃣ Light mode for free</h2>
-<p>Because components never touch hexes, an entire second theme is one media query. Swap the neon palette for a light one — here a soft quartz set — and keep every semantic name identical.</p>
+<p>Because components never touch hexes, an entire second theme is one media query. Swap the neon palette for a light one — here <a href="https://colorfiind.com/palette/quartz-drift-palette" target="_blank" rel="noopener">Quartz Drift</a> — and keep every semantic name identical.</p>
 <div class='tw'><table><thead><tr><th><code>#F5F7F9</code></th><th><code>#E3DFF1</code></th><th><code>#E0AED7</code></th><th><code>#994129</code></th></tr></thead><tbody><tr><td><img src="https://placehold.co/120x56/F5F7F9/F5F7F9.png" alt="off-white swatch #F5F7F9" /></td><td><img src="https://placehold.co/120x56/E3DFF1/E3DFF1.png" alt="pale indigo swatch #E3DFF1" /></td><td><img src="https://placehold.co/120x56/E0AED7/E0AED7.png" alt="light magenta swatch #E0AED7" /></td><td><img src="https://placehold.co/120x56/994129/994129.png" alt="dark red swatch #994129" /></td></tr></tbody></table></div>
 <pre class="code lang-css" data-lang="css"><code>:root {
   <span class="t-prop">color-scheme</span>: dark light;
@@ -369,6 +369,10 @@ console.log(&<span <span class="t-kw">class</span>="t-comment">#x27;✔ theme.cs
 <p><img src="https://placehold.co/1000x8/E0AED7/E0AED7.png" alt="Section divider bar in light magenta" /></p>
 <h2>🧾 The checklist</h2>
 <ol><li>Write the raw palette into <code>palette.css</code> once. Keep the source link in a comment.</li><li>Never let a component import layer one.</li><li>Every brand color gets an <code>-ink</code> partner that is readable on top of it.</li><li>Export <code>tokens.json</code> the moment a designer is involved.</li><li>Re-run contrast per mode, not per color.</li><li>Script the conversion — you will do it again next project.</li></ol>
+<p>Need a palette to run through the pipeline? <a href="https://colorfiind.com" target="_blank" rel="noopener">ColorFiind</a> lists 34,000+ of them with copy-ready HEX codes and a <code>:root</code> block on every page.</p>
+<p class='spacer'>&nbsp;</p>
+<a class='cta' href='https://colorfiind.com' target='_blank' rel='noopener'>Pick a palette, run the pipeline</a>
+<p class='spacer'>&nbsp;</p>
 <p>Next up: seasonal palettes as a theming system — why <em>soft summer</em> makes a beautiful reading app and <em>deep winter</em> makes the best dark mode you have shipped.</p></div>
     </article>
     <p class="note">Static local preview — Liquid tags are simulated, DEV renders them natively.

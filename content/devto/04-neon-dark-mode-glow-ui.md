@@ -14,7 +14,7 @@ tags: css, webdev, darkmode, design
 | :--: | :--: | :--: | :--: |
 | ![near-black swatch #09090B](https://placehold.co/120x56/09090B/09090B.png) | ![vivid pink swatch #FF007F](https://placehold.co/120x56/FF007F/FF007F.png) | ![vivid teal swatch #00E5FF](https://placehold.co/120x56/00E5FF/00E5FF.png) | ![vivid lime swatch #B8F500](https://placehold.co/120x56/B8F500/B8F500.png) |
 
-> 🎨 **Palette in play** — **Maple Drift** · `#09090B` `#FF007F` `#00E5FF` `#B8F500`
+> 🎨 **Palette in play** — [Maple Drift](https://colorfiind.com/palette/maple-drift) · `#09090B` `#FF007F` `#00E5FF` `#B8F500`
 
 Every neon theme starts the same way. You find a palette like this one, you build a landing page in an hour, it looks like the future, and three days later you notice you have been squinting at your own product.
 
@@ -46,9 +46,9 @@ Three more neon palettes with the same skeleton:
 
 | Palette | Base | Signal 1 | Signal 2 | Signal 3 |
 | :-- | :--: | :--: | :--: | :--: |
-| **Neon Diner Harmony** | ![navy swatch #0F172A](https://placehold.co/76x34/0F172A/0F172A.png) | ![vivid teal swatch #00F5D4](https://placehold.co/76x34/00F5D4/00F5D4.png) | ![vivid magenta swatch #F15BB5](https://placehold.co/76x34/F15BB5/F15BB5.png) | ![indigo swatch #9B5DE5](https://placehold.co/76x34/9B5DE5/9B5DE5.png) |
-| **Clay Flare Spectrum** | ![deep indigo swatch #10002B](https://placehold.co/76x34/10002B/10002B.png) | ![deep indigo swatch #240046](https://placehold.co/76x34/240046/240046.png) | ![vivid pink swatch #FF006E](https://placehold.co/76x34/FF006E/FF006E.png) | ![vivid teal swatch #00F5D4](https://placehold.co/76x34/00F5D4/00F5D4.png) |
-| **Pine Field Gallery** | ![near-black swatch #03071E](https://placehold.co/76x34/03071E/03071E.png) | ![dark red swatch #DC2F02](https://placehold.co/76x34/DC2F02/DC2F02.png) | ![vivid orange swatch #F48C06](https://placehold.co/76x34/F48C06/F48C06.png) | ![vivid orange swatch #FFBA08](https://placehold.co/76x34/FFBA08/FFBA08.png) |
+| [**Neon Diner Harmony**](https://colorfiind.com/palette/neon-diner-harmony) | ![navy swatch #0F172A](https://placehold.co/76x34/0F172A/0F172A.png) | ![vivid teal swatch #00F5D4](https://placehold.co/76x34/00F5D4/00F5D4.png) | ![vivid magenta swatch #F15BB5](https://placehold.co/76x34/F15BB5/F15BB5.png) | ![indigo swatch #9B5DE5](https://placehold.co/76x34/9B5DE5/9B5DE5.png) |
+| [**Clay Flare Spectrum**](https://colorfiind.com/palette/clay-flare-spectrum) | ![deep indigo swatch #10002B](https://placehold.co/76x34/10002B/10002B.png) | ![deep indigo swatch #240046](https://placehold.co/76x34/240046/240046.png) | ![vivid pink swatch #FF006E](https://placehold.co/76x34/FF006E/FF006E.png) | ![vivid teal swatch #00F5D4](https://placehold.co/76x34/00F5D4/00F5D4.png) |
+| [**Pine Field Gallery**](https://colorfiind.com/palette/pine-field-gallery) | ![near-black swatch #03071E](https://placehold.co/76x34/03071E/03071E.png) | ![dark red swatch #DC2F02](https://placehold.co/76x34/DC2F02/DC2F02.png) | ![vivid orange swatch #F48C06](https://placehold.co/76x34/F48C06/F48C06.png) | ![vivid orange swatch #FFBA08](https://placehold.co/76x34/FFBA08/FFBA08.png) |
 
 &nbsp;
 
@@ -286,5 +286,13 @@ Tests: 4 passed, 4 total
 - Give every neon an `-ink` partner and store it as a token.
 - Respect `prefers-reduced-motion`, and consider a "calm" intensity toggle.
 - Assert contrast in CI so the theme can't rot.
+
+Hunting for a base-plus-three-signals set? The [neon category on ColorFiind](https://colorfiind.com/category/neon) is full of them, and the [dark category](https://colorfiind.com/category/dark) covers the quieter end.
+
+&nbsp;
+
+{% cta https://colorfiind.com/category/neon %} Browse neon colour palettes {% endcta %}
+
+&nbsp;
 
 *Building something dark and loud? Drop your base + three signals in the comments.* 👇

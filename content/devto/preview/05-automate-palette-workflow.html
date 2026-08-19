@@ -117,8 +117,8 @@ font-family:ui-monospace,monospace;color:var(--primary);margin:1.2em 0}
         <div class="fm">published: <b>false</b> · tags: 4/4 · cover_image: none</div>
       </div>
       <div class="post"><div class='tw'><table><thead><tr><th><code>#10002B</code></th><th><code>#240046</code></th><th><code>#FF006E</code></th><th><code>#00F5D4</code></th></tr></thead><tbody><tr><td><img src="https://placehold.co/120x56/10002B/10002B.png" alt="deep indigo swatch #10002B" /></td><td><img src="https://placehold.co/120x56/240046/240046.png" alt="deep indigo swatch #240046" /></td><td><img src="https://placehold.co/120x56/FF006E/FF006E.png" alt="vivid pink swatch #FF006E" /></td><td><img src="https://placehold.co/120x56/00F5D4/00F5D4.png" alt="vivid teal swatch #00F5D4" /></td></tr></tbody></table></div>
-<blockquote><p>🎨 <strong>Palette in play</strong> — <strong>Clay Flare Spectrum</strong> · <code>#10002B</code> <code>#240046</code> <code>#FF006E</code> <code>#00F5D4</code></p></blockquote>
-<p>Here is a thing I did by hand far too many times: open a palette, copy four hexes, paste them into a CSS file, retype them into <code>tailwind.config.js</code>, retype them <em>again</em> into a tokens file, then paste each one into a contrast checker, then build a swatch table for the README.</p>
+<blockquote><p>🎨 <strong>Palette in play</strong> — <a href="https://colorfiind.com/palette/clay-flare-spectrum" target="_blank" rel="noopener">Clay Flare Spectrum</a> · <code>#10002B</code> <code>#240046</code> <code>#FF006E</code> <code>#00F5D4</code></p></blockquote>
+<p>Here is a thing I did by hand far too many times: open a palette on somewhere like <a href="https://colorfiind.com" target="_blank" rel="noopener">ColorFiind</a>, copy four hexes, paste them into a CSS file, retype them into <code>tailwind.config.js</code>, retype them <em>again</em> into a tokens file, then paste each one into a contrast checker, then build a swatch table for the README.</p>
 <p class='spacer'>&nbsp;</p>
 <p>Twelve minutes. Per palette. With at least one typo.</p>
 <p class='spacer'>&nbsp;</p>
@@ -372,6 +372,10 @@ jobs</span>:
 <h2>🧾 The checklist</h2>
 <ol><li>Store the palette <strong>once</strong>, in JSON, with its source URL next to it.</li><li>Generate CSS, Tailwind and tokens — never retype a hex.</li><li>Generate swatch markdown too; your README should show the colors, not list them.</li><li>Compute <code>onWhite</code> / <code>onBlack</code> for every color to decide light vs dark mode roles.</li><li>Put a contrast assertion in CI with the pairs you really ship.</li><li>Regenerate, don&#x27;t edit. The script is the source of truth; the artifacts are build output.</li></ol>
 <p>The full generator used for this series — bands, tables, contrast matrices and 1000×420 cover art — lives in the repo linked below. Point it at any palette and it prints a post&#x27;s worth of markdown.</p>
+<p class='spacer'>&nbsp;</p>
+<p>Feed the script anything — every palette page on <a href="https://colorfiind.com" target="_blank" rel="noopener">ColorFiind</a> shows its four HEX codes and a <code>:root</code> block you can pipe straight in.</p>
+<p class='spacer'>&nbsp;</p>
+<a class='cta' href='https://colorfiind.com' target='_blank' rel='noopener'>Find a palette to feed the script</a>
 <p class='spacer'>&nbsp;</p>
 <p><em>What&#x27;s the most tedious part of your color workflow? Tell me and I&#x27;ll add a flag for it.</em> 👇</p></div>
     </article>

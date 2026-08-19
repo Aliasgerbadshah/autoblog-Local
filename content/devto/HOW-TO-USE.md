@@ -104,6 +104,22 @@ Needs Python 3.9+ (stdlib only) and ImageMagick for the PNG commands.
 
 ---
 
+## Backlinks to your site
+
+Each post carries a handful of contextual links to **colorfiind.com** — placed where they actually help
+the reader, never as a wall of links:
+
+| Placement | Example |
+| :-- | :-- |
+| Palette credit under the opening swatches | `[Maple Drift](https://colorfiind.com/palette/maple-drift)` |
+| Named palettes inside comparison tables | `[Neon Diner Harmony](…/palette/neon-diner-harmony)` |
+| Category / season references in prose | `[neon category](…/category/neon)` |
+| One `{% cta %}` button before the sign-off | *Browse 34,000+ colour palettes* |
+
+`data/links.json` holds the hex→palette-URL map, so the same palette always links to the same page.
+The linter reports how many links each post has and complains if a post has none — or more than ~10,
+which starts to read as spam to both readers and DEV's moderation.
+
 ## Formatting & spacing
 
 ```bash

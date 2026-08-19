@@ -14,9 +14,9 @@ tags: python, css, productivity, webdev
 | :--: | :--: | :--: | :--: |
 | ![deep indigo swatch #10002B](https://placehold.co/120x56/10002B/10002B.png) | ![deep indigo swatch #240046](https://placehold.co/120x56/240046/240046.png) | ![vivid pink swatch #FF006E](https://placehold.co/120x56/FF006E/FF006E.png) | ![vivid teal swatch #00F5D4](https://placehold.co/120x56/00F5D4/00F5D4.png) |
 
-> 🎨 **Palette in play** — **Clay Flare Spectrum** · `#10002B` `#240046` `#FF006E` `#00F5D4`
+> 🎨 **Palette in play** — [Clay Flare Spectrum](https://colorfiind.com/palette/clay-flare-spectrum) · `#10002B` `#240046` `#FF006E` `#00F5D4`
 
-Here is a thing I did by hand far too many times: open a palette, copy four hexes, paste them into a CSS file, retype them into `tailwind.config.js`, retype them *again* into a tokens file, then paste each one into a contrast checker, then build a swatch table for the README.
+Here is a thing I did by hand far too many times: open a palette on somewhere like [ColorFiind](https://colorfiind.com), copy four hexes, paste them into a CSS file, retype them into `tailwind.config.js`, retype them *again* into a tokens file, then paste each one into a contrast checker, then build a swatch table for the README.
 
 &nbsp;
 
@@ -364,6 +364,14 @@ jobs:
 6. Regenerate, don't edit. The script is the source of truth; the artifacts are build output.
 
 The full generator used for this series — bands, tables, contrast matrices and 1000×420 cover art — lives in the repo linked below. Point it at any palette and it prints a post's worth of markdown.
+
+&nbsp;
+
+Feed the script anything — every palette page on [ColorFiind](https://colorfiind.com) shows its four HEX codes and a `:root` block you can pipe straight in.
+
+&nbsp;
+
+{% cta https://colorfiind.com %} Find a palette to feed the script {% endcta %}
 
 &nbsp;
 

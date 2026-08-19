@@ -1,0 +1,53 @@
+{
+  "site": "https://colorfiind.com",
+  "palettes": {
+    "3C0D4F-F22C33-C6EEA0-1681DF": [
+      "Mango Garden Moment",
+      "palette/mango-garden-moment"
+    ],
+    "0F172A-00F5D4-F15BB5-9B5DE5": [
+      "Neon Diner Harmony",
+      "palette/neon-diner-harmony"
+    ],
+    "10002B-240046-FF006E-00F5D4": [
+      "Clay Flare Spectrum",
+      "palette/clay-flare-spectrum"
+    ],
+    "09090B-FF007F-00E5FF-B8F500": [
+      "Maple Drift",
+      "palette/maple-drift"
+    ],
+    "03071E-DC2F02-F48C06-FFBA08": [
+      "Pine Field Gallery",
+      "palette/pine-field-gallery"
+    ],
+    "6D0F2B-004D40-0B3D91-2A1458": [
+      "Deep Winter Journal",
+      "palette/deep-winter-journal"
+    ],
+    "D8C7D8-8FA1B3-E6DDE3-9B8FA3": [
+      "Soft Summer Atelier",
+      "palette/soft-summer-atelier"
+    ],
+    "003566-0077B6-D0006F-C1121F": [
+      "Cool Winter Harmony",
+      "palette/cool-winter-harmony"
+    ],
+    "F5F7F9-E3DFF1-E0AED7-994129": [
+      "Quartz Drift",
+      "palette/quartz-drift-palette"
+    ],
+    "232E43-49627F-7F95B1-E8E9E5": [
+      "Winter Beach Wave",
+      "palette/winter-beach-wave-colorway"
+    ],
+    "FFFF79-FFD2DC-56D5CC-FF8D08": [
+      "Spring Beach Wave",
+      "palette/spring-beach-wave-colorway"
+    ],
+    "FFEAB6-FFEEBA-FFD489-F9BA5D": [
+      "Lagoon Warm Autumn",
+      "palette/lagoon-warm-autumn-edition"
+    ]
+  }
+}

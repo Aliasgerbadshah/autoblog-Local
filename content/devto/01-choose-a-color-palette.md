@@ -14,7 +14,7 @@ tags: css, webdev, design, beginners
 | :--: | :--: | :--: | :--: |
 | ![deep purple swatch #3C0D4F](https://placehold.co/120x56/3C0D4F/3C0D4F.png) | ![vivid red swatch #F22C33](https://placehold.co/120x56/F22C33/F22C33.png) | ![light lime swatch #C6EEA0](https://placehold.co/120x56/C6EEA0/C6EEA0.png) | ![cyan swatch #1681DF](https://placehold.co/120x56/1681DF/1681DF.png) |
 
-> 🎨 **Palette in play** — `#3C0D4F` `#F22C33` `#C6EEA0` `#1681DF`
+> 🎨 **Palette in play** — [Mango Garden Moment](https://colorfiind.com/palette/mango-garden-moment) · `#3C0D4F` `#F22C33` `#C6EEA0` `#1681DF`
 
 Picking colors is the part of a side project where an evening quietly disappears. You open a generator, spin the wheel forty times, save three screenshots, and end up shipping the same slate-and-indigo you always ship.
 
@@ -36,10 +36,10 @@ Ignore whether you like it for a second and ask: *what shape is this palette?* A
 
 | Structure | | | | | Ships well as | Watch out for |
 | :-- | :--: | :--: | :--: | :--: | :-- | :-- |
-| **Ramp** — one hue, four lightnesses | ![navy swatch #232E43](https://placehold.co/76x34/232E43/232E43.png) | ![dark blue swatch #49627F](https://placehold.co/76x34/49627F/49627F.png) | ![muted blue swatch #7F95B1](https://placehold.co/76x34/7F95B1/7F95B1.png) | ![light grey swatch #E8E9E5](https://placehold.co/76x34/E8E9E5/E8E9E5.png) | a whole dashboard: bg, borders, muted text, text | no accent — you must add one |
-| **Base + signals** — one dark, three brights | ![navy swatch #0F172A](https://placehold.co/76x34/0F172A/0F172A.png) | ![vivid teal swatch #00F5D4](https://placehold.co/76x34/00F5D4/00F5D4.png) | ![vivid magenta swatch #F15BB5](https://placehold.co/76x34/F15BB5/F15BB5.png) | ![indigo swatch #9B5DE5](https://placehold.co/76x34/9B5DE5/9B5DE5.png) | dark mode with status colours | brights are unreadable on white |
-| **Lights + anchor** — three pales, one deep | ![off-white swatch #F5F7F9](https://placehold.co/76x34/F5F7F9/F5F7F9.png) | ![pale indigo swatch #E3DFF1](https://placehold.co/76x34/E3DFF1/E3DFF1.png) | ![light magenta swatch #E0AED7](https://placehold.co/76x34/E0AED7/E0AED7.png) | ![dark red swatch #994129](https://placehold.co/76x34/994129/994129.png) | light UI with one strong CTA | only one usable text colour |
-| **Near-monochrome** — four neighbours | ![light orange swatch #FFEAB6](https://placehold.co/76x34/FFEAB6/FFEAB6.png) | ![light yellow swatch #FFEEBA](https://placehold.co/76x34/FFEEBA/FFEEBA.png) | ![light orange swatch #FFD489](https://placehold.co/76x34/FFD489/FFD489.png) | ![vivid orange swatch #F9BA5D](https://placehold.co/76x34/F9BA5D/F9BA5D.png) | backgrounds, illustration, packaging | **no text can live here** |
+| [**Ramp**](https://colorfiind.com/palette/winter-beach-wave-colorway) — one hue, four lightnesses | ![navy swatch #232E43](https://placehold.co/76x34/232E43/232E43.png) | ![dark blue swatch #49627F](https://placehold.co/76x34/49627F/49627F.png) | ![muted blue swatch #7F95B1](https://placehold.co/76x34/7F95B1/7F95B1.png) | ![light grey swatch #E8E9E5](https://placehold.co/76x34/E8E9E5/E8E9E5.png) | a whole dashboard: bg, borders, muted text, text | no accent — you must add one |
+| [**Base + signals**](https://colorfiind.com/palette/neon-diner-harmony) — one dark, three brights | ![navy swatch #0F172A](https://placehold.co/76x34/0F172A/0F172A.png) | ![vivid teal swatch #00F5D4](https://placehold.co/76x34/00F5D4/00F5D4.png) | ![vivid magenta swatch #F15BB5](https://placehold.co/76x34/F15BB5/F15BB5.png) | ![indigo swatch #9B5DE5](https://placehold.co/76x34/9B5DE5/9B5DE5.png) | dark mode with status colours | brights are unreadable on white |
+| [**Lights + anchor**](https://colorfiind.com/palette/quartz-drift-palette) — three pales, one deep | ![off-white swatch #F5F7F9](https://placehold.co/76x34/F5F7F9/F5F7F9.png) | ![pale indigo swatch #E3DFF1](https://placehold.co/76x34/E3DFF1/E3DFF1.png) | ![light magenta swatch #E0AED7](https://placehold.co/76x34/E0AED7/E0AED7.png) | ![dark red swatch #994129](https://placehold.co/76x34/994129/994129.png) | light UI with one strong CTA | only one usable text colour |
+| [**Near-monochrome**](https://colorfiind.com/palette/lagoon-warm-autumn-edition) — four neighbours | ![light orange swatch #FFEAB6](https://placehold.co/76x34/FFEAB6/FFEAB6.png) | ![light yellow swatch #FFEEBA](https://placehold.co/76x34/FFEEBA/FFEEBA.png) | ![light orange swatch #FFD489](https://placehold.co/76x34/FFD489/FFD489.png) | ![vivid orange swatch #F9BA5D](https://placehold.co/76x34/F9BA5D/F9BA5D.png) | backgrounds, illustration, packaging | **no text can live here** |
 
 That last row is the classic trap. The lightest and darkest of those four honeys are **1.45:1** apart. It is gorgeous, and it is a set of *surfaces* — bring your own ink or nobody can read your app.
 
@@ -259,6 +259,14 @@ $ checklist
 5. Squint, desaturate, and remove the accent before you call it done.
 
 Do that and colour stops being the thing that eats an evening — it becomes four lines in a token file that you can swap in a minute.
+
+&nbsp;
+
+If you want a shortcut to step one, [ColorFiind](https://colorfiind.com) is a browsable library of 34,000+ named palettes — every one has its HEX codes, a ready-made `:root` block and a downloadable swatch image, sorted by [category](https://colorfiind.com/category/pastel) and by [season](https://colorfiind.com/season/winter/deep-winter-color-palette).
+
+&nbsp;
+
+{% cta https://colorfiind.com %} Browse 34,000+ colour palettes {% endcta %}
 
 &nbsp;
 

@@ -14,7 +14,7 @@ tags: css, design, ux, webdev
 | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--: |
 | ![light magenta swatch #D8C7D8](https://placehold.co/120x56/D8C7D8/D8C7D8.png) | ![muted blue swatch #8FA1B3](https://placehold.co/120x56/8FA1B3/8FA1B3.png) | ![light magenta swatch #E6DDE3](https://placehold.co/120x56/E6DDE3/E6DDE3.png) | ![mid grey swatch #9B8FA3](https://placehold.co/120x56/9B8FA3/9B8FA3.png) | ![burgundy swatch #6D0F2B](https://placehold.co/120x56/6D0F2B/6D0F2B.png) | ![deep teal swatch #004D40](https://placehold.co/120x56/004D40/004D40.png) | ![dark blue swatch #0B3D91](https://placehold.co/120x56/0B3D91/0B3D91.png) | ![deep indigo swatch #2A1458](https://placehold.co/120x56/2A1458/2A1458.png) |
 
-> 🎨 **Palettes in play** — **Soft Summer Atelier** *(left)* vs **Deep Winter Journal** *(right)*
+> 🎨 **Palettes in play** — [Soft Summer Atelier](https://colorfiind.com/palette/soft-summer-atelier) *(left)* vs [Deep Winter Journal](https://colorfiind.com/palette/deep-winter-journal) *(right)*
 
 Seasonal color analysis sounds like something that belongs in a fashion magazine, and that is exactly why developers skip it. Underneath the vocabulary, though, it is a **two-axis classification system** — and it happens to answer the two questions we ask about every UI theme:
 
@@ -31,10 +31,10 @@ Once you sort palettes along those two axes, "pick a theme" becomes "pick a quad
 
 | Season | Temperature | Contrast | Feels like | Ships well as |
 | :-- | :-- | :-- | :-- | :-- |
-| **Spring** | warm | bright | fresh, playful | marketing, kids apps, onboarding |
-| **Summer** | cool | soft | calm, hazy | reading apps, wellness, docs |
-| **Autumn** | warm | muted-rich | grounded, earthy | food, crafts, editorial, commerce |
-| **Winter** | cool | high | sharp, precise | dashboards, fintech, dev tools |
+| [**Spring**](https://colorfiind.com/season/spring/spring-color-palette) | warm | bright | fresh, playful | marketing, kids apps, onboarding |
+| [**Summer**](https://colorfiind.com/season/summer/soft-summer-color-palette) | cool | soft | calm, hazy | reading apps, wellness, docs |
+| [**Autumn**](https://colorfiind.com/season/autumn/warm-autumn-color-palette) | warm | muted-rich | grounded, earthy | food, crafts, editorial, commerce |
+| [**Winter**](https://colorfiind.com/season/winter/deep-winter-color-palette) | cool | high | sharp, precise | dashboards, fintech, dev tools |
 
 Each season splits again — `soft summer`, `cool summer`, `true summer`, `light summer`; `deep winter`, `bright winter`, `dark winter`, `cool winter` — and every sub-season is its own URL:
 
@@ -318,5 +318,13 @@ One component, two seasons, zero conditional logic.
 - Deep seasons = surfaces *and* status colors. Check them against white, not against each other.
 - Map soft → light mode, deep → dark mode, and keep semantic names identical.
 - Browse the sub-season pages; the sub-season is the real spec, "summer" alone is too broad.
+
+Ready-made seasonal sets — [soft summer](https://colorfiind.com/season/summer/soft-summer-color-palette), [deep winter](https://colorfiind.com/season/winter/deep-winter-color-palette), [warm autumn](https://colorfiind.com/season/autumn/warm-autumn-color-palette), [bright spring](https://colorfiind.com/season/spring/bright-spring-color-palette) — live on ColorFiind with HEX codes and CSS variables on every page.
+
+&nbsp;
+
+{% cta https://colorfiind.com %} Explore palettes by season {% endcta %}
+
+&nbsp;
 
 *Which quadrant is your current project in? Post the four hexes below.* 👇

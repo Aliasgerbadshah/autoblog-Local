@@ -14,7 +14,7 @@ tags: css, tailwindcss, webdev, frontend
 | :--: | :--: | :--: | :--: |
 | ![navy swatch #0F172A](https://placehold.co/120x56/0F172A/0F172A.png) | ![vivid teal swatch #00F5D4](https://placehold.co/120x56/00F5D4/00F5D4.png) | ![vivid magenta swatch #F15BB5](https://placehold.co/120x56/F15BB5/F15BB5.png) | ![indigo swatch #9B5DE5](https://placehold.co/120x56/9B5DE5/9B5DE5.png) |
 
-> 🎨 **Palette in play** — midnight, mint, magenta, violet · `#0F172A` `#00F5D4` `#F15BB5` `#9B5DE5`
+> 🎨 **Palette in play** — [Neon Diner Harmony](https://colorfiind.com/palette/neon-diner-harmony) · `#0F172A` `#00F5D4` `#F15BB5` `#9B5DE5`
 
 Four hex codes is not a theme. A theme is four hex codes that survived a rename, a framework, a dark mode toggle and a designer asking "can we make the accent 10% lighter everywhere?"
 
@@ -276,7 +276,7 @@ android
 
 ## 6️⃣ Light mode for free
 
-Because components never touch hexes, an entire second theme is one media query. Swap the neon palette for a light one — here a soft quartz set — and keep every semantic name identical.
+Because components never touch hexes, an entire second theme is one media query. Swap the neon palette for a light one — here [Quartz Drift](https://colorfiind.com/palette/quartz-drift-palette) — and keep every semantic name identical.
 
 | `#F5F7F9` | `#E3DFF1` | `#E0AED7` | `#994129` |
 | :--: | :--: | :--: | :--: |
@@ -364,5 +364,13 @@ $ node palette-to-tokens.mjs 0F172A 00F5D4 F15BB5 9B5DE5
 4. Export `tokens.json` the moment a designer is involved.
 5. Re-run contrast per mode, not per color.
 6. Script the conversion — you will do it again next project.
+
+Need a palette to run through the pipeline? [ColorFiind](https://colorfiind.com) lists 34,000+ of them with copy-ready HEX codes and a `:root` block on every page.
+
+&nbsp;
+
+{% cta https://colorfiind.com %} Pick a palette, run the pipeline {% endcta %}
+
+&nbsp;
 
 Next up: seasonal palettes as a theming system — why *soft summer* makes a beautiful reading app and *deep winter* makes the best dark mode you have shipped.

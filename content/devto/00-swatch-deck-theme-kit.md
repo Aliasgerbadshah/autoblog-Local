@@ -15,7 +15,7 @@ tags: writing, markdown, css, design
   ┌───────────────────────────────────────────────────────────────┐
   │  SWATCH DECK — theme kit v1                                   │
   │  Every article in this series uses these blocks in this order │
-  │  Colour values: any palette source you like               │
+  │  Colour values: any palette source (e.g. colorfiind.com)  │
   └───────────────────────────────────────────────────────────────┘
   This file is a reference sheet, not a post you have to publish.
 -->
@@ -216,3 +216,9 @@ $ python3 tools/palette_kit.py swatches \
     --name "Neon Diner Harmony" --slug neon-diner-harmony \
     --colors 0F172A 00F5D4 F15BB5 9B5DE5
 ```
+
+The palettes used in these examples come from [ColorFiind](https://colorfiind.com) — 34,000+ named palettes with HEX codes, CSS variables and downloadable swatch images on every page.
+
+&nbsp;
+
+{% cta https://colorfiind.com %} Browse colour palettes {% endcta %}
