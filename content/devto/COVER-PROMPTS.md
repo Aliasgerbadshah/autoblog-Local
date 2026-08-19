@@ -566,6 +566,166 @@ DO NOT INCLUDE: text, printed labels, numbers, brand logos, watermarks, hands, f
 
 &nbsp;
 
+&nbsp;
+
+## 16 — sRGB vs Display P3 vs Adobe RGB: Which One Should You Work In?
+
+**Palette:** `#36F26E` green · `#3BD8F7` cyan · `#A428E2` purple · `#EF684D` coral
+
+```text
+A wide horizontal banner illustration, 1000x420 pixels, aspect ratio 50:21, flat vector infographic
+style on a very dark charcoal #14161A background.
+
+SUBJECT: three overlapping translucent triangles of different sizes, representing three colour gamuts,
+arranged like a nested Venn diagram slightly offset from each other. The smallest triangle glows in a
+neutral white outline, the middle one in vivid cyan #3BD8F7, the largest in vivid green #36F26E, with
+the overlap regions blending into purple #A428E2 and coral #EF684D. Each triangle has a small solid
+colour dot at one vertex to distinguish it. The shapes are geometric and precise, not organic.
+
+COMPOSITION: the nested triangles occupy the right two-thirds, tilted slightly for energy; the left
+third stays dark and empty for a title overlay. All shapes inside the central 900x380 safe area. Strong
+figure-ground separation, generous negative space.
+
+LIGHT: the triangle edges are self-luminous with soft bloom; deep matte background with a subtle
+vignette; no external light source, no reflections.
+
+STYLE: precise data-visualisation aesthetic, thin glowing strokes, translucent fills, science-poster
+clarity, premium and technical.
+
+DO NOT INCLUDE: text, axis labels, numbers, logos, watermarks, photographs, people.
+```
+
+**Alt text:** `Three nested translucent triangles of different sizes representing three colour gamuts`
+
+&nbsp;
+
+## 17 — Preparing Colour-Critical Assets for Retina and High-Gamut Displays
+
+**Palette:** `#92A3BA` slate · `#96A7BE` slate light · `#F2FAFF` near-white · `#D7E9F9` pale blue
+
+```text
+A wide horizontal banner illustration, 1000x420 pixels, aspect ratio 50:21, clean flat vector style on
+a very pale blue-white #F2FAFF background.
+
+SUBJECT: a magnifying glass held over the corner of a large pale blue #D7E9F9 gradient panel. Inside
+the magnified circle, the smooth gradient resolves into a visible stepped pixel grid with slate
+#92A3BA and #96A7BE squares, revealing banding and individual pixels. Outside the circle the same
+gradient looks perfectly smooth. Beside the panel, two small stacked rectangles labelled only by size
+difference suggest 1x and 2x versions of the same asset.
+
+COMPOSITION: the panel fills the right two-thirds, the magnifier sits over its upper-right area, the
+1x/2x rectangles sit at the lower right. The left third stays clean pale space for a title overlay.
+All elements inside the central 900x380 safe area.
+
+LIGHT: soft even daylight, very subtle drop shadow under the magnifier and the stacked rectangles,
+matte finish throughout, no glare.
+
+STYLE: crisp minimal vector illustration, design-tooling aesthetic, thin consistent strokes, restrained
+cool palette, lots of white space.
+
+DO NOT INCLUDE: text, numbers, labels, logos, watermarks, hands, faces, desks.
+```
+
+**Alt text:** `A magnifying glass over a pale gradient panel revealing a stepped pixel grid inside the lens`
+
+&nbsp;
+
+## 18 — Colour Management for Social Media: Why Your Exports Change Colour
+
+**Palette:** `#EB9C8E` coral · `#F3DA91` butter · `#9ADFD3` mint · `#A3B4EB` periwinkle
+
+```text
+A wide horizontal banner illustration, 1000x420 pixels, aspect ratio 50:21, flat vector illustration on
+a warm off-white #FBF8F5 background.
+
+SUBJECT: a sequence of three identical square social-post cards travelling left to right along a gentle
+arc, like an image being uploaded. The first card shows a crisp composition in coral #EB9C8E, butter
+#F3DA91, mint #9ADFD3 and periwinkle #A3B4EB. The second card, passing through a stylised funnel or
+pipe shape in the centre, is mid-transformation. The third card emerges visibly duller and shifted,
+its coral gone pinkish and its mint gone grey. Small abstract particles fall away from the funnel,
+suggesting discarded colour data.
+
+COMPOSITION: the arc runs from lower left to upper right across the right two-thirds; the funnel sits
+at centre. The left third remains clean warm white for a title overlay. All elements inside the central
+900x380 safe area.
+
+LIGHT: flat, even illustration lighting; the first card slightly brighter than the third to reinforce
+the loss; minimal soft shadows.
+
+STYLE: friendly editorial vector, social-media-marketing aesthetic, rounded corners, consistent stroke
+weights, clean and uncluttered.
+
+DO NOT INCLUDE: text, platform logos, app icons, watermarks, recognisable UI, faces, hands.
+```
+
+**Alt text:** `Three social post cards moving through a funnel, the last one emerging duller than the first`
+
+&nbsp;
+
+## 19 — Why PNG and JPEG Exports Look Different From Your Design
+
+**Palette:** `#432C1E` espresso · `#82462A` clay · `#C99235` amber · `#27564D` pine
+
+```text
+A wide horizontal banner illustration, 1000x420 pixels, aspect ratio 50:21, flat vector style on a deep
+espresso #432C1E background.
+
+SUBJECT: two identical square image tiles side by side, each showing the same simple abstract
+composition in clay #82462A, amber #C99235 and pine #27564D. The left tile is perfectly crisp with
+clean hard edges. The right tile shows the same composition with visible 8x8 compression blocks in the
+flat areas and soft coloured fringing haloing every edge, as if magnified. A thin vertical divider
+separates them, and a small magnified circular inset at the bottom highlights the fringed edge.
+
+COMPOSITION: the two tiles sit centred in the right two-thirds with equal weight, the magnified inset
+overlapping the lower boundary between them. Left third stays dark for a title overlay. All elements
+inside the central 900x380 safe area.
+
+LIGHT: flat illustration lighting, gentle inner shadow on the tiles to lift them off the background, no
+gloss or reflections.
+
+STYLE: precise technical vector comparison diagram, documentation clarity, warm autumnal palette,
+consistent line weights.
+
+DO NOT INCLUDE: text, labels, format names, numbers, logos, watermarks, people.
+```
+
+**Alt text:** `Two identical image tiles side by side, the right one showing compression blocks and colour fringing`
+
+&nbsp;
+
+## 20 — How Image Compression Quietly Breaks Colour Accessibility
+
+**Palette:** `#7C1E3A` burgundy · `#FFFFFF` white · `#176457` emerald · `#452F73` violet
+
+```text
+A wide horizontal banner illustration, 1000x420 pixels, aspect ratio 50:21, flat vector style on a deep
+burgundy #7C1E3A background.
+
+SUBJECT: a large white geometric shape — a bold abstract letterform-like block, not an actual letter —
+sitting on the burgundy field. Its left half has perfectly crisp clean edges. Its right half shows the
+same edge degraded: soft grey ringing halos, a faint darkening of the white where the halos bite in,
+and subtle blocky artefacts. Below the shape, a simple horizontal measuring bar with a marker sliding
+from a safe zone toward a warning zone, coloured emerald #176457 shifting to violet #452F73,
+suggesting a contrast ratio dropping.
+
+COMPOSITION: the geometric shape dominates the right two-thirds; the measuring bar runs beneath it. The
+left third stays deep burgundy and empty for a title overlay. All elements inside the central 900x380
+safe area.
+
+LIGHT: flat, even illustration lighting; the crisp half slightly brighter than the degraded half; no
+gradients other than the deliberate ringing artefacts.
+
+STYLE: bold editorial vector, accessibility-poster clarity, high contrast, minimal detail, confident
+geometry.
+
+DO NOT INCLUDE: readable text, actual alphabet letters, numbers, percentage signs, logos, watermarks,
+faces.
+```
+
+**Alt text:** `A white geometric shape on burgundy, crisp on the left and degraded with ringing on the right, above a sliding contrast meter`
+
+&nbsp;
+
 ## Sample renders
 
 Two of these prompts run through an image model, unedited, resized to 1000×420 —

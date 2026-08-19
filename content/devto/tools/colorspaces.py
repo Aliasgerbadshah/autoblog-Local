@@ -151,6 +151,32 @@ def p3_to_hex(r: float, g: float, b: float) -> tuple[str, bool]:
     return rgb_to_hex(tuple(linear_to_srgb(max(0.0, min(1.0, c))) for c in srgb_lin)), out  # type: ignore
 
 
+# ------------------------------------------------------------------ Adobe RGB
+
+XYZ_TO_ADOBE = [[2.0413690, -0.5649464, -0.3446944],
+                [-0.9692660, 1.8760108, 0.0415560],
+                [0.0134474, -0.1183897, 1.0154096]]
+ADOBE_TO_XYZ = [[0.5767309, 0.1855540, 0.1881852],
+                [0.2973769, 0.6273491, 0.0752741],
+                [0.0270343, 0.0706872, 0.9911085]]
+ADOBE_GAMMA = 563 / 256          # 2.19921875
+
+
+def hex_to_adobe(h: str) -> tuple[float, float, float]:
+    lin = tuple(srgb_to_linear(c) for c in hex_to_rgb(h))
+    xyz = _mul(SRGB_TO_XYZ, lin)  # type: ignore
+    a = _mul(XYZ_TO_ADOBE, xyz)
+    return tuple(round(max(0.0, min(1.0, c)) ** (1 / ADOBE_GAMMA), 4) for c in a)  # type: ignore
+
+
+def adobe_to_hex(r: float, g: float, b: float) -> tuple[str, bool]:
+    lin = tuple(c ** ADOBE_GAMMA for c in (r, g, b))
+    xyz = _mul(ADOBE_TO_XYZ, lin)  # type: ignore
+    s = _mul(XYZ_TO_SRGB, xyz)
+    out = any(c < -0.0005 or c > 1.0005 for c in s)
+    return rgb_to_hex(tuple(linear_to_srgb(max(0.0, min(1.0, c))) for c in s)), out  # type: ignore
+
+
 # ------------------------------------------------------------------- color-mix
 
 
@@ -205,6 +231,10 @@ def main() -> int:
             H, W, B = hex_to_hwb(h)
             print(f"#{h.lstrip('#').upper()} -> hwb({H} {W}% {B}%)  "
                   f"round-trip {hwb_to_hex(H, W, B)}")
+    elif cmd == "adobe":
+        for h in sys.argv[2:]:
+            r, g, b = hex_to_adobe(h)
+            print(f"#{h.lstrip('#').upper()} -> Adobe RGB ({r:.4f} {g:.4f} {b:.4f})")
     elif cmd == "p3":
         for h in sys.argv[2:]:
             r, g, b = hex_to_p3(h)

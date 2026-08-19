@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Preparing Colour-Critical Assets for Retina and High-Gamut Displays — DEV preview</title>
+<style>
+:root{--bg:#0B0F1A;--panel:#111827;--panel2:#0F172A;--line:#1F2A44;--ink:#E7E9EE;
+--muted:#94A3B8;--primary:#00F5D4;--accent:#F15BB5;--support:#9B5DE5;--radius:14px}
+html[data-theme=light]{--bg:#F5F7F9;--panel:#fff;--panel2:#EFF2F6;--line:#DDE3EC;
+--ink:#1B2333;--muted:#5B6478;--primary:#0E7C86;--accent:#B4276F;--support:#6D3FBF}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+font:16px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+a{color:var(--primary)}
+header.top{position:sticky;top:0;z-index:20;display:flex;gap:14px;align-items:center;padding:12px 18px;
+background:var(--bg);border-bottom:1px solid var(--line)}
+.brand{font-weight:800}.brand span{color:var(--primary)}
+.rule{display:flex;height:6px;width:150px;border-radius:99px;overflow:hidden}.rule i{flex:1}
+.spacer{flex:1}
+.btn{font:inherit;cursor:pointer;border:1px solid var(--line);background:var(--panel);color:var(--ink);
+border-radius:99px;padding:6px 14px;text-decoration:none}
+.btn:hover{border-color:var(--primary)}
+.btn-dl{background:var(--primary);color:#08121A;border-color:var(--primary);font-weight:700}
+.layout{display:grid;grid-template-columns:290px minmax(0,1fr);gap:26px;padding:22px;align-items:start}
+@media(max-width:900px){.layout{grid-template-columns:1fr}}
+nav.files{position:sticky;top:70px;background:var(--panel);border:1px solid var(--line);
+border-radius:var(--radius);padding:12px;display:flex;flex-direction:column;gap:6px}
+nav.files h2{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin:6px 8px 8px}
+nav.files a{display:block;padding:9px 11px;border-radius:10px;text-decoration:none;color:var(--ink);
+font-size:14px;border:1px solid transparent}
+nav.files a:hover{background:var(--panel2)}
+nav.files a.active{background:var(--panel2);border-color:var(--primary);color:var(--primary)}
+nav.files small{display:block;color:var(--muted);font-size:11.5px}
+article{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+padding-bottom:48px;max-width:840px;width:100%;overflow:hidden}
+.cover{width:100%;display:block;border-bottom:1px solid var(--line)}
+.meta{padding:22px clamp(18px,4vw,44px) 0}
+.meta h1{font-size:clamp(26px,4vw,40px);line-height:1.18;margin:.2em 0 .3em}
+.tags{display:flex;flex-wrap:wrap;gap:8px}
+.tag{font-size:12.5px;color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:2px 8px}
+.desc{color:var(--muted);font-size:15px}
+.fm{font-size:12px;color:var(--muted);border-top:1px dashed var(--line);
+border-bottom:1px dashed var(--line);padding:8px 0;margin-bottom:6px}
+.post{padding:0 clamp(18px,4vw,44px)}
+.post img{max-width:100%;display:block;margin:.4em 0}
+.post td img{margin:0 auto}
+
+.post h2{margin-top:1.9em;font-size:26px;border-bottom:1px solid var(--line);padding-bottom:.25em}
+.post h3{margin-top:1.5em;font-size:20px}
+.post blockquote{margin:1.4em 0;padding:.9em 1.1em;background:var(--panel2);
+border-left:4px solid var(--accent);border-radius:0 10px 10px 0}
+.post blockquote p{margin:0}
+.tw{overflow-x:auto;margin:1.3em 0}
+.post table{border-collapse:collapse;width:100%;font-size:14.5px}
+.post th,.post td{border:1px solid var(--line);padding:8px 11px;text-align:left;vertical-align:middle}
+.post th{background:var(--panel2)}
+.post td img{vertical-align:middle}
+.post :not(pre)>code{background:var(--panel2);padding:.15em .4em;border-radius:6px;font-size:.9em;
+font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+pre.code{background:#0d1117;border:1px solid var(--line);border-radius:12px;padding:18px;
+overflow-x:auto;position:relative;margin:1.3em 0}
+pre.code code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13.5px;
+line-height:1.62;color:#C9D1D9;white-space:pre}
+pre.code::before{content:attr(data-lang);position:absolute;top:0;right:0;font-size:10.5px;
+letter-spacing:.12em;text-transform:uppercase;color:#0B0F1A;background:var(--primary);
+padding:2px 10px;border-radius:0 11px 0 10px;font-family:ui-monospace,monospace}
+pre.lang-diff{border-color:#F15BB5}
+pre.lang-console,pre.lang-bash{background:#05070d;border-color:#00F5D4}
+.t-comment{color:#6E7A8A;font-style:italic}
+.t-string{color:#A5D6FF}.t-number{color:#F0A868}.t-kw{color:#FF7B9C}
+.t-prop{color:#9B5DE5;font-weight:600}.t-tag{color:#7EE787}
+.t-color{color:#FFD479}
+.chip{display:inline-block;width:.78em;height:.78em;margin-right:.35em;border-radius:3px;
+border:1px solid rgba(255,255,255,.35);vertical-align:-1px}
+.d-add{color:#7EE787;display:block;background:rgba(46,160,67,.15)}
+.d-del{color:#FF9492;display:block;background:rgba(248,81,73,.14)}
+.d-hunk{color:#79C0FF;display:block}
+.sh-prompt{color:#F15BB5;font-weight:700}.sh-cmd{color:#E7E9EE}
+.sh-ok{color:#7EE787;display:block}.sh-out{color:#9DF7E4;display:block}
+details.liquid{background:var(--panel2);border:1px solid var(--line);border-radius:12px;
+padding:10px 16px;margin:1.4em 0}
+details.liquid summary{cursor:pointer;font-weight:650}
+.cta{display:block;text-align:center;margin:1.8em 0;padding:14px 20px;border-radius:12px;
+background:linear-gradient(90deg,var(--primary),var(--support));color:#08121A;font-weight:750;
+text-decoration:none}
+.katex{background:var(--panel2);border:1px dashed var(--line);border-radius:10px;padding:12px 16px;
+font-family:ui-monospace,monospace;color:var(--primary);margin:1.2em 0}
+.embed{color:var(--muted);font-family:ui-monospace,monospace;font-size:13px}
+.note{max-width:840px;color:var(--muted);font-size:13px;margin-top:14px}
+.post hr{border:0;border-top:1px solid var(--line);margin:2em 0}
+.post p:empty,.post p.spacer{margin:1.1em 0;min-height:1.1em}
+.post h2{margin-top:1.2em}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand">Swatch<span>Deck</span> · DEV.to preview</div>
+  <div class="rule"><i style="background:#0F172A"></i><i style="background:#00F5D4"></i>
+    <i style="background:#F15BB5"></i><i style="background:#9B5DE5"></i></div>
+  <div class="spacer"></div>
+  <a class="btn" href="/downloads">⬇ Downloads</a>
+  <a class="btn btn-dl" href="/download/17-retina-high-gamut-assets.md">⬇ This post (.md)</a>
+  <a class="btn" href="../17-retina-high-gamut-assets.md" target="_blank">View raw</a>
+  <button class="btn" onclick="var d=document.documentElement;
+    d.dataset.theme=d.dataset.theme==='dark'?'light':'dark'">🌗 Theme</button>
+</header>
+<div class="layout">
+  <nav class="files"><h2>Articles</h2><a href="00-swatch-deck-theme-kit.html" class="">swatch deck theme kit<small>Reusable theme kit</small></a><a href="01-choose-a-color-palette.html" class="">choose a color palette<small>Choosing a palette</small></a><a href="02-hex-to-design-tokens.html" class="">hex to design tokens<small>Tokens pipeline</small></a><a href="03-seasonal-palettes-ui-themes.html" class="">seasonal palettes ui themes<small>Seasonal themes</small></a><a href="04-neon-dark-mode-glow-ui.html" class="">neon dark mode glow ui<small>Neon dark mode</small></a><a href="05-automate-palette-workflow.html" class="">automate palette workflow<small>Automation</small></a><a href="06-css-color-mix-dynamic-variations.html" class="">css color mix dynamic variations<small>color-mix()</small></a><a href="07-css-relative-color-syntax.html" class="">css relative color syntax<small>Relative colour</small></a><a href="08-light-dark-css-theme-aware.html" class="">light dark css theme aware<small>light-dark()</small></a><a href="09-hwb-color-explained.html" class="">hwb color explained<small>HWB</small></a><a href="10-display-p3-vs-srgb-wide-gamut.html" class="">display p3 vs srgb wide gamut<small>Display-P3</small></a><a href="11-wide-gamut-without-breaking-displays.html" class="">wide gamut without breaking displays<small>Wide gamut safely</small></a><a href="12-color-gamut-media-queries.html" class="">color gamut media queries<small>Gamut media queries</small></a><a href="13-same-hex-different-monitors.html" class="">same hex different monitors<small>Monitor variance</small></a><a href="14-browser-color-management.html" class="">browser color management<small>Colour management</small></a><a href="15-icc-color-profiles-guide.html" class="">icc color profiles guide<small>ICC profiles</small></a><a href="16-srgb-vs-p3-vs-adobe-rgb.html" class="">srgb vs p3 vs adobe rgb<small>Choosing a space</small></a><a href="17-retina-high-gamut-assets.html" class="active">retina high gamut assets<small>Retina assets</small></a><a href="18-social-media-color-management.html" class="">social media color management<small>Social exports</small></a><a href="19-png-vs-jpeg-color-differences.html" class="">png vs jpeg color differences<small>PNG vs JPEG</small></a><a href="20-compression-color-accessibility.html" class="">compression color accessibility<small>Compression + a11y</small></a></nav>
+  <div>
+    <article>
+      
+      <div class="meta">
+        <div class="tags"><span class="tag">#webdev</span><span class="tag">#design</span><span class="tag">#ux</span><span class="tag">#frontend</span></div>
+        <h1>Preparing Colour-Critical Assets for Retina and High-Gamut Displays</h1>
+        <p class="desc">2x assets, subtle gradients and brand colours all break in different ways on modern screens. Here&#x27;s an export pipeline that survives retina, P3 and 8-bit banding.</p>
+        <div class="fm">published: <b>false</b> · tags: 4/4 · cover_image: none</div>
+      </div>
+      <div class="post"><div class='tw'><table><thead><tr><th><code>#92A3BA</code></th><th><code>#96A7BE</code></th><th><code>#F2FAFF</code></th><th><code>#D7E9F9</code></th></tr></thead><tbody><tr><td><img src="https://placehold.co/120x56/92A3BA/92A3BA.png" alt="muted blue swatch #92A3BA" /></td><td><img src="https://placehold.co/120x56/96A7BE/96A7BE.png" alt="muted blue swatch #96A7BE" /></td><td><img src="https://placehold.co/120x56/F2FAFF/F2FAFF.png" alt="pale cyan swatch #F2FAFF" /></td><td><img src="https://placehold.co/120x56/D7E9F9/D7E9F9.png" alt="pale cyan swatch #D7E9F9" /></td></tr></tbody></table></div>
+<blockquote><p>🎨 <strong>Palette in play</strong> — <a href="https://colorfiind.com/palette/lagoon-cool-summer-edition" target="_blank" rel="noopener">Lagoon Cool Summer Edition</a> · <code>#92A3BA</code> <code>#96A7BE</code> <code>#F2FAFF</code> <code>#D7E9F9</code></p></blockquote>
+<p>A soft, low-contrast palette like this one is a stress test disguised as a mood board. Two of its colours — <code>#92A3BA</code> and <code>#96A7BE</code> — are <strong>four RGB values apart</strong>. On a retina screen with a good panel they&#x27;re two distinct greys-blue. Compressed, resized, or rendered on a cheap laptop, they&#x27;re the same colour.</p>
+<p class='spacer'>&nbsp;</p>
+<p>Colour-critical asset prep is mostly about protecting differences that small from the four things that eat them: resampling, 8-bit quantisation, compression and gamut mapping.</p>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/92A3BA/92A3BA.png" alt="Section divider bar in muted blue" /></p>
+<h2>🔍 Why &quot;retina&quot; is a colour problem, not just a sharpness problem</h2>
+<p>Everyone remembers to export at 2x. Fewer people notice what the <em>downscale</em> does.</p>
+<p class='spacer'>&nbsp;</p>
+<p>When a browser renders your 2x asset at 1x on a standard display, it averages pixels. Averaging happens in whatever space the compositor works in — and averaging gamma-encoded sRGB values is not the same as averaging light. A fine two-colour pattern that should blend to a mid-tone comes out darker than it should.</p>
+<pre class="code lang-console" data-lang="console"><code><span class="sh-prompt">$</span><span class="sh-cmd"> # the classic demonstration: 50/50 black and white stripes</span>
+<span class="sh-out">  averaged in gamma-encoded sRGB  → #808080   (looks too dark)</span>
+<span class="sh-out">  averaged in linear light        → #BCBCBC   (what your eye expects)</span>
+<span class="sh-out"></span></code></pre>
+<p>Practical consequences:</p>
+<ul><li><strong>Fine detail loses saturation</strong> when scaled down. Thin coloured lines go grey.</li><li><strong>Two similar tones merge.</strong> Exactly the <code>#92A3BA</code> / <code>#96A7BE</code> problem above.</li><li><strong>Logos with hairline strokes</strong> shift colour at 1x even though the file is &quot;correct&quot;.</li></ul>
+<p>The fix isn&#x27;t clever CSS. It&#x27;s <strong>designing the asset so the difference survives</strong>: minimum 2–3% lightness separation between adjacent tones, and no detail thinner than 2 device pixels carrying colour meaning.</p>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/96A7BE/96A7BE.png" alt="Section divider bar in muted blue" /></p>
+<h2>📐 The export matrix</h2>
+<div class='tw'><table><thead><tr><th>Asset type</th><th>Format</th><th>Density</th><th>Colour space</th><th>Notes</th></tr></thead><tbody><tr><td>UI icons, logos</td><td>SVG</td><td>vector</td><td>sRGB in CSS</td><td>colour lives in <code>fill</code>, not the file</td></tr><tr><td>Photography</td><td>AVIF + JPEG fallback</td><td>1x/2x via <code>srcset</code></td><td>sRGB tagged</td><td>never Adobe RGB</td></tr><tr><td>Brand hero art</td><td>AVIF, optionally P3</td><td>1x/2x</td><td>tagged P3 + sRGB fallback</td><td>see <code>&lt;picture&gt;</code> below</td></tr><tr><td>Flat graphics with text</td><td>PNG or lossless WebP</td><td>2x</td><td>sRGB tagged</td><td>avoid 4:2:0 chroma subsampling</td></tr><tr><td>Subtle gradients</td><td>SVG or CSS gradient</td><td>vector</td><td>sRGB</td><td>do <strong>not</strong> ship as 8-bit raster</td></tr></tbody></table></div>
+<p>That last row saves the most pain, and it deserves its own section.</p>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/F2FAFF/F2FAFF.png" alt="Section divider bar in pale cyan" /></p>
+<h2>🌫️ Banding: the 8-bit ceiling</h2>
+<p>Take the two pale colours from this palette. <code>#F2FAFF</code> → <code>#D7E9F9</code> is a gorgeous, barely-there gradient. Measure the distance and the problem appears:</p>
+<pre class="code lang-console" data-lang="console"><code><span class="sh-prompt">$</span><span class="sh-cmd"> # channel deltas from #F2FAFF to #D7E9F9</span>
+<span class="sh-out">  R: 27 steps   G: 17 steps   B: 6 steps</span>
+<span class="sh-out"></span></code></pre>
+<p>Six steps in blue. Stretch that across 1200 pixels of hero background and 8-bit colour gives you <strong>six visible bands</strong> — one every 200 pixels. No amount of JPEG quality fixes it, because the information was never there.</p>
+<p class='spacer'>&nbsp;</p>
+<p>Three fixes, in order of preference:</p>
+<p class='spacer'>&nbsp;</p>
+<p><strong>1 · Don&#x27;t ship it as a raster.</strong> A CSS gradient is computed at render time and can be dithered by the browser:</p>
+<pre class="code lang-css" data-lang="css"><code>.hero {
+  <span class="t-prop">background-image</span>: linear-gradient(160deg, <span class="t-color"><i class="chip" style="background:#F2FAFF"></i>#F2FAFF</span>, <span class="t-color"><i class="chip" style="background:#D7E9F9"></i>#D7E9F9</span>);
+}
+</code></pre>
+<p><strong>2 · Add noise.</strong> A 1–2% noise layer breaks up the bands and costs almost nothing after compression:</p>
+<pre class="code lang-css" data-lang="css"><code>.hero {
+  <span class="t-prop">background-image</span>:
+    url(&<span class="t-comment">#x27;data:image/svg+xml;utf8,&lt;svg xmlns=&quot;http://www.w3.org/2000/svg&quot;&gt;&lt;filter id=&quot;n&quot;&gt;&lt;feTurbulence baseFrequency=&quot;0.8&quot; numOctaves=&quot;3&quot;/&gt;&lt;feColorMatrix values=&quot;0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.035 0&quot;/&gt;&lt;/filter&gt;&lt;rect width=&quot;100%&quot; height=&quot;100%&quot; filter=&quot;url(%23n)&quot;/&gt;&lt;/svg&gt;&#x27;),</span>
+    linear-gradient(160deg, <span class="t-color"><i class="chip" style="background:#F2FAFF"></i>#F2FAFF</span>, <span class="t-color"><i class="chip" style="background:#D7E9F9"></i>#D7E9F9</span>);
+}
+</code></pre>
+<p><strong>3 · Interpolate in a better space.</strong> Gradients in OKLCH avoid the grey dip in the middle and distribute steps more evenly:</p>
+<pre class="code lang-css" data-lang="css"><code>.hero {
+  <span class="t-prop">background-image</span>: linear-gradient(in oklch 160deg, <span class="t-color"><i class="chip" style="background:#F2FAFF"></i>#F2FAFF</span>, <span class="t-color"><i class="chip" style="background:#D7E9F9"></i>#D7E9F9</span>);
+}
+</code></pre>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/D7E9F9/D7E9F9.png" alt="Section divider bar in pale cyan" /></p>
+<h2>🖼️ Serving retina and wide gamut together</h2>
+<p><code>&lt;picture&gt;</code> handles both axes without JavaScript. Gamut is chosen by media query, density by <code>srcset</code>:</p>
+<pre class="code lang-html" data-lang="html"><code><span class="t-tag">&lt;picture</span>&gt;
+  
+  <span class="t-tag">&lt;source</span>
+    media=&quot;(color-gamut: p3)&quot;
+    type=&quot;image/avif&quot;
+    srcset=&quot;hero-p3.avif 1x, hero-p3@2x.avif 2x&quot;&gt;
+
+  
+  <span class="t-tag">&lt;source</span>
+    type=&quot;image/avif&quot;
+    srcset=&quot;hero-srgb.avif 1x, hero-srgb@2x.avif 2x&quot;&gt;
+
+  <span class="t-tag">&lt;img</span>
+    src=&quot;hero-srgb.jpg&quot;
+    srcset=&quot;hero-srgb.jpg 1x, hero-srgb@2x.jpg 2x&quot;
+    width=&quot;<span class="t-number">1200</span>&quot; height=&quot;<span class="t-number">630</span>&quot;
+    alt=&quot;Sea fog over a harbour at dawn&quot;
+    decoding=&quot;async&quot;&gt;
+<span class="t-tag">&lt;/picture</span>&gt;
+</code></pre>
+<p>Four files instead of one. Worth it for a hero; overkill for a thumbnail. <strong>Pick your colour-critical assets deliberately</strong> — usually the hero, the product shot and the logo lockup, and nothing else.</p>
+<blockquote><p>🚧 <strong>Trap</strong> — <code>srcset</code> with <code>w</code> descriptors plus <code>sizes</code> is better for responsive layout images, but for a fixed-size hero the <code>1x/2x</code> form is clearer and avoids the browser picking a smaller file on a slow connection, which is exactly when banding shows up worst.</p></blockquote>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/92A3BA/92A3BA.png" alt="Section divider bar in muted blue" /></p>
+<h2>🎨 Keeping brand colour exact across the asset boundary</h2>
+<p>The place brand colour breaks is where a raster asset meets a CSS colour — a logo PNG on a coloured band, an illustration on a card.</p>
+<pre class="code lang-css" data-lang="css"><code>.brand-band {
+  <span class="t-comment">/* the CSS side */</span>
+  <span class="t-prop">background</span>: <span class="t-color"><i class="chip" style="background:#92A3BA"></i>#92A3BA</span>;
+}
+
+<span class="t-kw">@media</span> (color-gamut: p3) {
+  .brand-band {
+    <span class="t-comment">/* exact same colour, P3 coordinates — matches a P3-tagged asset */</span>
+    <span class="t-prop">background</span>: color(display-p3 <span class="t-number">0.5851</span> <span class="t-number">0.6371</span> <span class="t-number">0.7209</span>);
+  }
+}
+</code></pre>
+<p>And the asset side:</p>
+<ul><li>Export the logo as <strong>SVG</strong> wherever possible; then it inherits <code>currentColor</code> or a CSS variable and can never drift.</li><li>If it must be a raster, export it <strong>tagged</strong>, in the same space as the CSS enhancement.</li><li>Never place an untagged asset on a colour-managed background and expect a seam-free join.</li></ul>
+<details class='liquid' open><summary>🔧 A build step that catches the common failures</summary>
+<pre class="code lang-bash" data-lang="bash"><code><span class="sh-out">#!/usr/bin/env bash</span>
+<span class="sh-out"># check-assets.sh — run after the image pipeline, before deploy</span>
+<span class="sh-out">set -euo pipefail</span>
+<span class="sh-out">fail=0</span>
+<span class="sh-out"></span>
+<span class="sh-out">for f in dist/images/*.{jpg,png,avif,webp}; do</span>
+<span class="sh-out">  [ -e &quot;$f&quot; ] || continue</span>
+<span class="sh-out"></span>
+<span class="sh-out">  # 1 · must carry a colour profile</span>
+<span class="sh-out">  if ! exiftool -s3 -ProfileDescription &quot;$f&quot; | grep -q .; then</span>
+<span class="sh-out">    echo &quot;❌ untagged: $f&quot;; fail=1</span>
+<span class="sh-out">  fi</span>
+<span class="sh-out"></span>
+<span class="sh-out">  # 2 · must not be Adobe RGB</span>
+<span class="sh-out">  if exiftool -s3 -ProfileDescription &quot;$f&quot; | grep -qi &#x27;adobe&#x27;; then</span>
+<span class="sh-out">    echo &quot;❌ Adobe RGB in delivery: $f&quot;; fail=1</span>
+<span class="sh-out">  fi</span>
+<span class="sh-out"></span>
+<span class="sh-out">  # 3 · flat graphics should not be 4:2:0</span>
+<span class="sh-out">  case &quot;$f&quot; in</span>
+<span class="sh-out">    *ui-*|*logo-*|*diagram-*)</span>
+<span class="sh-out">      if exiftool -s3 -YCbCrSubSampling &quot;$f&quot; | grep -q &#x27;2 2&#x27;; then</span>
+<span class="sh-out">        echo &quot;⚠️  4:2:0 subsampling on a flat graphic: $f&quot;; fail=1</span>
+<span class="sh-out">      fi;;</span>
+<span class="sh-out">  esac</span>
+<span class="sh-out">done</span>
+<span class="sh-out"></span>
+<span class="sh-out">exit $fail</span>
+<span class="sh-out"></span></code></pre>
+<p>Three checks, thirty seconds, and it catches the majority of &quot;why does this look wrong on the new MacBooks&quot; tickets before they exist.</p>
+<p class='spacer'>&nbsp;</p>
+</details>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/96A7BE/96A7BE.png" alt="Section divider bar in muted blue" /></p>
+<h2>🧪 The review pass</h2>
+<pre class="code lang-console" data-lang="console"><code><span class="sh-prompt">$</span><span class="sh-cmd"> # 1 · view every colour-critical asset at 1x AND 2x</span>
+<span class="sh-out">      DevTools → device pixel ratio 1, then 2, then 3</span>
+<span class="sh-out"></span>
+<span class="sh-prompt">$</span><span class="sh-cmd"> # 2 · look for banding on a dark room, full-brightness screen</span>
+<span class="sh-out">      subtle gradients hide in daylight and appear at night</span>
+<span class="sh-out"></span>
+<span class="sh-prompt">$</span><span class="sh-cmd"> # 3 · check the seam between asset and CSS colour</span>
+<span class="sh-out">      zoom to 400% at the boundary — any line means a space mismatch</span>
+<span class="sh-out"></span>
+<span class="sh-prompt">$</span><span class="sh-cmd"> # 4 · verify the small tonal differences survived</span>
+<span class="sh-out">      #92A3BA vs #96A7BE — still two colours after export?</span>
+<span class="sh-out"></span>
+<span class="sh-prompt">$</span><span class="sh-cmd"> # 5 · confirm tags on the delivered files, not the source</span>
+<span class="sh-out">      exiftool -ProfileDescription dist/images/*.avif</span>
+<span class="sh-out"></span></code></pre>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/F2FAFF/F2FAFF.png" alt="Section divider bar in pale cyan" /></p>
+<h2>🧾 The checklist</h2>
+<ol><li>Design with <strong>≥ 2–3% lightness separation</strong>; anything closer will merge somewhere.</li><li>Never carry colour meaning in detail thinner than 2 device pixels.</li><li>Ship subtle gradients as CSS or SVG, not 8-bit rasters — and add noise or use <code>in oklch</code>.</li><li>Use <code>&lt;picture&gt;</code> to serve gamut and density together, for hero assets only.</li><li>Logos as SVG so brand colour comes from CSS and can&#x27;t drift.</li><li>Tag every raster, never deliver Adobe RGB, avoid 4:2:0 on flat graphics.</li><li>Automate the audit on the <strong>delivered</strong> files.</li></ol>
+<p>Low-contrast palettes are the hardest to prepare well, which is a good reason to know a palette&#x27;s contrast structure before you commit to it — <a href="https://colorfiind.com" target="_blank" rel="noopener">ColorFiind</a> labels each set&#x27;s contrast character alongside the HEX codes.</p>
+<p class='spacer'>&nbsp;</p>
+<a class='cta' href='https://colorfiind.com' target='_blank' rel='noopener'>Check a palette&#x27;s contrast before you build</a>
+<p class='spacer'>&nbsp;</p>
+<p><em>What&#x27;s the smallest colour difference you&#x27;ve tried to ship? Did it survive the export?</em> 👇</p></div>
+    </article>
+    <p class="note">Static local preview — Liquid tags are simulated, DEV renders them natively.
+    Colour swatches load from placehold.co, so they need internet access.</p>
+  </div>
+</div>
+</body>
+</html>

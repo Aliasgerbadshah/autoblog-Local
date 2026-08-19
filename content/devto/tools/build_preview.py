@@ -39,6 +39,11 @@ ARTICLES = [
     ("13-same-hex-different-monitors.md", "Monitor variance"),
     ("14-browser-color-management.md", "Colour management"),
     ("15-icc-color-profiles-guide.md", "ICC profiles"),
+    ("16-srgb-vs-p3-vs-adobe-rgb.md", "Choosing a space"),
+    ("17-retina-high-gamut-assets.md", "Retina assets"),
+    ("18-social-media-color-management.md", "Social exports"),
+    ("19-png-vs-jpeg-color-differences.md", "PNG vs JPEG"),
+    ("20-compression-color-accessibility.md", "Compression + a11y"),
 ]
 
 # --------------------------------------------------------------- highlighting

@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>How Image Compression Quietly Breaks Colour Accessibility — DEV preview</title>
+<style>
+:root{--bg:#0B0F1A;--panel:#111827;--panel2:#0F172A;--line:#1F2A44;--ink:#E7E9EE;
+--muted:#94A3B8;--primary:#00F5D4;--accent:#F15BB5;--support:#9B5DE5;--radius:14px}
+html[data-theme=light]{--bg:#F5F7F9;--panel:#fff;--panel2:#EFF2F6;--line:#DDE3EC;
+--ink:#1B2333;--muted:#5B6478;--primary:#0E7C86;--accent:#B4276F;--support:#6D3FBF}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+font:16px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+a{color:var(--primary)}
+header.top{position:sticky;top:0;z-index:20;display:flex;gap:14px;align-items:center;padding:12px 18px;
+background:var(--bg);border-bottom:1px solid var(--line)}
+.brand{font-weight:800}.brand span{color:var(--primary)}
+.rule{display:flex;height:6px;width:150px;border-radius:99px;overflow:hidden}.rule i{flex:1}
+.spacer{flex:1}
+.btn{font:inherit;cursor:pointer;border:1px solid var(--line);background:var(--panel);color:var(--ink);
+border-radius:99px;padding:6px 14px;text-decoration:none}
+.btn:hover{border-color:var(--primary)}
+.btn-dl{background:var(--primary);color:#08121A;border-color:var(--primary);font-weight:700}
+.layout{display:grid;grid-template-columns:290px minmax(0,1fr);gap:26px;padding:22px;align-items:start}
+@media(max-width:900px){.layout{grid-template-columns:1fr}}
+nav.files{position:sticky;top:70px;background:var(--panel);border:1px solid var(--line);
+border-radius:var(--radius);padding:12px;display:flex;flex-direction:column;gap:6px}
+nav.files h2{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin:6px 8px 8px}
+nav.files a{display:block;padding:9px 11px;border-radius:10px;text-decoration:none;color:var(--ink);
+font-size:14px;border:1px solid transparent}
+nav.files a:hover{background:var(--panel2)}
+nav.files a.active{background:var(--panel2);border-color:var(--primary);color:var(--primary)}
+nav.files small{display:block;color:var(--muted);font-size:11.5px}
+article{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+padding-bottom:48px;max-width:840px;width:100%;overflow:hidden}
+.cover{width:100%;display:block;border-bottom:1px solid var(--line)}
+.meta{padding:22px clamp(18px,4vw,44px) 0}
+.meta h1{font-size:clamp(26px,4vw,40px);line-height:1.18;margin:.2em 0 .3em}
+.tags{display:flex;flex-wrap:wrap;gap:8px}
+.tag{font-size:12.5px;color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:2px 8px}
+.desc{color:var(--muted);font-size:15px}
+.fm{font-size:12px;color:var(--muted);border-top:1px dashed var(--line);
+border-bottom:1px dashed var(--line);padding:8px 0;margin-bottom:6px}
+.post{padding:0 clamp(18px,4vw,44px)}
+.post img{max-width:100%;display:block;margin:.4em 0}
+.post td img{margin:0 auto}
+
+.post h2{margin-top:1.9em;font-size:26px;border-bottom:1px solid var(--line);padding-bottom:.25em}
+.post h3{margin-top:1.5em;font-size:20px}
+.post blockquote{margin:1.4em 0;padding:.9em 1.1em;background:var(--panel2);
+border-left:4px solid var(--accent);border-radius:0 10px 10px 0}
+.post blockquote p{margin:0}
+.tw{overflow-x:auto;margin:1.3em 0}
+.post table{border-collapse:collapse;width:100%;font-size:14.5px}
+.post th,.post td{border:1px solid var(--line);padding:8px 11px;text-align:left;vertical-align:middle}
+.post th{background:var(--panel2)}
+.post td img{vertical-align:middle}
+.post :not(pre)>code{background:var(--panel2);padding:.15em .4em;border-radius:6px;font-size:.9em;
+font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+pre.code{background:#0d1117;border:1px solid var(--line);border-radius:12px;padding:18px;
+overflow-x:auto;position:relative;margin:1.3em 0}
+pre.code code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13.5px;
+line-height:1.62;color:#C9D1D9;white-space:pre}
+pre.code::before{content:attr(data-lang);position:absolute;top:0;right:0;font-size:10.5px;
+letter-spacing:.12em;text-transform:uppercase;color:#0B0F1A;background:var(--primary);
+padding:2px 10px;border-radius:0 11px 0 10px;font-family:ui-monospace,monospace}
+pre.lang-diff{border-color:#F15BB5}
+pre.lang-console,pre.lang-bash{background:#05070d;border-color:#00F5D4}
+.t-comment{color:#6E7A8A;font-style:italic}
+.t-string{color:#A5D6FF}.t-number{color:#F0A868}.t-kw{color:#FF7B9C}
+.t-prop{color:#9B5DE5;font-weight:600}.t-tag{color:#7EE787}
+.t-color{color:#FFD479}
+.chip{display:inline-block;width:.78em;height:.78em;margin-right:.35em;border-radius:3px;
+border:1px solid rgba(255,255,255,.35);vertical-align:-1px}
+.d-add{color:#7EE787;display:block;background:rgba(46,160,67,.15)}
+.d-del{color:#FF9492;display:block;background:rgba(248,81,73,.14)}
+.d-hunk{color:#79C0FF;display:block}
+.sh-prompt{color:#F15BB5;font-weight:700}.sh-cmd{color:#E7E9EE}
+.sh-ok{color:#7EE787;display:block}.sh-out{color:#9DF7E4;display:block}
+details.liquid{background:var(--panel2);border:1px solid var(--line);border-radius:12px;
+padding:10px 16px;margin:1.4em 0}
+details.liquid summary{cursor:pointer;font-weight:650}
+.cta{display:block;text-align:center;margin:1.8em 0;padding:14px 20px;border-radius:12px;
+background:linear-gradient(90deg,var(--primary),var(--support));color:#08121A;font-weight:750;
+text-decoration:none}
+.katex{background:var(--panel2);border:1px dashed var(--line);border-radius:10px;padding:12px 16px;
+font-family:ui-monospace,monospace;color:var(--primary);margin:1.2em 0}
+.embed{color:var(--muted);font-family:ui-monospace,monospace;font-size:13px}
+.note{max-width:840px;color:var(--muted);font-size:13px;margin-top:14px}
+.post hr{border:0;border-top:1px solid var(--line);margin:2em 0}
+.post p:empty,.post p.spacer{margin:1.1em 0;min-height:1.1em}
+.post h2{margin-top:1.2em}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand">Swatch<span>Deck</span> · DEV.to preview</div>
+  <div class="rule"><i style="background:#0F172A"></i><i style="background:#00F5D4"></i>
+    <i style="background:#F15BB5"></i><i style="background:#9B5DE5"></i></div>
+  <div class="spacer"></div>
+  <a class="btn" href="/downloads">⬇ Downloads</a>
+  <a class="btn btn-dl" href="/download/20-compression-color-accessibility.md">⬇ This post (.md)</a>
+  <a class="btn" href="../20-compression-color-accessibility.md" target="_blank">View raw</a>
+  <button class="btn" onclick="var d=document.documentElement;
+    d.dataset.theme=d.dataset.theme==='dark'?'light':'dark'">🌗 Theme</button>
+</header>
+<div class="layout">
+  <nav class="files"><h2>Articles</h2><a href="00-swatch-deck-theme-kit.html" class="">swatch deck theme kit<small>Reusable theme kit</small></a><a href="01-choose-a-color-palette.html" class="">choose a color palette<small>Choosing a palette</small></a><a href="02-hex-to-design-tokens.html" class="">hex to design tokens<small>Tokens pipeline</small></a><a href="03-seasonal-palettes-ui-themes.html" class="">seasonal palettes ui themes<small>Seasonal themes</small></a><a href="04-neon-dark-mode-glow-ui.html" class="">neon dark mode glow ui<small>Neon dark mode</small></a><a href="05-automate-palette-workflow.html" class="">automate palette workflow<small>Automation</small></a><a href="06-css-color-mix-dynamic-variations.html" class="">css color mix dynamic variations<small>color-mix()</small></a><a href="07-css-relative-color-syntax.html" class="">css relative color syntax<small>Relative colour</small></a><a href="08-light-dark-css-theme-aware.html" class="">light dark css theme aware<small>light-dark()</small></a><a href="09-hwb-color-explained.html" class="">hwb color explained<small>HWB</small></a><a href="10-display-p3-vs-srgb-wide-gamut.html" class="">display p3 vs srgb wide gamut<small>Display-P3</small></a><a href="11-wide-gamut-without-breaking-displays.html" class="">wide gamut without breaking displays<small>Wide gamut safely</small></a><a href="12-color-gamut-media-queries.html" class="">color gamut media queries<small>Gamut media queries</small></a><a href="13-same-hex-different-monitors.html" class="">same hex different monitors<small>Monitor variance</small></a><a href="14-browser-color-management.html" class="">browser color management<small>Colour management</small></a><a href="15-icc-color-profiles-guide.html" class="">icc color profiles guide<small>ICC profiles</small></a><a href="16-srgb-vs-p3-vs-adobe-rgb.html" class="">srgb vs p3 vs adobe rgb<small>Choosing a space</small></a><a href="17-retina-high-gamut-assets.html" class="">retina high gamut assets<small>Retina assets</small></a><a href="18-social-media-color-management.html" class="">social media color management<small>Social exports</small></a><a href="19-png-vs-jpeg-color-differences.html" class="">png vs jpeg color differences<small>PNG vs JPEG</small></a><a href="20-compression-color-accessibility.html" class="active">compression color accessibility<small>Compression + a11y</small></a></nav>
+  <div>
+    <article>
+      
+      <div class="meta">
+        <div class="tags"><span class="tag">#accessibility</span><span class="tag">#webdev</span><span class="tag">#design</span><span class="tag">#frontend</span></div>
+        <h1>How Image Compression Quietly Breaks Colour Accessibility</h1>
+        <p class="desc">Compression doesn&#x27;t just soften edges — it moves colours, and it moves them most where text sits on images. Here&#x27;s how to keep contrast ratios intact after encoding.</p>
+        <div class="fm">published: <b>false</b> · tags: 4/4 · cover_image: none</div>
+      </div>
+      <div class="post"><div class='tw'><table><thead><tr><th><code>#7C1E3A</code></th><th><code>#FFFFFF</code></th><th><code>#176457</code></th><th><code>#452F73</code></th></tr></thead><tbody><tr><td><img src="https://placehold.co/120x56/7C1E3A/7C1E3A.png" alt="dark pink swatch #7C1E3A" /></td><td><img src="https://placehold.co/120x56/FFFFFF/FFFFFF.png" alt="off-white swatch #FFFFFF" /></td><td><img src="https://placehold.co/120x56/176457/176457.png" alt="deep teal swatch #176457" /></td><td><img src="https://placehold.co/120x56/452F73/452F73.png" alt="dark indigo swatch #452F73" /></td></tr></tbody></table></div>
+<blockquote><p>🎨 <strong>Palette in play</strong> — <a href="https://colorfiind.com/palette/deep-winter-reef-couture" target="_blank" rel="noopener">Deep Winter Reef Couture</a> · <code>#7C1E3A</code> <code>#FFFFFF</code> <code>#176457</code> <code>#452F73</code></p></blockquote>
+<p>Accessibility audits check contrast against the values in your design file. Users experience contrast against the pixels their browser actually decoded. Between those two things sits an encoder that was asked to make the file smaller, and it does that by <strong>changing colours</strong>.</p>
+<p class='spacer'>&nbsp;</p>
+<p>Most of the time the change is too small to matter. In three specific situations it is enough to push a passing combination into failure — and those situations are common.</p>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/7C1E3A/7C1E3A.png" alt="Section divider bar in dark pink" /></p>
+<h2>📊 The starting point: values that pass comfortably</h2>
+<p>This palette is deliberately high-contrast, which is exactly what you want for text over imagery:</p>
+<div class='tw'><table><thead><tr><th>Text</th><th>Background</th><th>Ratio</th><th>Grade</th></tr></thead><tbody><tr><td><img src="https://placehold.co/70x26/FFFFFF/FFFFFF.png" alt="off-white swatch #FFFFFF" /> <code>#FFFFFF</code></td><td><img src="https://placehold.co/70x26/7C1E3A/7C1E3A.png" alt="dark pink swatch #7C1E3A" /> <code>#7C1E3A</code></td><td><strong>9.98:1</strong></td><td>✅ AAA</td></tr><tr><td><img src="https://placehold.co/70x26/FFFFFF/FFFFFF.png" alt="off-white swatch #FFFFFF" /> <code>#FFFFFF</code></td><td><img src="https://placehold.co/70x26/176457/176457.png" alt="deep teal swatch #176457" /> <code>#176457</code></td><td><strong>7.01:1</strong></td><td>✅ AAA</td></tr><tr><td><img src="https://placehold.co/70x26/FFFFFF/FFFFFF.png" alt="off-white swatch #FFFFFF" /> <code>#FFFFFF</code></td><td><img src="https://placehold.co/70x26/452F73/452F73.png" alt="dark indigo swatch #452F73" /> <code>#452F73</code></td><td><strong>11.01:1</strong></td><td>✅ AAA</td></tr></tbody></table></div>
+<p>Plenty of headroom. Now put that white text <strong>inside a JPEG</strong> instead of in HTML, and watch what compression does to it.</p>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/176457/176457.png" alt="Section divider bar in deep teal" /></p>
+<h2>🔨 The three ways compression eats contrast</h2>
+<h3>1 · Ringing around text</h3>
+<p>JPEG and other DCT-based codecs work in 8×8 blocks. A hard edge — white letterform against a dark background — produces high-frequency information that quantisation can&#x27;t represent exactly, so the decoder reconstructs it with overshoot: faint dark halos inside the light stroke and light halos outside it.</p>
+<p class='spacer'>&nbsp;</p>
+<p>The consequence for accessibility: the <em>effective</em> colour of a thin white stroke is no longer <code>#FFFFFF</code>. Sample the middle of a 2px stroke in a heavily compressed JPEG and you may find <code>#E4E0E2</code> — which drops white-on-burgundy from <strong>9.98:1</strong> to <strong>7.63:1</strong>. Still fine here. Start from a combination at 4.6:1 and the same effect puts you under the line.</p>
+<h3>2 · Chroma subsampling shifting the colour, not the brightness</h3>
+<p>At 4:2:0, colour is stored at quarter resolution. Around coloured text this produces fringing — and if your foreground and background differ mainly in <strong>hue</strong> rather than <strong>lightness</strong>, subsampling attacks exactly the channel carrying the distinction.</p>
+<p class='spacer'>&nbsp;</p>
+<p>This is the strongest argument for a rule you already know: <strong>contrast should come from lightness, not hue.</strong> A design that satisfies WCAG through a big lightness gap is robust to compression. One that scrapes past on a saturated-hue difference is not.</p>
+<h3>3 · Banding in gradients behind text</h3>
+<p>A hero with a subtle dark gradient behind white text can band after encoding. Each band is a slightly different background value, so the contrast ratio varies across the headline — and the audit, which sampled one point, never saw it.</p>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/7C1E3A/7C1E3A.png" alt="Section divider bar in dark pink" /></p>
+<h2>🛡️ The fix that solves all three at once</h2>
+<p><strong>Don&#x27;t put text inside the image.</strong></p>
+<pre class="code lang-html" data-lang="html"><code>
+<span class="t-tag">&lt;img</span> src=&quot;hero-with-headline.jpg&quot; alt=&quot;Winter collection — now available&quot;&gt;
+
+
+<span class="t-tag">&lt;figure</span> class=&quot;hero&quot;&gt;
+  <span class="t-tag">&lt;img</span> src=&quot;hero.avif&quot; alt=&quot;&quot; width=&quot;<span class="t-number">1600</span>&quot; height=&quot;<span class="t-number">900</span>&quot;&gt;
+  <span class="t-tag">&lt;figcaption</span> class=&quot;hero__text&quot;&gt;Winter collection — now available<span class="t-tag">&lt;/figcaption</span>&gt;
+<span class="t-tag">&lt;/figure</span>&gt;
+</code></pre>
+<pre class="code lang-css" data-lang="css"><code>.hero { position: relative; isolation: isolate; }
+
+.hero img { display: block; inline-size: <span class="t-number">100</span>%; block-size: auto; }
+
+.hero__text {
+  <span class="t-prop">position</span>: absolute;
+  <span class="t-prop">inset-block-end</span>: <span class="t-number">0</span>;
+  <span class="t-prop">padding</span>: <span class="t-number">2rem</span>;
+  <span class="t-prop">color</span>: <span class="t-color"><i class="chip" style="background:#FFFFFF"></i>#FFFFFF</span>;
+  <span class="t-prop">font-size</span>: clamp(<span class="t-number">1.5rem</span>, 4vw, <span class="t-number">3rem</span>);
+  <span class="t-prop">font-weight</span>: <span class="t-number">650</span>;
+  <span class="t-comment">/* a scrim guarantees the ratio regardless of what the photo does */</span>
+  <span class="t-prop">background</span>: linear-gradient(to top, rgb(<span class="t-number">124</span> <span class="t-number">30</span> <span class="t-number">58</span> / <span class="t-number">0.92</span>), rgb(<span class="t-number">124</span> <span class="t-number">30</span> <span class="t-number">58</span> / <span class="t-number">0</span>));
+}
+</code></pre>
+<p>The scrim is the important part: it pins the <em>effective</em> background to a value you chose — here <code>#7C1E3A</code> at 92%, giving white text a computable ratio — instead of whatever the photograph happens to contain after compression.</p>
+<p class='spacer'>&nbsp;</p>
+<p>Benefits beyond contrast: the text is selectable, translatable, searchable, resizable and readable by a screen reader without duplicating it in <code>alt</code>.</p>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/176457/176457.png" alt="Section divider bar in deep teal" /></p>
+<h2>🎛️ When the text really must be in the image</h2>
+<p>Social cards, email headers, some ad formats. Then:</p>
+<pre class="code lang-console" data-lang="console"><code><span class="sh-prompt">$</span><span class="sh-cmd"> # 1 · lossless or near-lossless for anything with text</span>
+<span class="sh-out">  magick card.png -define png:compression-level=9 card-out.png</span>
+<span class="sh-out">  magick card.png -quality 95 -sampling-factor 4:4:4 card-out.jpg</span>
+<span class="sh-out"></span>
+<span class="sh-prompt">$</span><span class="sh-cmd"> # 2 · never lossy WebP for text (it is always 4:2:0)</span>
+<span class="sh-out">  cwebp -lossless card.png -o card.webp</span>
+<span class="sh-out"></span>
+<span class="sh-prompt">$</span><span class="sh-cmd"> # 3 · give the text more headroom than the audit requires</span>
+<span class="sh-out">  design at ≥ 7:1 so a compression loss of ~1.5 points still clears 4.5:1</span>
+<span class="sh-out"></span>
+<span class="sh-prompt">$</span><span class="sh-cmd"> # 4 · check the compressed file, not the source</span>
+<span class="sh-out"></span></code></pre>
+<p>That fourth line is the whole discipline. Audit the artefact you ship.</p>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/7C1E3A/7C1E3A.png" alt="Section divider bar in dark pink" /></p>
+<h2>🧪 Measuring contrast on the file you actually serve</h2>
+<pre class="code lang-js" data-lang="js"><code><span <span class="t-kw">class</span>="t-comment">// contrast-after-encode.mjs — sample the real pixels <span class="t-kw">of</span> the delivered image</span>
+<span class="t-kw">import</span> sharp <span class="t-kw">from</span> &<span <span class="t-kw">class</span>="t-comment">#x27;sharp&#x27;;</span>
+
+<span class="t-kw">const</span> luminance = ([r, g, b]) =&gt; {
+  <span class="t-kw">const</span> f = (c) =&gt; {
+    <span class="t-kw">const</span> s = c / <span <span class="t-kw">class</span>="t-number">255</span>;
+    <span class="t-kw">return</span> s &lt;= <span <span class="t-kw">class</span>="t-number">0.03928</span> ? s / <span <span class="t-kw">class</span>="t-number">12.92</span> : ((s + <span <span class="t-kw">class</span>="t-number">0.055</span>) / <span <span class="t-kw">class</span>="t-number">1.055</span>) ** <span <span class="t-kw">class</span>="t-number">2.4</span>;
+  };
+  <span class="t-kw">return</span> <span <span class="t-kw">class</span>="t-number">0.2126</span> * f(r) + <span <span class="t-kw">class</span>="t-number">0.7152</span> * f(g) + <span <span class="t-kw">class</span>="t-number">0.0722</span> * f(b);
+};
+
+<span class="t-kw">const</span> ratio = (a, b) =&gt; {
+  <span class="t-kw">const</span> [hi, lo] = [luminance(a), luminance(b)].sort((x, y) =&gt; y - x);
+  <span class="t-kw">return</span> +((hi + <span <span class="t-kw">class</span>="t-number">0.05</span>) / (lo + <span <span class="t-kw">class</span>="t-number">0.05</span>)).toFixed(<span <span class="t-kw">class</span>="t-number">2</span>);
+};
+
+<span <span class="t-kw">class</span>="t-comment">// average a small patch so a single ringing pixel doesn&#x27;t skew the result</span>
+<span class="t-kw">async</span> <span class="t-kw">function</span> patch(file, left, top, size = <span <span class="t-kw">class</span>="t-number">6</span>) {
+  <span class="t-kw">const</span> { data } = <span class="t-kw">await</span> sharp(file)
+    .extract({ left, top, width: size, height: size })
+    .raw().toBuffer({ resolveWithObject: <span class="t-kw">true</span> });
+  <span class="t-kw">const</span> px = [<span <span class="t-kw">class</span>="t-number">0</span>, <span <span class="t-kw">class</span>="t-number">1</span>, <span <span class="t-kw">class</span>="t-number">2</span>].map((c) =&gt; {
+    <span class="t-kw">let</span> sum = <span <span class="t-kw">class</span>="t-number">0</span>;
+    <span class="t-kw">for</span> (<span class="t-kw">let</span> i = c; i &lt; data.length; i += <span <span class="t-kw">class</span>="t-number">3</span>) sum += data[i];
+    <span class="t-kw">return</span> Math.round(sum / (data.length / <span <span class="t-kw">class</span>="t-number">3</span>));
+  });
+  <span class="t-kw">return</span> px;
+}
+
+<span class="t-kw">const</span> fg = <span class="t-kw">await</span> patch(&<span <span class="t-kw">class</span>="t-comment">#x27;dist/card.jpg&#x27;, 120, 300);   // inside a letter stroke</span>
+<span class="t-kw">const</span> bg = <span class="t-kw">await</span> patch(&<span <span class="t-kw">class</span>="t-comment">#x27;dist/card.jpg&#x27;, 60, 300);    // background beside it</span>
+
+console.log(&<span <span class="t-kw">class</span>="t-comment">#x27;after encoding:&#x27;, ratio(fg, bg));       // the number that matters</span>
+</code></pre>
+<p>Wire that into CI for your social-card generator and a quality-setting change can never silently break a contrast requirement.</p>
+<p class='spacer'>&nbsp;</p>
+<details class='liquid' open><summary>♿ The rest of the accessibility angle</summary>
+<p class='spacer'>&nbsp;</p>
+<p>Compression interacts with more than contrast:</p>
+<ul><li><strong>Colour-only meaning gets worse.</strong> If a chart image distinguishes series by hue and 4:2:0 smears those hues together, the encoding has amplified an existing accessibility failure. Redundant encoding — shape, pattern, direct labels — protects against both.</li><li><strong>Banding is a comfort issue.</strong> Visible banding in large flat areas is unpleasant for people with light sensitivity or migraine triggers. Noise-dithering a gradient is an accessibility improvement, not just a cosmetic one.</li><li><strong>Alt text stops being optional</strong> when text lives inside an image. If the headline is in the JPEG and the <code>alt</code> is empty, that headline does not exist for a screen-reader user.</li><li><strong>Zoom.</strong> Baked-in text pixelates at 200% zoom; HTML text reflows. WCAG asks for the latter.</li></ul>
+</details>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/176457/176457.png" alt="Section divider bar in deep teal" /></p>
+<h2>🧾 The checklist</h2>
+<ol><li>Contrast must come from a <strong>lightness</strong> difference — that&#x27;s the part compression preserves best.</li><li>Keep text in HTML over images, with a scrim that fixes the effective background.</li><li>If text must be baked in: lossless, or JPEG q95 at 4:4:4. Never lossy WebP.</li><li>Design to ≥ 7:1 for text over imagery so encoding losses stay clear of the limit.</li><li>Measure contrast on the <strong>delivered</strong> file, averaged over a patch.</li><li>Dither gradients to avoid banding — it&#x27;s a comfort issue, not just a visual one.</li><li>Never rely on hue alone; compression degrades hue distinctions first.</li></ol>
+<p>High-contrast palettes make all of this easier, because they start with headroom to lose — the deep-winter style sets on <a href="https://colorfiind.com" target="_blank" rel="noopener">ColorFiind</a> are built around exactly that kind of lightness separation.</p>
+<p class='spacer'>&nbsp;</p>
+<a class='cta' href='https://colorfiind.com/season/winter/deep-winter-color-palette' target='_blank' rel='noopener'>Browse high-contrast palettes</a>
+<p class='spacer'>&nbsp;</p>
+<p><em>Have you ever measured contrast on the compressed file rather than the design? The gap surprises most people.</em> 👇</p></div>
+    </article>
+    <p class="note">Static local preview — Liquid tags are simulated, DEV renders them natively.
+    Colour swatches load from placehold.co, so they need internet access.</p>
+  </div>
+</div>
+</body>
+</html>

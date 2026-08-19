@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>sRGB vs Display P3 vs Adobe RGB: Which One Should You Actually Work In? — DEV preview</title>
+<style>
+:root{--bg:#0B0F1A;--panel:#111827;--panel2:#0F172A;--line:#1F2A44;--ink:#E7E9EE;
+--muted:#94A3B8;--primary:#00F5D4;--accent:#F15BB5;--support:#9B5DE5;--radius:14px}
+html[data-theme=light]{--bg:#F5F7F9;--panel:#fff;--panel2:#EFF2F6;--line:#DDE3EC;
+--ink:#1B2333;--muted:#5B6478;--primary:#0E7C86;--accent:#B4276F;--support:#6D3FBF}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+font:16px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+a{color:var(--primary)}
+header.top{position:sticky;top:0;z-index:20;display:flex;gap:14px;align-items:center;padding:12px 18px;
+background:var(--bg);border-bottom:1px solid var(--line)}
+.brand{font-weight:800}.brand span{color:var(--primary)}
+.rule{display:flex;height:6px;width:150px;border-radius:99px;overflow:hidden}.rule i{flex:1}
+.spacer{flex:1}
+.btn{font:inherit;cursor:pointer;border:1px solid var(--line);background:var(--panel);color:var(--ink);
+border-radius:99px;padding:6px 14px;text-decoration:none}
+.btn:hover{border-color:var(--primary)}
+.btn-dl{background:var(--primary);color:#08121A;border-color:var(--primary);font-weight:700}
+.layout{display:grid;grid-template-columns:290px minmax(0,1fr);gap:26px;padding:22px;align-items:start}
+@media(max-width:900px){.layout{grid-template-columns:1fr}}
+nav.files{position:sticky;top:70px;background:var(--panel);border:1px solid var(--line);
+border-radius:var(--radius);padding:12px;display:flex;flex-direction:column;gap:6px}
+nav.files h2{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin:6px 8px 8px}
+nav.files a{display:block;padding:9px 11px;border-radius:10px;text-decoration:none;color:var(--ink);
+font-size:14px;border:1px solid transparent}
+nav.files a:hover{background:var(--panel2)}
+nav.files a.active{background:var(--panel2);border-color:var(--primary);color:var(--primary)}
+nav.files small{display:block;color:var(--muted);font-size:11.5px}
+article{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+padding-bottom:48px;max-width:840px;width:100%;overflow:hidden}
+.cover{width:100%;display:block;border-bottom:1px solid var(--line)}
+.meta{padding:22px clamp(18px,4vw,44px) 0}
+.meta h1{font-size:clamp(26px,4vw,40px);line-height:1.18;margin:.2em 0 .3em}
+.tags{display:flex;flex-wrap:wrap;gap:8px}
+.tag{font-size:12.5px;color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:2px 8px}
+.desc{color:var(--muted);font-size:15px}
+.fm{font-size:12px;color:var(--muted);border-top:1px dashed var(--line);
+border-bottom:1px dashed var(--line);padding:8px 0;margin-bottom:6px}
+.post{padding:0 clamp(18px,4vw,44px)}
+.post img{max-width:100%;display:block;margin:.4em 0}
+.post td img{margin:0 auto}
+
+.post h2{margin-top:1.9em;font-size:26px;border-bottom:1px solid var(--line);padding-bottom:.25em}
+.post h3{margin-top:1.5em;font-size:20px}
+.post blockquote{margin:1.4em 0;padding:.9em 1.1em;background:var(--panel2);
+border-left:4px solid var(--accent);border-radius:0 10px 10px 0}
+.post blockquote p{margin:0}
+.tw{overflow-x:auto;margin:1.3em 0}
+.post table{border-collapse:collapse;width:100%;font-size:14.5px}
+.post th,.post td{border:1px solid var(--line);padding:8px 11px;text-align:left;vertical-align:middle}
+.post th{background:var(--panel2)}
+.post td img{vertical-align:middle}
+.post :not(pre)>code{background:var(--panel2);padding:.15em .4em;border-radius:6px;font-size:.9em;
+font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+pre.code{background:#0d1117;border:1px solid var(--line);border-radius:12px;padding:18px;
+overflow-x:auto;position:relative;margin:1.3em 0}
+pre.code code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13.5px;
+line-height:1.62;color:#C9D1D9;white-space:pre}
+pre.code::before{content:attr(data-lang);position:absolute;top:0;right:0;font-size:10.5px;
+letter-spacing:.12em;text-transform:uppercase;color:#0B0F1A;background:var(--primary);
+padding:2px 10px;border-radius:0 11px 0 10px;font-family:ui-monospace,monospace}
+pre.lang-diff{border-color:#F15BB5}
+pre.lang-console,pre.lang-bash{background:#05070d;border-color:#00F5D4}
+.t-comment{color:#6E7A8A;font-style:italic}
+.t-string{color:#A5D6FF}.t-number{color:#F0A868}.t-kw{color:#FF7B9C}
+.t-prop{color:#9B5DE5;font-weight:600}.t-tag{color:#7EE787}
+.t-color{color:#FFD479}
+.chip{display:inline-block;width:.78em;height:.78em;margin-right:.35em;border-radius:3px;
+border:1px solid rgba(255,255,255,.35);vertical-align:-1px}
+.d-add{color:#7EE787;display:block;background:rgba(46,160,67,.15)}
+.d-del{color:#FF9492;display:block;background:rgba(248,81,73,.14)}
+.d-hunk{color:#79C0FF;display:block}
+.sh-prompt{color:#F15BB5;font-weight:700}.sh-cmd{color:#E7E9EE}
+.sh-ok{color:#7EE787;display:block}.sh-out{color:#9DF7E4;display:block}
+details.liquid{background:var(--panel2);border:1px solid var(--line);border-radius:12px;
+padding:10px 16px;margin:1.4em 0}
+details.liquid summary{cursor:pointer;font-weight:650}
+.cta{display:block;text-align:center;margin:1.8em 0;padding:14px 20px;border-radius:12px;
+background:linear-gradient(90deg,var(--primary),var(--support));color:#08121A;font-weight:750;
+text-decoration:none}
+.katex{background:var(--panel2);border:1px dashed var(--line);border-radius:10px;padding:12px 16px;
+font-family:ui-monospace,monospace;color:var(--primary);margin:1.2em 0}
+.embed{color:var(--muted);font-family:ui-monospace,monospace;font-size:13px}
+.note{max-width:840px;color:var(--muted);font-size:13px;margin-top:14px}
+.post hr{border:0;border-top:1px solid var(--line);margin:2em 0}
+.post p:empty,.post p.spacer{margin:1.1em 0;min-height:1.1em}
+.post h2{margin-top:1.2em}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand">Swatch<span>Deck</span> · DEV.to preview</div>
+  <div class="rule"><i style="background:#0F172A"></i><i style="background:#00F5D4"></i>
+    <i style="background:#F15BB5"></i><i style="background:#9B5DE5"></i></div>
+  <div class="spacer"></div>
+  <a class="btn" href="/downloads">⬇ Downloads</a>
+  <a class="btn btn-dl" href="/download/16-srgb-vs-p3-vs-adobe-rgb.md">⬇ This post (.md)</a>
+  <a class="btn" href="../16-srgb-vs-p3-vs-adobe-rgb.md" target="_blank">View raw</a>
+  <button class="btn" onclick="var d=document.documentElement;
+    d.dataset.theme=d.dataset.theme==='dark'?'light':'dark'">🌗 Theme</button>
+</header>
+<div class="layout">
+  <nav class="files"><h2>Articles</h2><a href="00-swatch-deck-theme-kit.html" class="">swatch deck theme kit<small>Reusable theme kit</small></a><a href="01-choose-a-color-palette.html" class="">choose a color palette<small>Choosing a palette</small></a><a href="02-hex-to-design-tokens.html" class="">hex to design tokens<small>Tokens pipeline</small></a><a href="03-seasonal-palettes-ui-themes.html" class="">seasonal palettes ui themes<small>Seasonal themes</small></a><a href="04-neon-dark-mode-glow-ui.html" class="">neon dark mode glow ui<small>Neon dark mode</small></a><a href="05-automate-palette-workflow.html" class="">automate palette workflow<small>Automation</small></a><a href="06-css-color-mix-dynamic-variations.html" class="">css color mix dynamic variations<small>color-mix()</small></a><a href="07-css-relative-color-syntax.html" class="">css relative color syntax<small>Relative colour</small></a><a href="08-light-dark-css-theme-aware.html" class="">light dark css theme aware<small>light-dark()</small></a><a href="09-hwb-color-explained.html" class="">hwb color explained<small>HWB</small></a><a href="10-display-p3-vs-srgb-wide-gamut.html" class="">display p3 vs srgb wide gamut<small>Display-P3</small></a><a href="11-wide-gamut-without-breaking-displays.html" class="">wide gamut without breaking displays<small>Wide gamut safely</small></a><a href="12-color-gamut-media-queries.html" class="">color gamut media queries<small>Gamut media queries</small></a><a href="13-same-hex-different-monitors.html" class="">same hex different monitors<small>Monitor variance</small></a><a href="14-browser-color-management.html" class="">browser color management<small>Colour management</small></a><a href="15-icc-color-profiles-guide.html" class="">icc color profiles guide<small>ICC profiles</small></a><a href="16-srgb-vs-p3-vs-adobe-rgb.html" class="active">srgb vs p3 vs adobe rgb<small>Choosing a space</small></a><a href="17-retina-high-gamut-assets.html" class="">retina high gamut assets<small>Retina assets</small></a><a href="18-social-media-color-management.html" class="">social media color management<small>Social exports</small></a><a href="19-png-vs-jpeg-color-differences.html" class="">png vs jpeg color differences<small>PNG vs JPEG</small></a><a href="20-compression-color-accessibility.html" class="">compression color accessibility<small>Compression + a11y</small></a></nav>
+  <div>
+    <article>
+      
+      <div class="meta">
+        <div class="tags"><span class="tag">#css</span><span class="tag">#webdev</span><span class="tag">#design</span><span class="tag">#frontend</span></div>
+        <h1>sRGB vs Display P3 vs Adobe RGB: Which One Should You Actually Work In?</h1>
+        <p class="desc">Three colour spaces, three jobs. A decision table for web work, a look at what each one holds, and the conversion mistakes that quietly ruin brand colour.</p>
+        <div class="fm">published: <b>false</b> · tags: 4/4 · cover_image: none</div>
+      </div>
+      <div class="post"><div class='tw'><table><thead><tr><th><code>#36F26E</code></th><th><code>#3BD8F7</code></th><th><code>#A428E2</code></th><th><code>#EF684D</code></th></tr></thead><tbody><tr><td><img src="https://placehold.co/120x56/36F26E/36F26E.png" alt="vivid green swatch #36F26E" /></td><td><img src="https://placehold.co/120x56/3BD8F7/3BD8F7.png" alt="vivid cyan swatch #3BD8F7" /></td><td><img src="https://placehold.co/120x56/A428E2/A428E2.png" alt="purple swatch #A428E2" /></td><td><img src="https://placehold.co/120x56/EF684D/EF684D.png" alt="vivid red swatch #EF684D" /></td></tr></tbody></table></div>
+<blockquote><p>🎨 <strong>Palette in play</strong> — <a href="https://colorfiind.com/palette/dahlia-meadow-daybreak" target="_blank" rel="noopener">Dahlia Meadow Daybreak</a> · <code>#36F26E</code> <code>#3BD8F7</code> <code>#A428E2</code> <code>#EF684D</code></p></blockquote>
+<p>Three colour spaces come up constantly, and most advice about them is either &quot;always use sRGB&quot; or a colour-science lecture. Neither helps when you&#x27;re staring at an export dialog.</p>
+<p class='spacer'>&nbsp;</p>
+<p>Here&#x27;s the short version: <strong>they solve different problems, and only one of them is a delivery format for the web.</strong></p>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/36F26E/36F26E.png" alt="Section divider bar in vivid green" /></p>
+<h2>📊 What each one actually holds</h2>
+<div class='tw'><table><thead><tr><th></th><th>sRGB</th><th>Display P3</th><th>Adobe RGB (1998)</th></tr></thead><tbody><tr><td>Born</td><td>1996, for CRTs</td><td>2015, from cinema&#x27;s DCI-P3</td><td>1998, for print prepress</td></tr><tr><td>Coverage of visible colour</td><td>~35%</td><td>~45%</td><td>~50%</td></tr><tr><td>Strongest in</td><td>nothing in particular</td><td><strong>reds and greens</strong></td><td><strong>cyans and greens</strong></td></tr><tr><td>Gamma</td><td>~2.2 (piecewise)</td><td>same curve as sRGB</td><td>2.19921875</td></tr><tr><td>White point</td><td>D65</td><td>D65</td><td>D65</td></tr><tr><td>Native to</td><td>the web, everything</td><td>Apple hardware, modern phones</td><td>print workflows</td></tr><tr><td>Web delivery?</td><td>✅ the default</td><td>✅ via <code>color()</code> + tagged images</td><td>🚫 <strong>no</strong></td></tr></tbody></table></div>
+<p>That last row is the one that matters most. Adobe RGB is a <strong>working</strong> space, not a delivery space. Ship an Adobe RGB file to the web and any viewer that ignores the profile treats those numbers as sRGB — and the image goes flat and desaturated.</p>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/3BD8F7/3BD8F7.png" alt="Section divider bar in vivid cyan" /></p>
+<h2>🔬 The same colour, three ways</h2>
+<p>Here is that palette&#x27;s green expressed in each space. Same perceptual colour, different numbers, because each space&#x27;s primaries sit in a different place:</p>
+<div class='tw'><table><thead><tr><th>Space</th><th><code>#36F26E</code> expressed as</th></tr></thead><tbody><tr><td>sRGB</td><td><code>#36F26E</code> → <code>rgb(54 242 110)</code></td></tr><tr><td>Display P3</td><td><code>color(display-p3 0.4708 0.9356 0.4922)</code></td></tr><tr><td>Adobe RGB</td><td><code>(0.5599 0.9474 0.4655)</code></td></tr></tbody></table></div>
+<p>Notice the numbers move <em>inward</em> for the wider spaces. That&#x27;s the tell: a wider space needs less of each primary to hit the same colour. And it&#x27;s exactly why a mis-tagged file looks wrong — feed <code>0.5599</code> to something expecting sRGB and you get a duller green.</p>
+<p class='spacer'>&nbsp;</p>
+<p>The interesting question is the reverse: what can each space hold that sRGB cannot?</p>
+<div class='tw'><table><thead><tr><th>Colour</th><th>In sRGB</th><th>Display P3</th><th>Adobe RGB</th></tr></thead><tbody><tr><td>Saturated cinema green</td><td>clipped</td><td>✅ comfortably</td><td>✅ comfortably</td></tr><tr><td>Vivid coral / warm red</td><td>clipped</td><td>✅ notably better</td><td>🟡 slightly better</td></tr><tr><td>Deep cyan</td><td>clipped</td><td>🟡 slightly better</td><td>✅ notably better</td></tr><tr><td>Everyday UI colour</td><td>✅ fine</td><td>✅ fine</td><td>✅ fine</td></tr></tbody></table></div>
+<p>P3 was built from cinema primaries and is strongest in reds. Adobe RGB was built for CMYK prepress and is strongest in cyans and greens — because those are the colours offset printing struggles to reach and photographers needed to preserve. <strong>Neither is &quot;bigger&quot; in a way that makes it universally better.</strong></p>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/A428E2/A428E2.png" alt="Section divider bar in purple" /></p>
+<h2>🧭 The decision table</h2>
+<div class='tw'><table><thead><tr><th>What you&#x27;re doing</th><th>Work in</th><th>Deliver as</th></tr></thead><tbody><tr><td>Web UI, CSS colours</td><td>sRGB</td><td>sRGB (it&#x27;s the default; no tagging needed)</td></tr><tr><td>Web imagery, general</td><td>sRGB</td><td>sRGB, <strong>profile embedded</strong></td></tr><tr><td>Web hero art for Apple-heavy traffic</td><td>Display P3</td><td>tagged P3 + sRGB fallback via <code>&lt;picture&gt;</code></td></tr><tr><td>App icons, marketing assets</td><td>Display P3</td><td>per-platform export, tagged</td></tr><tr><td>Photography you&#x27;ll edit later</td><td>Adobe RGB or ProPhoto</td><td><strong>convert</strong> to sRGB or P3 on export</td></tr><tr><td>Anything going to print</td><td>Adobe RGB</td><td>the printer&#x27;s CMYK profile</td></tr><tr><td>Social media</td><td>anything</td><td><strong>always sRGB, 8-bit, tagged</strong></td></tr></tbody></table></div>
+<p>If you remember one line: <strong>edit wide, deliver appropriately, never deliver Adobe RGB to a browser.</strong></p>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/EF684D/EF684D.png" alt="Section divider bar in vivid red" /></p>
+<h2>🎨 In CSS, specifically</h2>
+<p>CSS colours are sRGB unless you say otherwise. There&#x27;s no Adobe RGB option in CSS at all — and that&#x27;s fine, because it was never a display space.</p>
+<pre class="code lang-css" data-lang="css"><code>.brand {
+  <span class="t-comment">/* sRGB — the contract, understood everywhere */</span>
+  <span class="t-prop">background</span>: <span class="t-color"><i class="chip" style="background:#A428E2"></i>#A428E2</span>;
+}
+
+<span class="t-kw">@media</span> (color-gamut: p3) {
+  .brand {
+    <span class="t-comment">/* the same purple, in P3 coordinates */</span>
+    <span class="t-prop">background</span>: color(display-p3 <span class="t-number">0.5919</span> <span class="t-number">0.1991</span> <span class="t-number">0.8544</span>);
+  }
+}
+</code></pre>
+<p>Or skip the branching and describe the colour perceptually, letting the browser map it to whatever the display supports:</p>
+<pre class="code lang-css" data-lang="css"><code>.brand {
+  <span class="t-prop">background</span>: oklch(<span class="t-number">0.564</span> <span class="t-number">0.258</span> <span class="t-number">310.4</span>);   <span class="t-comment">/* = #A428E2, richer on P3 screens */</span>
+}
+</code></pre>
+<p><code>oklch()</code> is not a fourth colour space competing with the three above — it&#x27;s a way of <em>describing</em> colour that isn&#x27;t tied to any device&#x27;s primaries. That&#x27;s why it&#x27;s the best default for a design system that has to serve both narrow and wide screens.</p>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/36F26E/36F26E.png" alt="Section divider bar in vivid green" /></p>
+<h2>🚨 The four conversion mistakes</h2>
+<p><strong>1 · Assign vs Convert.</strong> <em>Assign</em> relabels the numbers — the appearance changes. <em>Convert</em> changes the numbers to preserve the appearance. Assigning Adobe RGB to an sRGB file is the classic &quot;why did it get so saturated?&quot; moment.</p>
+<pre class="code lang-console" data-lang="console"><code><span class="sh-prompt">$</span><span class="sh-cmd"> # convert (right): appearance preserved</span>
+<span class="sh-out">  magick in.tif -profile AdobeRGB1998.icc -profile sRGB.icc out.jpg</span>
+<span class="sh-out"></span>
+<span class="sh-prompt">$</span><span class="sh-cmd"> # assign (usually wrong for delivery): numbers kept, appearance changes</span>
+<span class="sh-out">  magick in.tif -set profile:icc sRGB.icc out.jpg</span>
+<span class="sh-out"></span></code></pre>
+<p><strong>2 · Exporting &quot;Same as source&quot;.</strong> The single most common cause of muddy uploads. Your working space leaks into a delivery file.</p>
+<p class='spacer'>&nbsp;</p>
+<p><strong>3 · Stripping the profile to save bytes.</strong> An untagged file is assumed sRGB. If it isn&#x27;t sRGB, it&#x27;s now wrong — and a P3 hero going out untagged is the bug that fills support queues.</p>
+<p class='spacer'>&nbsp;</p>
+<p><strong>4 · Round-tripping.</strong> sRGB → Adobe RGB → sRGB does not return you to where you started; every conversion clips and quantises. Keep one master in the widest space and export from it each time.</p>
+<p class='spacer'>&nbsp;</p>
+<details class='liquid' open><summary>🧪 Checking what you actually shipped</summary>
+<pre class="code lang-bash" data-lang="bash"><code><span class="sh-out"># what profile is in the delivered file?</span>
+<span class="sh-out">exiftool -ProfileDescription -ColorSpace dist/hero.jpg</span>
+<span class="sh-out">#   Profile Description : sRGB IEC61966-2.1</span>
+<span class="sh-out">#   Color Space         : sRGB                ← good</span>
+<span class="sh-out"></span>
+<span class="sh-out"># batch audit: fail the build on anything that isn&#x27;t sRGB</span>
+<span class="sh-out">find dist -name &#x27;*.jpg&#x27; -exec sh -c &#x27;</span>
+<span class="sh-out">  p=$(exiftool -s3 -ProfileDescription &quot;$1&quot;)</span>
+<span class="sh-out">  case &quot;$p&quot; in *sRGB*) ;; *) echo &quot;❌ $1 → ${p:-untagged}&quot;;; esac</span>
+<span class="sh-out">&#x27; _ {} \;</span>
+<span class="sh-out"></span></code></pre>
+<p>Run it after your image pipeline, not before. Optimisers are the usual culprit.</p>
+<p class='spacer'>&nbsp;</p>
+</details>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/3BD8F7/3BD8F7.png" alt="Section divider bar in vivid cyan" /></p>
+<h2>🖥️ &quot;But my monitor is Adobe RGB&quot;</h2>
+<p>Then your monitor covers a wide gamut, and colour management maps sRGB content into it correctly — <strong>as long as your OS and browser are colour-managed and the monitor has an accurate profile.</strong> Two things follow:</p>
+<ul><li>Your screen is a <em>bad</em> proxy for your users&#x27;. Everything looks more saturated to you than to most of your audience.</li><li>Don&#x27;t &quot;fix&quot; it by editing in Adobe RGB and exporting as-is. That&#x27;s the desaturation bug, delivered at scale.</li></ul>
+<p>Keep a second, boring sRGB display — or at minimum, check work in a colour-managed browser with the gamut emulated.</p>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/A428E2/A428E2.png" alt="Section divider bar in purple" /></p>
+<h2>🧾 The checklist</h2>
+<ol><li><strong>sRGB</strong> is the web&#x27;s delivery format. Everything else converts <em>into</em> it or ships alongside it.</li><li><strong>Display P3</strong> is a delivery space for wide-gamut screens — tag it and provide a fallback.</li><li><strong>Adobe RGB</strong> is a working/print space. Never deliver it to a browser.</li><li>Wider ≠ better: P3 wins on reds, Adobe RGB on cyans.</li><li>Convert, don&#x27;t assign, and never export &quot;same as source&quot;.</li><li>In CSS, use plain hex for the baseline and <code>oklch()</code> or <code>color(display-p3 …)</code> for the enhancement.</li><li>Audit the <em>delivered</em> files; your pipeline probably strips something.</li></ol>
+<p>For UI colour, none of this is a reason to avoid a plain hex palette — the palettes on <a href="https://colorfiind.com" target="_blank" rel="noopener">ColorFiind</a> are sRGB, which is exactly what you want as the baseline before any enhancement.</p>
+<p class='spacer'>&nbsp;</p>
+<a class='cta' href='https://colorfiind.com' target='_blank' rel='noopener'>Start from an sRGB palette</a>
+<p class='spacer'>&nbsp;</p>
+<p><em>What&#x27;s your working space, and does your export preset actually convert out of it? Worth checking today.</em> 👇</p></div>
+    </article>
+    <p class="note">Static local preview — Liquid tags are simulated, DEV renders them natively.
+    Colour swatches load from placehold.co, so they need internet access.</p>
+  </div>
+</div>
+</body>
+</html>

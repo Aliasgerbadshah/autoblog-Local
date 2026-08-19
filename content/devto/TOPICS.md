@@ -14,30 +14,42 @@ Source: the 100-topic colour list. Five posts per batch.
 
 ## ✅ Batch 2 — topics 6–10 → files 11–15
 
+| # | Topic | File |
+| :-: | :-- | :-- |
+| 6 | Wide-Gamut Screens Without Breaking Older Displays | `11-wide-gamut-without-breaking-displays.md` |
+| 7 | Color-Gamut Media Queries | `12-color-gamut-media-queries.md` |
+| 8 | Why the Same HEX Looks Different on Different Monitors | `13-same-hex-different-monitors.md` |
+| 9 | How Browser Color Management Changes Appearance | `14-browser-color-management.md` |
+| 10 | A Designer's Guide to ICC Color Profiles | `15-icc-color-profiles-guide.md` |
+
+## ✅ Batch 3 — topics 11–15 → files 16–20
+
 | # | Topic | File | Audience |
 | :-: | :-- | :-- | :-- |
-| 6 | Design for Wide-Gamut Screens Without Breaking Older Displays | `11-wide-gamut-without-breaking-displays.md` | Product designers |
-| 7 | Color-Gamut Media Queries | `12-color-gamut-media-queries.md` | E-commerce teams |
-| 8 | Why the Same HEX Looks Different on Different Monitors | `13-same-hex-different-monitors.md` | Data designers |
-| 9 | How Browser Color Management Changes Appearance | `14-browser-color-management.md` | AI-assisted designers |
-| 10 | A Designer's Guide to ICC Color Profiles | `15-icc-color-profiles-guide.md` | Print/packaging designers |
+| 11 | sRGB vs Display P3 vs Adobe RGB | `16-srgb-vs-p3-vs-adobe-rgb.md` | Web designers/developers |
+| 12 | Colour-Critical Assets for Retina and High-Gamut | `17-retina-high-gamut-assets.md` | UI/UX designers |
+| 13 | Colour Management for Social Media | `18-social-media-color-management.md` | Brand designers |
+| 14 | Why PNG and JPEG Exports Look Different | `19-png-vs-jpeg-color-differences.md` | Design systems teams |
+| 15 | How Image Compression Affects Colour | `20-compression-color-accessibility.md` | Accessibility designers |
 
-## ⏭️ Batch 3 — next up (topics 11–15)
+## ⏭️ Batch 4 — next up (topics 16–20)
 
 | # | Topic | Audience |
 | :-: | :-- | :-- |
-| 11 | sRGB vs Display P3 vs Adobe RGB: Which Profile Should You Choose? | Web designers/developers |
-| 12 | Preparing Color-Critical Assets for Retina and High-Gamut Displays | UI/UX designers |
-| 13 | Color Management for Social Media: Why Exported Images Change Color | Brand designers |
-| 14 | Why PNG and JPEG Exports Can Look Different From Your Design | Design systems teams |
-| 15 | How Image Compression Affects Color on the Web | Accessibility designers |
+| 16 | Color Banding in Gradients: Causes and Fixes | Product designers |
+| 17 | How to Prevent Banding in Dark Gradients | E-commerce teams |
+| 18 | Dithering Explained: When It Helps Digital Color Rendering | Data designers |
+| 19 | Color Quantization Explained for Designers | AI-assisted designers |
+| 20 | How Image Colour Extraction Algorithms Choose Palette Colors | Print/packaging designers |
 
-## Palettes used so far
+## Palettes used so far (one per post, no repeats)
 
 `mango-garden-moment` · `neon-diner-harmony` · `soft-summer-atelier` · `deep-winter-journal` ·
 `maple-drift` · `clay-flare-spectrum` · `cool-winter-harmony` · `quartz-drift-palette` ·
 `aurora-whisper-moment` · `mint-garden-tone` · `topaz-studio-moment` · `pine-field-gallery` ·
-`summer-gallery` · `winter-beach-wave-colorway` · `coral-breeze-edition` · `bluebell-mood-horizon`
+`summer-gallery` · `winter-beach-wave-colorway` · `coral-breeze-edition` · `bluebell-mood-horizon` ·
+`dahlia-meadow-daybreak` · `lagoon-cool-summer-edition` · `honeydew-collection-daydream` ·
+`autumn-beach-wave-colorway` · `deep-winter-reef-couture`
 
 ## House rules for every post
 
