@@ -99,6 +99,61 @@ def hsl(hex_code: str) -> tuple[int, int, int]:
     return round(h * 60), round(s * 100), round(l * 100)
 
 
+HUES = [
+    (15, "red"), (45, "orange"), (70, "yellow"), (95, "lime"), (150, "green"),
+    (190, "teal"), (210, "cyan"), (250, "blue"), (275, "indigo"),
+    (300, "purple"), (330, "magenta"), (346, "pink"), (361, "red"),
+]
+
+
+def color_name(hex_code: str) -> str:
+    """Human-readable description of a colour, for image alt text."""
+    h, s, l = hsl(hex_code)
+    if l < 8:
+        return "near-black"
+    if l > 92 and s < 30:
+        return "off-white"
+    if s < 14:
+        if l < 35:
+            return "dark grey"
+        if l < 65:
+            return "mid grey"
+        if l < 92:
+            return "light grey"
+        return "off-white"
+
+    hue = next(name for edge, name in HUES if h < edge)
+
+    if l < 30:                                   # named dark colours read better
+        if hue in ("pink", "magenta", "red"):
+            return "burgundy"
+        if hue in ("blue", "indigo"):
+            return "navy" if hue == "blue" else "deep indigo"
+        if hue in ("green", "teal"):
+            return f"deep {hue}"
+        return f"deep {hue}"
+    if l > 90 and s < 45:
+        return f"pale {hue}"
+    if l < 45:
+        return f"dark {hue}"
+    if l > 88:
+        return f"pale {hue}"
+    if l > 72:
+        return f"light {hue}"
+    if s > 82:
+        return f"vivid {hue}"
+    if s < 30:
+        return f"muted {hue}"
+    return hue
+
+
+def alt_text(hex_code: str, palette: str = "") -> str:
+    """Alt text DEV's accessibility linter is happy with."""
+    h = norm(hex_code)
+    label = f"{color_name(h)} swatch #{h}"
+    return f"{label} from {palette}" if palette else label
+
+
 def slugify(name: str) -> str:
     return "-".join(
         "".join(ch.lower() if ch.isalnum() else " " for ch in name).split()

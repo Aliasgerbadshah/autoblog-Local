@@ -1,22 +1,23 @@
 ---
-title: "From HEX to Design Tokens: One ColorFiind Palette, Six Formats, Five Minutes"
+title: "From HEX to Design Tokens: One Palette, Six Formats, Five Minutes"
 published: false
-description: "Take four hex codes off a ColorFiind palette page and turn them into CSS custom properties, a semantic layer, Tailwind config, SCSS, JSON design tokens and a working dark mode."
+description: "Turn four hex codes into CSS custom properties, a semantic layer, Tailwind config, SCSS, JSON design tokens and a working dark mode — without retyping a colour."
 tags: css, tailwindcss, webdev, frontend
-cover_image: https://placehold.co/1000x420/0F172A/00F5D4.png
 ---
 
-<!-- Cover asset: content/devto/assets/cover-neon-diner-harmony.png (1000x420) -->
+<!-- Cover image: upload your own 1000x420 image in the DEV editor,
+     then paste the URL it returns into a new `cover_image:` line above.
+     A ready-made generation prompt for this post is in COVER-PROMPTS.md. -->
 
-![Neon Diner Harmony](https://placehold.co/250x110/0F172A/0F172A.png)![Neon Diner Harmony](https://placehold.co/250x110/00F5D4/00F5D4.png)![Neon Diner Harmony](https://placehold.co/250x110/F15BB5/F15BB5.png)![Neon Diner Harmony](https://placehold.co/250x110/9B5DE5/9B5DE5.png)
+![navy swatch #0F172A in a divider rule](https://placehold.co/250x110/0F172A/0F172A.png)![vivid teal swatch #00F5D4 in a divider rule](https://placehold.co/250x110/00F5D4/00F5D4.png)![vivid magenta swatch #F15BB5 in a divider rule](https://placehold.co/250x110/F15BB5/F15BB5.png)![indigo swatch #9B5DE5 in a divider rule](https://placehold.co/250x110/9B5DE5/9B5DE5.png)
 
-> 🎨 **Palette in play** — [Neon Diner Harmony](https://colorfiind.com/palette/neon-diner-harmony) · `#0F172A` `#00F5D4` `#F15BB5` `#9B5DE5`
+> 🎨 **Palette in play** — midnight, mint, magenta, violet · `#0F172A` `#00F5D4` `#F15BB5` `#9B5DE5`
 
 Four hex codes is not a theme. A theme is four hex codes that survived a rename, a framework, a dark mode toggle and a designer asking "can we make the accent 10% lighter everywhere?"
 
-This post is the pipeline I run every time I pull a palette from [ColorFiind](https://colorfiind.com). Same four colors, six formats, and the important part — **the naming step in the middle that makes all the rest boring**.
+This post is the pipeline I run every time I pull a palette from anywhere. Same four colors, six formats, and the important part — **the naming step in the middle that makes all the rest boring**.
 
-![rule](https://placehold.co/250x12/0F172A/0F172A.png)![rule](https://placehold.co/250x12/00F5D4/00F5D4.png)![rule](https://placehold.co/250x12/F15BB5/F15BB5.png)![rule](https://placehold.co/250x12/9B5DE5/9B5DE5.png)
+![navy swatch #0F172A in a divider rule](https://placehold.co/250x12/0F172A/0F172A.png)![vivid teal swatch #00F5D4 in a divider rule](https://placehold.co/250x12/00F5D4/00F5D4.png)![vivid magenta swatch #F15BB5 in a divider rule](https://placehold.co/250x12/F15BB5/F15BB5.png)![indigo swatch #9B5DE5 in a divider rule](https://placehold.co/250x12/9B5DE5/9B5DE5.png)
 
 ## 📐 The pipeline
 
@@ -27,20 +28,20 @@ $ palette → raw vars → semantic names → framework config → tokens.json �
 
 | Swatch | HEX | On `#0F172A` | Grade | Job |
 | :----: | :-- | :----------- | :---: | :-- |
-| ![](https://placehold.co/110x44/0F172A/0F172A.png) | `#0F172A` | — | — | surface |
-| ![](https://placehold.co/110x44/00F5D4/00F5D4.png) | `#00F5D4` | **12.76:1** | ✅ AAA | primary |
-| ![](https://placehold.co/110x44/F15BB5/F15BB5.png) | `#F15BB5` | **5.87:1** | ✅ AA | accent |
-| ![](https://placehold.co/110x44/9B5DE5/9B5DE5.png) | `#9B5DE5` | **4.33:1** | 🟡 AA Large | support |
+| ![navy swatch #0F172A](https://placehold.co/110x44/0F172A/0F172A.png) | `#0F172A` | — | — | surface |
+| ![vivid teal swatch #00F5D4](https://placehold.co/110x44/00F5D4/00F5D4.png) | `#00F5D4` | **12.76:1** | ✅ AAA | primary |
+| ![vivid magenta swatch #F15BB5](https://placehold.co/110x44/F15BB5/F15BB5.png) | `#F15BB5` | **5.87:1** | ✅ AA | accent |
+| ![indigo swatch #9B5DE5](https://placehold.co/110x44/9B5DE5/9B5DE5.png) | `#9B5DE5` | **4.33:1** | 🟡 AA Large | support |
 
 ## 1️⃣ Layer one — the raw palette
 
-ColorFiind hands you this block on the palette page. **Copy it verbatim and do not touch it.** It is your receipt: it says exactly which palette this theme came from.
+Write the raw palette down exactly once. **Copy it verbatim and do not touch it again.** It is your receipt: it says exactly which palette this theme came from.
 
 **`styles/palette.css`** ⌁ *raw, never referenced by components*
 
 ```css
-/* Neon Diner Harmony
-   https://colorfiind.com/palette/neon-diner-harmony */
+/* Palette: midnight, mint, magenta, violet
+ */
 :root {
   --palette-color-1: #0F172A;
   --palette-color-2: #00F5D4;
@@ -134,7 +135,7 @@ Here is the refactor that usually happens at this point, in the format that make
 
 Two wins in four lines: the palette became swappable, **and** the white-on-pink text (3.04:1 — a fail for body copy) became near-black on pink at **6.27:1**.
 
-![rule](https://placehold.co/250x12/0F172A/0F172A.png)![rule](https://placehold.co/250x12/00F5D4/00F5D4.png)![rule](https://placehold.co/250x12/F15BB5/F15BB5.png)![rule](https://placehold.co/250x12/9B5DE5/9B5DE5.png)
+![navy swatch #0F172A in a divider rule](https://placehold.co/250x12/0F172A/0F172A.png)![vivid teal swatch #00F5D4 in a divider rule](https://placehold.co/250x12/00F5D4/00F5D4.png)![vivid magenta swatch #F15BB5 in a divider rule](https://placehold.co/250x12/F15BB5/F15BB5.png)![indigo swatch #9B5DE5 in a divider rule](https://placehold.co/250x12/9B5DE5/9B5DE5.png)
 
 ## 4️⃣ Tailwind, SCSS, and everything else
 
@@ -215,7 +216,7 @@ If design tooling is anywhere near your project, export W3C-style design tokens.
 {
   "$schema": "https://design-tokens.github.io/community-group/format/",
   "palette": {
-    "$description": "Neon Diner Harmony — colorfiind.com/palette/neon-diner-harmony",
+    "$description": "Neon Diner Harmony",
     "surface": { "$type": "color", "$value": "#0F172A" },
     "primary": { "$type": "color", "$value": "#00F5D4" },
     "accent":  { "$type": "color", "$value": "#F15BB5" },
@@ -236,9 +237,9 @@ android
 
 ## 6️⃣ Light mode for free
 
-Because components never touch hexes, an entire second theme is one media query. Swap the neon palette for a light ColorFiind pick — [Quartz Drift](https://colorfiind.com/palette/quartz-drift-palette) — and keep every semantic name identical.
+Because components never touch hexes, an entire second theme is one media query. Swap the neon palette for a light one — here a soft quartz set — and keep every semantic name identical.
 
-![Quartz Drift](https://placehold.co/250x64/F5F7F9/F5F7F9.png)![Quartz Drift](https://placehold.co/250x64/E3DFF1/E3DFF1.png)![Quartz Drift](https://placehold.co/250x64/E0AED7/E0AED7.png)![Quartz Drift](https://placehold.co/250x64/994129/994129.png)
+![off-white swatch #F5F7F9](https://placehold.co/250x64/F5F7F9/F5F7F9.png)![pale indigo swatch #E3DFF1](https://placehold.co/250x64/E3DFF1/E3DFF1.png)![light magenta swatch #E0AED7](https://placehold.co/250x64/E0AED7/E0AED7.png)![dark red swatch #994129](https://placehold.co/250x64/994129/994129.png)
 
 ```css
 :root {
@@ -277,7 +278,7 @@ document.querySelector('#toggle').addEventListener('click', () => {
 
 > 🚧 **Trap** — do not reuse the same accent across both modes without re-checking it. `#00F5D4` is **12.76:1** on the dark surface and **1.4:1** on white. Same color, opposite verdict. Each mode needs its own contrast pass.
 
-![rule](https://placehold.co/250x12/0F172A/0F172A.png)![rule](https://placehold.co/250x12/00F5D4/00F5D4.png)![rule](https://placehold.co/250x12/F15BB5/F15BB5.png)![rule](https://placehold.co/250x12/9B5DE5/9B5DE5.png)
+![navy swatch #0F172A in a divider rule](https://placehold.co/250x12/0F172A/0F172A.png)![vivid teal swatch #00F5D4 in a divider rule](https://placehold.co/250x12/00F5D4/00F5D4.png)![vivid magenta swatch #F15BB5 in a divider rule](https://placehold.co/250x12/F15BB5/F15BB5.png)![indigo swatch #9B5DE5 in a divider rule](https://placehold.co/250x12/9B5DE5/9B5DE5.png)
 
 ## 🤖 Automate the boring 90%
 
@@ -310,7 +311,7 @@ $ node palette-to-tokens.mjs 0F172A 00F5D4 F15BB5 9B5DE5
 
 ## 🧾 The checklist
 
-1. Copy the `:root` block from the ColorFiind palette page → `palette.css`. Keep the URL in a comment.
+1. Write the raw palette into `palette.css` once. Keep the source link in a comment.
 2. Never let a component import layer one.
 3. Every brand color gets an `-ink` partner that is readable on top of it.
 4. Export `tokens.json` the moment a designer is involved.
@@ -319,4 +320,4 @@ $ node palette-to-tokens.mjs 0F172A 00F5D4 F15BB5 9B5DE5
 
 Next up: seasonal palettes as a theming system — why *soft summer* makes a beautiful reading app and *deep winter* makes the best dark mode you have shipped.
 
-{% cta https://colorfiind.com %} Grab a palette and run the pipeline {% endcta %}
+

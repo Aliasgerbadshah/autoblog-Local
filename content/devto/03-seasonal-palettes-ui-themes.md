@@ -1,25 +1,26 @@
 ---
 title: "Seasonal Color Analysis for Developers: Soft Summer UI vs Deep Winter Dark Mode"
 published: false
-description: "Seasonal palettes are a temperature-and-contrast system, not fashion jargon. Here's how to use ColorFiind's season pages to pick a UI theme that matches what your product actually does."
+description: "Seasonal palettes are a temperature-and-contrast system, not fashion jargon. How to use them to pick a UI theme that matches what your product does."
 tags: css, design, ux, webdev
-cover_image: https://placehold.co/1000x420/6D0F2B/E8E9E5.png
 ---
 
-<!-- Cover asset: content/devto/assets/cover-deep-winter-journal.png (1000x420) -->
+<!-- Cover image: upload your own 1000x420 image in the DEV editor,
+     then paste the URL it returns into a new `cover_image:` line above.
+     A ready-made generation prompt for this post is in COVER-PROMPTS.md. -->
 
-![Soft Summer](https://placehold.co/125x110/D8C7D8/D8C7D8.png)![Soft Summer](https://placehold.co/125x110/8FA1B3/8FA1B3.png)![Soft Summer](https://placehold.co/125x110/E6DDE3/E6DDE3.png)![Soft Summer](https://placehold.co/125x110/9B8FA3/9B8FA3.png)![Deep Winter](https://placehold.co/125x110/6D0F2B/6D0F2B.png)![Deep Winter](https://placehold.co/125x110/004D40/004D40.png)![Deep Winter](https://placehold.co/125x110/0B3D91/0B3D91.png)![Deep Winter](https://placehold.co/125x110/2A1458/2A1458.png)
+![light magenta swatch #D8C7D8](https://placehold.co/125x110/D8C7D8/D8C7D8.png)![muted blue swatch #8FA1B3](https://placehold.co/125x110/8FA1B3/8FA1B3.png)![light magenta swatch #E6DDE3](https://placehold.co/125x110/E6DDE3/E6DDE3.png)![mid grey swatch #9B8FA3](https://placehold.co/125x110/9B8FA3/9B8FA3.png)![burgundy swatch #6D0F2B](https://placehold.co/125x110/6D0F2B/6D0F2B.png)![deep teal swatch #004D40](https://placehold.co/125x110/004D40/004D40.png)![dark blue swatch #0B3D91](https://placehold.co/125x110/0B3D91/0B3D91.png)![deep indigo swatch #2A1458](https://placehold.co/125x110/2A1458/2A1458.png)
 
-> 🎨 **Palettes in play** — [Soft Summer Atelier](https://colorfiind.com/palette/soft-summer-atelier) *(left)* vs [Deep Winter Journal](https://colorfiind.com/palette/deep-winter-journal) *(right)*
+> 🎨 **Palettes in play** — **Soft Summer Atelier** *(left)* vs **Deep Winter Journal** *(right)*
 
 Seasonal color analysis sounds like something that belongs in a fashion magazine, and that is exactly why developers skip it. Underneath the vocabulary, though, it is a **two-axis classification system** — and it happens to answer the two questions we ask about every UI theme:
 
 1. **Temperature** — are the colors warm (yellow-based) or cool (blue-based)?
 2. **Contrast + saturation** — is the palette loud and high-contrast, or muted and quiet?
 
-[ColorFiind's season pages](https://colorfiind.com) already sort thousands of palettes along those axes, which turns "pick a theme" into "pick a quadrant".
+Once you sort palettes along those two axes, "pick a theme" becomes "pick a quadrant" — and that is a decision you can make in ten seconds.
 
-![rule](https://placehold.co/166x12/D8C7D8/D8C7D8.png)![rule](https://placehold.co/167x12/8FA1B3/8FA1B3.png)![rule](https://placehold.co/167x12/6D0F2B/6D0F2B.png)![rule](https://placehold.co/250x12/0B3D91/0B3D91.png)![rule](https://placehold.co/250x12/2A1458/2A1458.png)
+![light magenta swatch #D8C7D8 in a divider rule](https://placehold.co/166x12/D8C7D8/D8C7D8.png)![muted blue swatch #8FA1B3 in a divider rule](https://placehold.co/167x12/8FA1B3/8FA1B3.png)![burgundy swatch #6D0F2B in a divider rule](https://placehold.co/167x12/6D0F2B/6D0F2B.png)![dark blue swatch #0B3D91 in a divider rule](https://placehold.co/250x12/0B3D91/0B3D91.png)![deep indigo swatch #2A1458 in a divider rule](https://placehold.co/250x12/2A1458/2A1458.png)
 
 ## 🧭 1 · The map
 
@@ -33,7 +34,7 @@ Seasonal color analysis sounds like something that belongs in a fashion magazine
 Each season splits again — `soft summer`, `cool summer`, `true summer`, `light summer`; `deep winter`, `bright winter`, `dark winter`, `cool winter` — and every sub-season is its own URL:
 
 ```console
-$ tree colorfiind.com/season
+$ tree seasonal-palettes
 season
 ├── spring/{spring,light,warm,bright,true}-color-palette
 ├── summer/{summer,soft,cool,light,true}-color-palette
@@ -43,7 +44,7 @@ season
 
 ## 🌫️ 2 · Soft Summer — the low-contrast reading UI
 
-![](https://placehold.co/250x96/D8C7D8/D8C7D8.png)![](https://placehold.co/250x96/8FA1B3/8FA1B3.png)![](https://placehold.co/250x96/E6DDE3/E6DDE3.png)![](https://placehold.co/250x96/9B8FA3/9B8FA3.png)
+![light magenta swatch #D8C7D8](https://placehold.co/250x96/D8C7D8/D8C7D8.png)![muted blue swatch #8FA1B3](https://placehold.co/250x96/8FA1B3/8FA1B3.png)![light magenta swatch #E6DDE3](https://placehold.co/250x96/E6DDE3/E6DDE3.png)![mid grey swatch #9B8FA3](https://placehold.co/250x96/9B8FA3/9B8FA3.png)
 
 Soft summer is cool, greyed-down and deliberately low contrast — dusty mauve, slate blue, fog. It is the palette equivalent of a quiet room. Ideal for long-form reading, journaling apps, meditation timers, documentation, anything where the interface should get out of the way.
 
@@ -94,7 +95,7 @@ hr    { border: 0; border-top: 1px solid var(--color-line); }
 
 ## ❄️ 3 · Deep Winter — the dark mode that isn't grey soup
 
-![](https://placehold.co/250x96/6D0F2B/6D0F2B.png)![](https://placehold.co/250x96/004D40/004D40.png)![](https://placehold.co/250x96/0B3D91/0B3D91.png)![](https://placehold.co/250x96/2A1458/2A1458.png)
+![burgundy swatch #6D0F2B](https://placehold.co/250x96/6D0F2B/6D0F2B.png)![deep teal swatch #004D40](https://placehold.co/250x96/004D40/004D40.png)![dark blue swatch #0B3D91](https://placehold.co/250x96/0B3D91/0B3D91.png)![deep indigo swatch #2A1458](https://placehold.co/250x96/2A1458/2A1458.png)
 
 Deep winter is cool, saturated and high contrast: burgundy, emerald, royal blue, deep purple, black, icy white. Those are **jewel tones**, and jewel tones are the reason a dark theme can look expensive instead of looking like `#333`.
 
@@ -102,10 +103,10 @@ The colors are dark enough to be *backgrounds* and saturated enough to be *ident
 
 | Color | vs `#FFFFFF` | vs `#050505` | Natural role |
 | :-- | :-- | :-- | :-- |
-| ![](https://placehold.co/70x28/6D0F2B/6D0F2B.png) `#6D0F2B` | 11.98:1 ✅ | 1.70:1 | destructive / danger surface |
-| ![](https://placehold.co/70x28/004D40/004D40.png) `#004D40` | 9.83:1 ✅ | 2.07:1 | success surface |
-| ![](https://placehold.co/70x28/0B3D91/0B3D91.png) `#0B3D91` | 10.04:1 ✅ | 2.03:1 | info / primary surface |
-| ![](https://placehold.co/70x28/2A1458/2A1458.png) `#2A1458` | 15.68:1 ✅ | 1.30:1 | elevated background |
+| ![burgundy swatch #6D0F2B](https://placehold.co/70x28/6D0F2B/6D0F2B.png) `#6D0F2B` | 11.98:1 ✅ | 1.70:1 | destructive / danger surface |
+| ![deep teal swatch #004D40](https://placehold.co/70x28/004D40/004D40.png) `#004D40` | 9.83:1 ✅ | 2.07:1 | success surface |
+| ![dark blue swatch #0B3D91](https://placehold.co/70x28/0B3D91/0B3D91.png) `#0B3D91` | 10.04:1 ✅ | 2.03:1 | info / primary surface |
+| ![deep indigo swatch #2A1458](https://placehold.co/70x28/2A1458/2A1458.png) `#2A1458` | 15.68:1 ✅ | 1.30:1 | elevated background |
 
 Read that table sideways and the theme designs itself: these four are **surfaces on a black canvas**, each carrying white text at AAA.
 
@@ -155,19 +156,19 @@ Compare that to the default dark theme most projects ship:
 
 Same semantics, completely different product personality — and the accessibility numbers went *up*.
 
-![rule](https://placehold.co/250x12/6D0F2B/6D0F2B.png)![rule](https://placehold.co/250x12/004D40/004D40.png)![rule](https://placehold.co/250x12/0B3D91/0B3D91.png)![rule](https://placehold.co/250x12/2A1458/2A1458.png)
+![burgundy swatch #6D0F2B in a divider rule](https://placehold.co/250x12/6D0F2B/6D0F2B.png)![deep teal swatch #004D40 in a divider rule](https://placehold.co/250x12/004D40/004D40.png)![dark blue swatch #0B3D91 in a divider rule](https://placehold.co/250x12/0B3D91/0B3D91.png)![deep indigo swatch #2A1458 in a divider rule](https://placehold.co/250x12/2A1458/2A1458.png)
 
 ## 🍂 4 · The other two quadrants, briefly
 
-**Warm Autumn** — ![](https://placehold.co/90x30/FFEAB6/FFEAB6.png)![](https://placehold.co/90x30/FFEEBA/FFEEBA.png)![](https://placehold.co/90x30/FFD489/FFD489.png)![](https://placehold.co/90x30/F9BA5D/F9BA5D.png) [Lagoon Warm Autumn](https://colorfiind.com/palette/lagoon-warm-autumn-edition)
+**Warm Autumn** — ![light orange swatch #FFEAB6](https://placehold.co/90x30/FFEAB6/FFEAB6.png)![light yellow swatch #FFEEBA](https://placehold.co/90x30/FFEEBA/FFEEBA.png)![light orange swatch #FFD489](https://placehold.co/90x30/FFD489/FFD489.png)![vivid orange swatch #F9BA5D](https://placehold.co/90x30/F9BA5D/F9BA5D.png) **Lagoon Warm Autumn**
 
 Honey, amber, clay. Near-monochrome warmth for food, artisan commerce and editorial. Total internal contrast: **1.45:1** — surfaces only, again. Pair with `#3A2A12`.
 
-**Bright Spring** — ![](https://placehold.co/90x30/FFFF79/FFFF79.png)![](https://placehold.co/90x30/FFD2DC/FFD2DC.png)![](https://placehold.co/90x30/56D5CC/56D5CC.png)![](https://placehold.co/90x30/FF8D08/FF8D08.png) [Spring Beach Wave](https://colorfiind.com/palette/spring-beach-wave-colorway)
+**Bright Spring** — ![light yellow swatch #FFFF79](https://placehold.co/90x30/FFFF79/FFFF79.png)![pale red swatch #FFD2DC](https://placehold.co/90x30/FFD2DC/FFD2DC.png)![teal swatch #56D5CC](https://placehold.co/90x30/56D5CC/56D5CC.png)![vivid orange swatch #FF8D08](https://placehold.co/90x30/FF8D08/FF8D08.png) **Spring Beach Wave**
 
 Maximum energy. Great for a launch page, exhausting for a workspace. Use one as the hero background and keep the rest for illustration.
 
-**Cool Winter** — ![](https://placehold.co/90x30/003566/003566.png)![](https://placehold.co/90x30/0077B6/0077B6.png)![](https://placehold.co/90x30/D0006F/D0006F.png)![](https://placehold.co/90x30/C1121F/C1121F.png) [Cool Winter Harmony](https://colorfiind.com/palette/cool-winter-harmony)
+**Cool Winter** — ![deep cyan swatch #003566](https://placehold.co/90x30/003566/003566.png)![dark cyan swatch #0077B6](https://placehold.co/90x30/0077B6/0077B6.png)![dark magenta swatch #D0006F](https://placehold.co/90x30/D0006F/D0006F.png)![dark red swatch #C1121F](https://placehold.co/90x30/C1121F/C1121F.png) **Cool Winter Harmony**
 
 Icy blue structure with a shout. This is the fintech dashboard palette: navy chrome, blue data, magenta for the one number that matters.
 
@@ -261,6 +262,5 @@ One component, two seasons, zero conditional logic.
 - Map soft → light mode, deep → dark mode, and keep semantic names identical.
 - Browse the sub-season pages; the sub-season is the real spec, "summer" alone is too broad.
 
-{% cta https://colorfiind.com %} Browse palettes by season on ColorFiind {% endcta %}
 
 *Which quadrant is your current project in? Post the four hexes below.* 👇

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>From HEX to Design Tokens: One ColorFiind Palette, Six Formats, Five Minutes — DEV preview</title>
+<title>From HEX to Design Tokens: One Palette, Six Formats, Five Minutes — DEV preview</title>
 <style>
 :root{--bg:#0B0F1A;--panel:#111827;--panel2:#0F172A;--line:#1F2A44;--ink:#E7E9EE;
 --muted:#94A3B8;--primary:#00F5D4;--accent:#F15BB5;--support:#9B5DE5;--radius:14px}
@@ -100,31 +100,31 @@ font-family:ui-monospace,monospace;color:var(--primary);margin:1.2em 0}
     d.dataset.theme=d.dataset.theme==='dark'?'light':'dark'">🌗 Theme</button>
 </header>
 <div class="layout">
-  <nav class="files"><h2>Articles</h2><a href="00-swatch-deck-theme-kit.html" class="">swatch deck theme kit<small>Reusable theme kit</small></a><a href="01-colorfiind-developer-tour.html" class="">colorfiind developer tour<small>Feature tour</small></a><a href="02-hex-to-design-tokens.html" class="active">hex to design tokens<small>Tokens pipeline</small></a><a href="03-seasonal-palettes-ui-themes.html" class="">seasonal palettes ui themes<small>Seasonal themes</small></a><a href="04-neon-dark-mode-glow-ui.html" class="">neon dark mode glow ui<small>Neon dark mode</small></a><a href="05-automate-palette-workflow.html" class="">automate palette workflow<small>Automation</small></a></nav>
+  <nav class="files"><h2>Articles</h2><a href="00-swatch-deck-theme-kit.html" class="">swatch deck theme kit<small>Reusable theme kit</small></a><a href="01-choose-a-color-palette.html" class="">choose a color palette<small>Choosing a palette</small></a><a href="02-hex-to-design-tokens.html" class="active">hex to design tokens<small>Tokens pipeline</small></a><a href="03-seasonal-palettes-ui-themes.html" class="">seasonal palettes ui themes<small>Seasonal themes</small></a><a href="04-neon-dark-mode-glow-ui.html" class="">neon dark mode glow ui<small>Neon dark mode</small></a><a href="05-automate-palette-workflow.html" class="">automate palette workflow<small>Automation</small></a></nav>
   <div>
     <article>
-      <img class="cover" src="https://placehold.co/1000x420/0F172A/00F5D4.png" alt="cover" />
+      
       <div class="meta">
         <div class="tags"><span class="tag">#css</span><span class="tag">#tailwindcss</span><span class="tag">#webdev</span><span class="tag">#frontend</span></div>
-        <h1>From HEX to Design Tokens: One ColorFiind Palette, Six Formats, Five Minutes</h1>
-        <p class="desc">Take four hex codes off a ColorFiind palette page and turn them into CSS custom properties, a semantic layer, Tailwind config, SCSS, JSON design tokens and a working dark mode.</p>
-        <div class="fm">published: <b>false</b> · tags: 4/4 · cover_image: set</div>
+        <h1>From HEX to Design Tokens: One Palette, Six Formats, Five Minutes</h1>
+        <p class="desc">Turn four hex codes into CSS custom properties, a semantic layer, Tailwind config, SCSS, JSON design tokens and a working dark mode — without retyping a colour.</p>
+        <div class="fm">published: <b>false</b> · tags: 4/4 · cover_image: none</div>
       </div>
-      <div class="post"><p class='band'><img src="https://placehold.co/250x110/0F172A/0F172A.png" alt="Neon Diner Harmony" /><img src="https://placehold.co/250x110/00F5D4/00F5D4.png" alt="Neon Diner Harmony" /><img src="https://placehold.co/250x110/F15BB5/F15BB5.png" alt="Neon Diner Harmony" /><img src="https://placehold.co/250x110/9B5DE5/9B5DE5.png" alt="Neon Diner Harmony" /></p>
-<blockquote><p>🎨 <strong>Palette in play</strong> — <a href="https://colorfiind.com/palette/neon-diner-harmony" target="_blank" rel="noopener">Neon Diner Harmony</a> · <code>#0F172A</code> <code>#00F5D4</code> <code>#F15BB5</code> <code>#9B5DE5</code></p></blockquote>
+      <div class="post"><p class='band'><img src="https://placehold.co/250x110/0F172A/0F172A.png" alt="navy swatch #0F172A in a divider rule" /><img src="https://placehold.co/250x110/00F5D4/00F5D4.png" alt="vivid teal swatch #00F5D4 in a divider rule" /><img src="https://placehold.co/250x110/F15BB5/F15BB5.png" alt="vivid magenta swatch #F15BB5 in a divider rule" /><img src="https://placehold.co/250x110/9B5DE5/9B5DE5.png" alt="indigo swatch #9B5DE5 in a divider rule" /></p>
+<blockquote><p>🎨 <strong>Palette in play</strong> — midnight, mint, magenta, violet · <code>#0F172A</code> <code>#00F5D4</code> <code>#F15BB5</code> <code>#9B5DE5</code></p></blockquote>
 <p>Four hex codes is not a theme. A theme is four hex codes that survived a rename, a framework, a dark mode toggle and a designer asking &quot;can we make the accent 10% lighter everywhere?&quot;</p>
-<p>This post is the pipeline I run every time I pull a palette from <a href="https://colorfiind.com" target="_blank" rel="noopener">ColorFiind</a>. Same four colors, six formats, and the important part — <strong>the naming step in the middle that makes all the rest boring</strong>.</p>
-<p class='band'><img src="https://placehold.co/250x12/0F172A/0F172A.png" alt="rule" /><img src="https://placehold.co/250x12/00F5D4/00F5D4.png" alt="rule" /><img src="https://placehold.co/250x12/F15BB5/F15BB5.png" alt="rule" /><img src="https://placehold.co/250x12/9B5DE5/9B5DE5.png" alt="rule" /></p>
+<p>This post is the pipeline I run every time I pull a palette from anywhere. Same four colors, six formats, and the important part — <strong>the naming step in the middle that makes all the rest boring</strong>.</p>
+<p class='band'><img src="https://placehold.co/250x12/0F172A/0F172A.png" alt="navy swatch #0F172A in a divider rule" /><img src="https://placehold.co/250x12/00F5D4/00F5D4.png" alt="vivid teal swatch #00F5D4 in a divider rule" /><img src="https://placehold.co/250x12/F15BB5/F15BB5.png" alt="vivid magenta swatch #F15BB5 in a divider rule" /><img src="https://placehold.co/250x12/9B5DE5/9B5DE5.png" alt="indigo swatch #9B5DE5 in a divider rule" /></p>
 <h2>📐 The pipeline</h2>
 <pre class="code lang-console" data-lang="console"><code><span class="sh-prompt">$</span><span class="sh-cmd"> palette → raw vars → semantic names → framework config → tokens.json → dark mode</span>
 <span class="sh-out">   1 min     10 sec      2 min           1 min             30 sec       auto</span>
 <span class="sh-out"></span></code></pre>
-<div class='tw'><table><thead><tr><th>Swatch</th><th>HEX</th><th>On <code>#0F172A</code></th><th>Grade</th><th>Job</th></tr></thead><tbody><tr><td><img src="https://placehold.co/110x44/0F172A/0F172A.png" alt="" /></td><td><code>#0F172A</code></td><td>—</td><td>—</td><td>surface</td></tr><tr><td><img src="https://placehold.co/110x44/00F5D4/00F5D4.png" alt="" /></td><td><code>#00F5D4</code></td><td><strong>12.76:1</strong></td><td>✅ AAA</td><td>primary</td></tr><tr><td><img src="https://placehold.co/110x44/F15BB5/F15BB5.png" alt="" /></td><td><code>#F15BB5</code></td><td><strong>5.87:1</strong></td><td>✅ AA</td><td>accent</td></tr><tr><td><img src="https://placehold.co/110x44/9B5DE5/9B5DE5.png" alt="" /></td><td><code>#9B5DE5</code></td><td><strong>4.33:1</strong></td><td>🟡 AA Large</td><td>support</td></tr></tbody></table></div>
+<div class='tw'><table><thead><tr><th>Swatch</th><th>HEX</th><th>On <code>#0F172A</code></th><th>Grade</th><th>Job</th></tr></thead><tbody><tr><td><img src="https://placehold.co/110x44/0F172A/0F172A.png" alt="navy swatch #0F172A" /></td><td><code>#0F172A</code></td><td>—</td><td>—</td><td>surface</td></tr><tr><td><img src="https://placehold.co/110x44/00F5D4/00F5D4.png" alt="vivid teal swatch #00F5D4" /></td><td><code>#00F5D4</code></td><td><strong>12.76:1</strong></td><td>✅ AAA</td><td>primary</td></tr><tr><td><img src="https://placehold.co/110x44/F15BB5/F15BB5.png" alt="vivid magenta swatch #F15BB5" /></td><td><code>#F15BB5</code></td><td><strong>5.87:1</strong></td><td>✅ AA</td><td>accent</td></tr><tr><td><img src="https://placehold.co/110x44/9B5DE5/9B5DE5.png" alt="indigo swatch #9B5DE5" /></td><td><code>#9B5DE5</code></td><td><strong>4.33:1</strong></td><td>🟡 AA Large</td><td>support</td></tr></tbody></table></div>
 <h2>1️⃣ Layer one — the raw palette</h2>
-<p>ColorFiind hands you this block on the palette page. <strong>Copy it verbatim and do not touch it.</strong> It is your receipt: it says exactly which palette this theme came from.</p>
+<p>Write the raw palette down exactly once. <strong>Copy it verbatim and do not touch it again.</strong> It is your receipt: it says exactly which palette this theme came from.</p>
 <p><strong><code>styles/palette.css</code></strong> ⌁ <em>raw, never referenced by components</em></p>
-<pre class="code lang-css" data-lang="css"><code><span class="t-comment">/* Neon Diner Harmony
-   <span class="t-prop">https</span>://colorfiind.com/palette/neon-diner-harmony */</span>
+<pre class="code lang-css" data-lang="css"><code><span class="t-comment">/* Palette: midnight, mint, magenta, violet
+ */</span>
 :root {
   --palette-color-<span class="t-number">1</span>: <span class="t-color"><i class="chip" style="background:#0F172A"></i>#0F172A</span>;
   --palette-color-<span class="t-number">2</span>: <span class="t-color"><i class="chip" style="background:#00F5D4"></i>#00F5D4</span>;
@@ -202,7 +202,7 @@ font-family:ui-monospace,monospace;color:var(--primary);margin:1.2em 0}
   }
 </code></pre>
 <p>Two wins in four lines: the palette became swappable, <strong>and</strong> the white-on-pink text (3.04:1 — a fail for body copy) became near-black on pink at <strong>6.27:1</strong>.</p>
-<p class='band'><img src="https://placehold.co/250x12/0F172A/0F172A.png" alt="rule" /><img src="https://placehold.co/250x12/00F5D4/00F5D4.png" alt="rule" /><img src="https://placehold.co/250x12/F15BB5/F15BB5.png" alt="rule" /><img src="https://placehold.co/250x12/9B5DE5/9B5DE5.png" alt="rule" /></p>
+<p class='band'><img src="https://placehold.co/250x12/0F172A/0F172A.png" alt="navy swatch #0F172A in a divider rule" /><img src="https://placehold.co/250x12/00F5D4/00F5D4.png" alt="vivid teal swatch #00F5D4 in a divider rule" /><img src="https://placehold.co/250x12/F15BB5/F15BB5.png" alt="vivid magenta swatch #F15BB5 in a divider rule" /><img src="https://placehold.co/250x12/9B5DE5/9B5DE5.png" alt="indigo swatch #9B5DE5 in a divider rule" /></p>
 <h2>4️⃣ Tailwind, SCSS, and everything else</h2>
 <p>Same four colors, wearing different clothes.</p>
 <p><strong><code>tailwind.config.js</code></strong> ⌁ <em>semantic names all the way down</em></p>
@@ -265,7 +265,7 @@ module.exports = {
 <pre class="code lang-json" data-lang="json"><code>{
   &quot;$schema&quot;: &quot;https:<span class="t-comment">//design-tokens.github.io/community-group/format/&quot;,</span>
   &quot;palette&quot;: {
-    &quot;$description&quot;: &quot;Neon Diner Harmony — colorfiind.com/palette/neon-diner-harmony&quot;,
+    &quot;$description&quot;: &quot;Neon Diner Harmony&quot;,
     &quot;surface&quot;: { &quot;$type&quot;: &quot;color&quot;, &quot;$value&quot;: &quot;<span class="t-color"><i class="chip" style="background:#0F172A"></i>#0F172A</span>&quot; },
     &quot;primary&quot;: { &quot;$type&quot;: &quot;color&quot;, &quot;$value&quot;: &quot;<span class="t-color"><i class="chip" style="background:#00F5D4"></i>#00F5D4</span>&quot; },
     &quot;accent&quot;:  { &quot;$type&quot;: &quot;color&quot;, &quot;$value&quot;: &quot;<span class="t-color"><i class="chip" style="background:#F15BB5"></i>#F15BB5</span>&quot; },
@@ -282,8 +282,8 @@ module.exports = {
 <span class="sh-ok">  ✔ build/android/colors.xml</span>
 <span class="sh-out"></span></code></pre>
 <h2>6️⃣ Light mode for free</h2>
-<p>Because components never touch hexes, an entire second theme is one media query. Swap the neon palette for a light ColorFiind pick — <a href="https://colorfiind.com/palette/quartz-drift-palette" target="_blank" rel="noopener">Quartz Drift</a> — and keep every semantic name identical.</p>
-<p class='band'><img src="https://placehold.co/250x64/F5F7F9/F5F7F9.png" alt="Quartz Drift" /><img src="https://placehold.co/250x64/E3DFF1/E3DFF1.png" alt="Quartz Drift" /><img src="https://placehold.co/250x64/E0AED7/E0AED7.png" alt="Quartz Drift" /><img src="https://placehold.co/250x64/994129/994129.png" alt="Quartz Drift" /></p>
+<p>Because components never touch hexes, an entire second theme is one media query. Swap the neon palette for a light one — here a soft quartz set — and keep every semantic name identical.</p>
+<p class='band'><img src="https://placehold.co/250x64/F5F7F9/F5F7F9.png" alt="off-white swatch #F5F7F9" /><img src="https://placehold.co/250x64/E3DFF1/E3DFF1.png" alt="pale indigo swatch #E3DFF1" /><img src="https://placehold.co/250x64/E0AED7/E0AED7.png" alt="light magenta swatch #E0AED7" /><img src="https://placehold.co/250x64/994129/994129.png" alt="dark red swatch #994129" /></p>
 <pre class="code lang-css" data-lang="css"><code>:root {
   <span class="t-prop">color-scheme</span>: dark light;
 }
@@ -316,7 +316,7 @@ document.querySelector(&<span <span class="t-kw">class</span>="t-comment">#x27;#
 });
 </code></pre>
 <blockquote><p>🚧 <strong>Trap</strong> — do not reuse the same accent across both modes without re-checking it. <code>#00F5D4</code> is <strong>12.76:1</strong> on the dark surface and <strong>1.4:1</strong> on white. Same color, opposite verdict. Each mode needs its own contrast pass.</p></blockquote>
-<p class='band'><img src="https://placehold.co/250x12/0F172A/0F172A.png" alt="rule" /><img src="https://placehold.co/250x12/00F5D4/00F5D4.png" alt="rule" /><img src="https://placehold.co/250x12/F15BB5/F15BB5.png" alt="rule" /><img src="https://placehold.co/250x12/9B5DE5/9B5DE5.png" alt="rule" /></p>
+<p class='band'><img src="https://placehold.co/250x12/0F172A/0F172A.png" alt="navy swatch #0F172A in a divider rule" /><img src="https://placehold.co/250x12/00F5D4/00F5D4.png" alt="vivid teal swatch #00F5D4 in a divider rule" /><img src="https://placehold.co/250x12/F15BB5/F15BB5.png" alt="vivid magenta swatch #F15BB5 in a divider rule" /><img src="https://placehold.co/250x12/9B5DE5/9B5DE5.png" alt="indigo swatch #9B5DE5 in a divider rule" /></p>
 <h2>🤖 Automate the boring 90%</h2>
 <p>Everything above is deterministic, so it can be a script. Feed it a palette, get every format out:</p>
 <pre class="code lang-js" data-lang="js"><code><span <span class="t-kw">class</span>="t-comment">#!/usr/bin/env node</span>
@@ -341,9 +341,8 @@ console.log(&<span <span class="t-kw">class</span>="t-comment">#x27;✔ theme.cs
 <span class="sh-ok">✔ theme.css  ✔ tokens.json  ✔ tailwind.colors.js</span>
 <span class="sh-out"></span></code></pre>
 <h2>🧾 The checklist</h2>
-<ol><li>Copy the <code>:root</code> block from the ColorFiind palette page → <code>palette.css</code>. Keep the URL in a comment.</li><li>Never let a component import layer one.</li><li>Every brand color gets an <code>-ink</code> partner that is readable on top of it.</li><li>Export <code>tokens.json</code> the moment a designer is involved.</li><li>Re-run contrast per mode, not per color.</li><li>Script the conversion — you will do it again next project.</li></ol>
-<p>Next up: seasonal palettes as a theming system — why <em>soft summer</em> makes a beautiful reading app and <em>deep winter</em> makes the best dark mode you have shipped.</p>
-<a class='cta' href='https://colorfiind.com' target='_blank' rel='noopener'>Grab a palette and run the pipeline</a></div>
+<ol><li>Write the raw palette into <code>palette.css</code> once. Keep the source link in a comment.</li><li>Never let a component import layer one.</li><li>Every brand color gets an <code>-ink</code> partner that is readable on top of it.</li><li>Export <code>tokens.json</code> the moment a designer is involved.</li><li>Re-run contrast per mode, not per color.</li><li>Script the conversion — you will do it again next project.</li></ol>
+<p>Next up: seasonal palettes as a theming system — why <em>soft summer</em> makes a beautiful reading app and <em>deep winter</em> makes the best dark mode you have shipped.</p></div>
     </article>
     <p class="note">Static local preview — Liquid tags are simulated, DEV renders them natively.
     Colour swatches load from placehold.co, so they need internet access.</p>

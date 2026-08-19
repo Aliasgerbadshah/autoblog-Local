@@ -1,24 +1,25 @@
 ---
 title: "Automate Your Color Workflow: One Script, Any Palette → Tokens, Swatches & README Badges"
 published: false
-description: "A single CLI turns four hex codes from ColorFiind into CSS variables, Tailwind config, design tokens, a contrast report, README swatch tables and DEV.to-ready markdown. Python, Node and PHP versions included."
+description: "One script turns four hex codes into CSS variables, Tailwind config, design tokens, a contrast report and README swatches. Python, Node and PHP versions."
 tags: python, css, productivity, webdev
-cover_image: https://placehold.co/1000x420/10002B/FF006E.png
 ---
 
-<!-- Cover asset: content/devto/assets/cover-clay-flare-spectrum.png (1000x420) -->
+<!-- Cover image: upload your own 1000x420 image in the DEV editor,
+     then paste the URL it returns into a new `cover_image:` line above.
+     A ready-made generation prompt for this post is in COVER-PROMPTS.md. -->
 
-![Clay Flare Spectrum](https://placehold.co/250x110/10002B/10002B.png)![Clay Flare Spectrum](https://placehold.co/250x110/240046/240046.png)![Clay Flare Spectrum](https://placehold.co/250x110/FF006E/FF006E.png)![Clay Flare Spectrum](https://placehold.co/250x110/00F5D4/00F5D4.png)
+![deep indigo swatch #10002B in a divider rule](https://placehold.co/250x110/10002B/10002B.png)![deep indigo swatch #240046 in a divider rule](https://placehold.co/250x110/240046/240046.png)![vivid pink swatch #FF006E in a divider rule](https://placehold.co/250x110/FF006E/FF006E.png)![vivid teal swatch #00F5D4 in a divider rule](https://placehold.co/250x110/00F5D4/00F5D4.png)
 
-> 🎨 **Palette in play** — [Clay Flare Spectrum](https://colorfiind.com/palette/clay-flare-spectrum) · `#10002B` `#240046` `#FF006E` `#00F5D4`
+> 🎨 **Palette in play** — **Clay Flare Spectrum** · `#10002B` `#240046` `#FF006E` `#00F5D4`
 
-Here is a thing I did by hand far too many times: open a palette on [ColorFiind](https://colorfiind.com), copy four hexes, paste them into a CSS file, retype them into `tailwind.config.js`, retype them *again* into a tokens file, then paste each one into a contrast checker, then build a swatch table for the README.
+Here is a thing I did by hand far too many times: open a palette, copy four hexes, paste them into a CSS file, retype them into `tailwind.config.js`, retype them *again* into a tokens file, then paste each one into a contrast checker, then build a swatch table for the README.
 
 Twelve minutes. Per palette. With at least one typo.
 
 So I wrote the script. This post is the script, in three languages, plus the CI job that keeps it honest.
 
-![rule](https://placehold.co/250x12/10002B/10002B.png)![rule](https://placehold.co/250x12/240046/240046.png)![rule](https://placehold.co/250x12/FF006E/FF006E.png)![rule](https://placehold.co/250x12/00F5D4/00F5D4.png)
+![deep indigo swatch #10002B in a divider rule](https://placehold.co/250x12/10002B/10002B.png)![deep indigo swatch #240046 in a divider rule](https://placehold.co/250x12/240046/240046.png)![vivid pink swatch #FF006E in a divider rule](https://placehold.co/250x12/FF006E/FF006E.png)![vivid teal swatch #00F5D4 in a divider rule](https://placehold.co/250x12/00F5D4/00F5D4.png)
 
 ## 🎯 What "done" looks like
 
@@ -98,7 +99,7 @@ NAMES = ["surface", "primary", "accent", "support"]
 
 def css_vars(name, colors):
     body = "\n".join(f"  --color-{k}: {c};" for k, c in zip(NAMES, colors))
-    return f"/* {name} — colorfiind.com */\n:root {{\n{body}\n}}"
+    return f"/* {name} */\n:root {{\n{body}\n}}"
 
 
 def tailwind(colors):
@@ -112,7 +113,7 @@ def tokens(name, slug, colors):
     import json
     return json.dumps({
         "palette": {
-            "$description": f"{name} — colorfiind.com/palette/{slug}",
+            "$description": f"{name} ({slug})",
             **{k: {"$type": "color", "$value": c} for k, c in zip(NAMES, colors)},
         }
     }, indent=2)
@@ -147,14 +148,14 @@ def table(colors):
 
 Passing the same hex as background **and** text color hides placehold.co's default size label, leaving a clean block. Output:
 
-![](https://placehold.co/210x110/10002B/10002B.png)![](https://placehold.co/210x110/240046/240046.png)![](https://placehold.co/210x110/FF006E/FF006E.png)![](https://placehold.co/210x110/00F5D4/00F5D4.png)
+![deep indigo swatch #10002B](https://placehold.co/210x110/10002B/10002B.png)![deep indigo swatch #240046](https://placehold.co/210x110/240046/240046.png)![vivid pink swatch #FF006E](https://placehold.co/210x110/FF006E/FF006E.png)![vivid teal swatch #00F5D4](https://placehold.co/210x110/00F5D4/00F5D4.png)
 
 | Swatch | HEX | Contrast vs white | Grade |
 | :----: | :-- | :---------------- | :---- |
-| ![](https://placehold.co/110x44/10002B/10002B.png) | `#10002B` | 19.87:1 | AAA |
-| ![](https://placehold.co/110x44/240046/240046.png) | `#240046` | 18.05:1 | AAA |
-| ![](https://placehold.co/110x44/FF006E/FF006E.png) | `#FF006E` | 3.83:1 | AA Large |
-| ![](https://placehold.co/110x44/00F5D4/00F5D4.png) | `#00F5D4` | 1.40:1 | fail |
+| ![deep indigo swatch #10002B](https://placehold.co/110x44/10002B/10002B.png) | `#10002B` | 19.87:1 | AAA |
+| ![deep indigo swatch #240046](https://placehold.co/110x44/240046/240046.png) | `#240046` | 18.05:1 | AAA |
+| ![vivid pink swatch #FF006E](https://placehold.co/110x44/FF006E/FF006E.png) | `#FF006E` | 3.83:1 | AA Large |
+| ![vivid teal swatch #00F5D4](https://placehold.co/110x44/00F5D4/00F5D4.png) | `#00F5D4` | 1.40:1 | fail |
 
 {% details 🏷️ Prefer shields.io badges? Here's that variant %}
 
@@ -172,7 +173,7 @@ Badges give you the hex printed on the chip; `placehold.co` gives you a clean bl
 
 {% enddetails %}
 
-![rule](https://placehold.co/250x12/10002B/10002B.png)![rule](https://placehold.co/250x12/240046/240046.png)![rule](https://placehold.co/250x12/FF006E/FF006E.png)![rule](https://placehold.co/250x12/00F5D4/00F5D4.png)
+![deep indigo swatch #10002B in a divider rule](https://placehold.co/250x12/10002B/10002B.png)![deep indigo swatch #240046 in a divider rule](https://placehold.co/250x12/240046/240046.png)![vivid pink swatch #FF006E in a divider rule](https://placehold.co/250x12/FF006E/FF006E.png)![vivid teal swatch #00F5D4 in a divider rule](https://placehold.co/250x12/00F5D4/00F5D4.png)
 
 ## 🟨 4 · The Node version
 
@@ -258,7 +259,7 @@ function contrast(string $a, string $b): float {
 
 function cssVars(string $name, array $colors): string {
     $keys = ['surface', 'primary', 'accent', 'support'];
-    $out  = "/* {$name} — colorfiind.com */\n:root {\n";
+    $out  = "/* {$name} */\n:root {\n";
     foreach ($colors as $i => $hex) {
         $out .= sprintf("  --color-%s: %s;\n", $keys[$i] ?? "extra-{$i}", $hex);
     }
@@ -313,7 +314,7 @@ jobs:
 
 ## 🧾 The checklist
 
-1. Store the palette **once**, in JSON, with the ColorFiind URL next to it.
+1. Store the palette **once**, in JSON, with its source URL next to it.
 2. Generate CSS, Tailwind and tokens — never retype a hex.
 3. Generate swatch markdown too; your README should show the colors, not list them.
 4. Compute `onWhite` / `onBlack` for every color to decide light vs dark mode roles.
@@ -322,6 +323,5 @@ jobs:
 
 The full generator used for this series — bands, tables, contrast matrices and 1000×420 cover art — lives in the repo linked below. Point it at any palette and it prints a post's worth of markdown.
 
-{% cta https://colorfiind.com %} Find a palette to feed the script {% endcta %}
 
 *What's the most tedious part of your color workflow? Tell me and I'll add a flag for it.* 👇

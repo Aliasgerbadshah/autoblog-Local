@@ -1,33 +1,34 @@
 ---
-title: "Neon Dark Mode That Doesn't Hurt: Building a Glow UI from ColorFiind's Neon Palettes"
+title: "Neon Dark Mode That Doesn't Hurt: Building a Glow UI from a good palette library's Neon Palettes"
 published: false
-description: "Neon palettes look incredible in a screenshot and burn your retinas in production. Here's the CSS system that keeps the glow and fixes the pain — halation, focus rings, glow tokens and a reduced-motion path."
+description: "Neon palettes look incredible in a screenshot and burn your retinas in production. The CSS system that keeps the glow and fixes the pain."
 tags: css, webdev, darkmode, design
-cover_image: https://placehold.co/1000x420/09090B/00E5FF.png
 ---
 
-<!-- Cover asset: content/devto/assets/cover-maple-drift.png (1000x420) -->
+<!-- Cover image: upload your own 1000x420 image in the DEV editor,
+     then paste the URL it returns into a new `cover_image:` line above.
+     A ready-made generation prompt for this post is in COVER-PROMPTS.md. -->
 
-![Maple Drift](https://placehold.co/250x110/09090B/09090B.png)![Maple Drift](https://placehold.co/250x110/FF007F/FF007F.png)![Maple Drift](https://placehold.co/250x110/00E5FF/00E5FF.png)![Maple Drift](https://placehold.co/250x110/B8F500/B8F500.png)
+![near-black swatch #09090B in a divider rule](https://placehold.co/250x110/09090B/09090B.png)![vivid pink swatch #FF007F in a divider rule](https://placehold.co/250x110/FF007F/FF007F.png)![vivid teal swatch #00E5FF in a divider rule](https://placehold.co/250x110/00E5FF/00E5FF.png)![vivid lime swatch #B8F500 in a divider rule](https://placehold.co/250x110/B8F500/B8F500.png)
 
-> 🎨 **Palette in play** — [Maple Drift](https://colorfiind.com/palette/maple-drift) · `#09090B` `#FF007F` `#00E5FF` `#B8F500`
+> 🎨 **Palette in play** — **Maple Drift** · `#09090B` `#FF007F` `#00E5FF` `#B8F500`
 
 Every neon theme starts the same way. You find a palette like this one, you build a landing page in an hour, it looks like the future, and three days later you notice you have been squinting at your own product.
 
-The colors are not the problem. **The way they are applied is.** [ColorFiind's neon category](https://colorfiind.com/category/neon) is full of palettes with the exact structure you want — one near-black base plus three high-luminance signals — and that structure is a rule waiting to be written down.
+The colors are not the problem. **The way they are applied is.** a good palette library's neon category is full of palettes with the exact structure you want — one near-black base plus three high-luminance signals — and that structure is a rule waiting to be written down.
 
-![rule](https://placehold.co/250x12/09090B/09090B.png)![rule](https://placehold.co/250x12/FF007F/FF007F.png)![rule](https://placehold.co/250x12/00E5FF/00E5FF.png)![rule](https://placehold.co/250x12/B8F500/B8F500.png)
+![near-black swatch #09090B in a divider rule](https://placehold.co/250x12/09090B/09090B.png)![vivid pink swatch #FF007F in a divider rule](https://placehold.co/250x12/FF007F/FF007F.png)![vivid teal swatch #00E5FF in a divider rule](https://placehold.co/250x12/00E5FF/00E5FF.png)![vivid lime swatch #B8F500 in a divider rule](https://placehold.co/250x12/B8F500/B8F500.png)
 
 ## ⚡ 1 · Read the structure, not the vibe
 
-Every good neon palette on ColorFiind is `1 base + 3 signals`:
+Every good neon palette is `1 base + 3 signals`:
 
 | Swatch | HEX | Luminance | On base | Grade | Role |
 | :----: | :-- | :-------- | :------ | :---: | :--- |
-| ![](https://placehold.co/110x44/09090B/09090B.png) | `#09090B` | 0.003 | — | — | canvas |
-| ![](https://placehold.co/110x44/FF007F/FF007F.png) | `#FF007F` | 0.228 | **5.27:1** | ✅ AA | accent / brand |
-| ![](https://placehold.co/110x44/00E5FF/00E5FF.png) | `#00E5FF` | 0.633 | **12.93:1** | ✅ AAA | primary / links |
-| ![](https://placehold.co/110x44/B8F500/B8F500.png) | `#B8F500` | 0.755 | **15.25:1** | ✅ AAA | success / highlight |
+| ![near-black swatch #09090B](https://placehold.co/110x44/09090B/09090B.png) | `#09090B` | 0.003 | — | — | canvas |
+| ![vivid pink swatch #FF007F](https://placehold.co/110x44/FF007F/FF007F.png) | `#FF007F` | 0.228 | **5.27:1** | ✅ AA | accent / brand |
+| ![vivid teal swatch #00E5FF](https://placehold.co/110x44/00E5FF/00E5FF.png) | `#00E5FF` | 0.633 | **12.93:1** | ✅ AAA | primary / links |
+| ![vivid lime swatch #B8F500](https://placehold.co/110x44/B8F500/B8F500.png) | `#B8F500` | 0.755 | **15.25:1** | ✅ AAA | success / highlight |
 
 Two things fall out of that table immediately:
 
@@ -38,9 +39,9 @@ Three more neon palettes with the same skeleton:
 
 | Palette | Base | Signals |
 | :-- | :-- | :-- |
-| [Neon Diner Harmony](https://colorfiind.com/palette/neon-diner-harmony) | ![](https://placehold.co/54x24/0F172A/0F172A.png) `#0F172A` | ![](https://placehold.co/54x24/00F5D4/00F5D4.png)![](https://placehold.co/54x24/F15BB5/F15BB5.png)![](https://placehold.co/54x24/9B5DE5/9B5DE5.png) |
-| [Clay Flare Spectrum](https://colorfiind.com/palette/clay-flare-spectrum) | ![](https://placehold.co/54x24/10002B/10002B.png) `#10002B` | ![](https://placehold.co/54x24/240046/240046.png)![](https://placehold.co/54x24/FF006E/FF006E.png)![](https://placehold.co/54x24/00F5D4/00F5D4.png) |
-| [Pine Field Gallery](https://colorfiind.com/palette/pine-field-gallery) | ![](https://placehold.co/54x24/03071E/03071E.png) `#03071E` | ![](https://placehold.co/54x24/DC2F02/DC2F02.png)![](https://placehold.co/54x24/F48C06/F48C06.png)![](https://placehold.co/54x24/FFBA08/FFBA08.png) |
+| **Neon Diner Harmony** | ![navy swatch #0F172A](https://placehold.co/54x24/0F172A/0F172A.png) `#0F172A` | ![vivid teal swatch #00F5D4](https://placehold.co/54x24/00F5D4/00F5D4.png)![vivid magenta swatch #F15BB5](https://placehold.co/54x24/F15BB5/F15BB5.png)![indigo swatch #9B5DE5](https://placehold.co/54x24/9B5DE5/9B5DE5.png) |
+| **Clay Flare Spectrum** | ![deep indigo swatch #10002B](https://placehold.co/54x24/10002B/10002B.png) `#10002B` | ![deep indigo swatch #240046](https://placehold.co/54x24/240046/240046.png)![vivid pink swatch #FF006E](https://placehold.co/54x24/FF006E/FF006E.png)![vivid teal swatch #00F5D4](https://placehold.co/54x24/00F5D4/00F5D4.png) |
+| **Pine Field Gallery** | ![near-black swatch #03071E](https://placehold.co/54x24/03071E/03071E.png) `#03071E` | ![dark red swatch #DC2F02](https://placehold.co/54x24/DC2F02/DC2F02.png)![vivid orange swatch #F48C06](https://placehold.co/54x24/F48C06/F48C06.png)![vivid orange swatch #FFBA08](https://placehold.co/54x24/FFBA08/FFBA08.png) |
 
 ## 🩹 2 · Why it hurts — halation, and the 3 fixes
 
@@ -87,7 +88,7 @@ a         { color: var(--neon-cyan); }
 
 > 🧪 **Lab note** — `color-mix()` is the whole trick. One neon token generates its own tint, border, glow and hover state, so a palette swap is still a one-line change. Supported in every current browser; `rgb(0 229 255 / 6%)` is the fallback.
 
-![rule](https://placehold.co/250x12/09090B/09090B.png)![rule](https://placehold.co/250x12/FF007F/FF007F.png)![rule](https://placehold.co/250x12/00E5FF/00E5FF.png)![rule](https://placehold.co/250x12/B8F500/B8F500.png)
+![near-black swatch #09090B in a divider rule](https://placehold.co/250x12/09090B/09090B.png)![vivid pink swatch #FF007F in a divider rule](https://placehold.co/250x12/FF007F/FF007F.png)![vivid teal swatch #00E5FF in a divider rule](https://placehold.co/250x12/00E5FF/00E5FF.png)![vivid lime swatch #B8F500 in a divider rule](https://placehold.co/250x12/B8F500/B8F500.png)
 
 ## 🧱 3 · The full theme
 
@@ -157,9 +158,9 @@ Text-on-neon pairings, pre-solved:
 
 | Background | Ink | Ratio |
 | :-- | :-- | :-- |
-| ![](https://placehold.co/70x26/00E5FF/00E5FF.png) `#00E5FF` | `#04252B` | **10.46:1** ✅ |
-| ![](https://placehold.co/70x26/B8F500/B8F500.png) `#B8F500` | `#14200B` | **12.97:1** ✅ |
-| ![](https://placehold.co/70x26/FF007F/FF007F.png) `#FF007F` | `#1A0010` | **5.29:1** ✅ |
+| ![vivid teal swatch #00E5FF](https://placehold.co/70x26/00E5FF/00E5FF.png) `#00E5FF` | `#04252B` | **10.46:1** ✅ |
+| ![vivid lime swatch #B8F500](https://placehold.co/70x26/B8F500/B8F500.png) `#B8F500` | `#14200B` | **12.97:1** ✅ |
+| ![vivid pink swatch #FF007F](https://placehold.co/70x26/FF007F/FF007F.png) `#FF007F` | `#1A0010` | **5.29:1** ✅ |
 
 > 🚧 **Trap** — light text on `#FF007F` maxes out at **3.43:1**; the pink is simply too luminous to carry white type. Dark ink on pink is the only combination that passes AA, and it looks better anyway.
 
@@ -255,6 +256,5 @@ Tests: 4 passed, 4 total
 - Respect `prefers-reduced-motion`, and consider a "calm" intensity toggle.
 - Assert contrast in CI so the theme can't rot.
 
-{% cta https://colorfiind.com/category/neon %} Browse the neon palettes on ColorFiind {% endcta %}
 
 *Building something dark and loud? Drop your base + three signals in the comments.* 👇

@@ -29,18 +29,10 @@ or straight on GitHub. Swatches render there too, because they are images.
 1. Open <https://dev.to/new>.
 2. Make sure you are in the **Markdown** editor
    (Settings → Customization → Editor version → "rich + markdown" if you want separate title/tag fields).
-3. Open e.g. `01-colorfiind-developer-tour.md`, select **everything including the `---` front matter**, paste it in.
-4. **Cover image:** drag the matching file from `assets/` into the editor body — DEV uploads it and gives
-   you a URL. Cut that URL, paste it as the `cover_image:` value in the front matter, delete the leftover
-   image line from the body.
-
-   | Article | Cover file in `assets/` |
-   | :-- | :-- |
-   | 01 tour | `cover-mango-garden-moment.png` |
-   | 02 tokens | `cover-neon-diner-harmony.png` |
-   | 03 seasonal | `cover-deep-winter-journal.png` |
-   | 04 neon | `cover-maple-drift.png` |
-   | 05 automation | `cover-clay-flare-spectrum.png` |
+3. Open e.g. `01-choose-a-color-palette.md`, select **everything including the `---` front matter**, paste it in.
+4. **Cover image:** there is deliberately **no `cover_image:`** in the front matter — generate or design
+   your own 1000×420 image (prompts for every post are in `COVER-PROMPTS.md`), drag it into the DEV
+   editor, and paste the URL it returns into a new `cover_image:` line.
 
 5. Click **Preview** in DEV and check the swatch bands and code blocks.
 6. Change `published: false` → `published: true`, hit **Publish**.
@@ -100,6 +92,16 @@ Needs Python 3.9+ (stdlib only) and ImageMagick for the PNG commands.
 
 ---
 
+## Before you paste: run the linter
+
+```bash
+python3 content/devto/tools/lint_md.py          # report problems
+python3 content/devto/tools/lint_md.py --fix    # auto-add missing image alt text
+```
+
+It catches exactly what DEV's editor complains about: empty `![]()` alt text, more than 4 tags,
+over-long descriptions, unbalanced Liquid tags, and a stray `cover_image:` you forgot to remove.
+
 ## Rules to keep when you edit the posts
 
 - **Never hand-edit a contrast number.** Change a colour → re-run
@@ -108,4 +110,6 @@ Needs Python 3.9+ (stdlib only) and ImageMagick for the PNG commands.
   `https://placehold.co/210x110/HEX/HEX.png` (same hex twice = solid block, no label).
 - **Four swatch images on one line with no spaces** = a seamless band. Add a space and it breaks.
 - **Max 4 tags**, comma separated, no `#`.
+- **Every image needs alt text** — `![](url)` triggers DEV's accessibility warning. `lint_md.py --fix` fills them in.
+- **No `cover_image:` in the file** — you upload the cover yourself.
 - Keep long code inside `{% details %} … {% enddetails %}` so the article stays readable.

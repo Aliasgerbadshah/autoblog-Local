@@ -24,7 +24,7 @@ OUT = ROOT / "preview"
 
 ARTICLES = [
     ("00-swatch-deck-theme-kit.md", "Reusable theme kit"),
-    ("01-colorfiind-developer-tour.md", "Feature tour"),
+    ("01-choose-a-color-palette.md", "Choosing a palette"),
     ("02-hex-to-design-tokens.md", "Tokens pipeline"),
     ("03-seasonal-palettes-ui-themes.md", "Seasonal themes"),
     ("04-neon-dark-mode-glow-ui.md", "Neon dark mode"),

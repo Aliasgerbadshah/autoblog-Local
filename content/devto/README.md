@@ -7,13 +7,15 @@ different from one another.
 ```
 content/devto/
 ├── 00-swatch-deck-theme-kit.md      ← the reusable theme (reference sheet)
-├── 01-colorfiind-developer-tour.md  ← feature tour of the site
+├── 01-choose-a-color-palette.md  ← how to choose a palette that survives production
 ├── 02-hex-to-design-tokens.md       ← palette → CSS vars / Tailwind / tokens
 ├── 03-seasonal-palettes-ui-themes.md← soft summer vs deep winter theming
 ├── 04-neon-dark-mode-glow-ui.md     ← neon palettes without eye strain
 ├── 05-automate-palette-workflow.md  ← one script → every format (py/node/php)
 ├── assets/                          ← 1000×420 covers + 1200×260 strips (PNG)
-├── data/palettes.json               ← the 16 real palettes used across the posts
+├── COVER-PROMPTS.md                 ← image-generation prompt for each post
+├── devto-posts.zip                  ← all .md files, ready to download
+├── data/palettes.json               ← the palettes used across the posts
 ├── preview/                         ← generated static preview (open index.html)
 ├── index.html                       ← redirect into the preview
 └── tools/palette_kit.py             ← generator for swatches, tokens, contrast, covers

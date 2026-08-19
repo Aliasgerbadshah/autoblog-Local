@@ -100,22 +100,22 @@ font-family:ui-monospace,monospace;color:var(--primary);margin:1.2em 0}
     d.dataset.theme=d.dataset.theme==='dark'?'light':'dark'">🌗 Theme</button>
 </header>
 <div class="layout">
-  <nav class="files"><h2>Articles</h2><a href="00-swatch-deck-theme-kit.html" class="">swatch deck theme kit<small>Reusable theme kit</small></a><a href="01-colorfiind-developer-tour.html" class="">colorfiind developer tour<small>Feature tour</small></a><a href="02-hex-to-design-tokens.html" class="">hex to design tokens<small>Tokens pipeline</small></a><a href="03-seasonal-palettes-ui-themes.html" class="">seasonal palettes ui themes<small>Seasonal themes</small></a><a href="04-neon-dark-mode-glow-ui.html" class="">neon dark mode glow ui<small>Neon dark mode</small></a><a href="05-automate-palette-workflow.html" class="active">automate palette workflow<small>Automation</small></a></nav>
+  <nav class="files"><h2>Articles</h2><a href="00-swatch-deck-theme-kit.html" class="">swatch deck theme kit<small>Reusable theme kit</small></a><a href="01-choose-a-color-palette.html" class="">choose a color palette<small>Choosing a palette</small></a><a href="02-hex-to-design-tokens.html" class="">hex to design tokens<small>Tokens pipeline</small></a><a href="03-seasonal-palettes-ui-themes.html" class="">seasonal palettes ui themes<small>Seasonal themes</small></a><a href="04-neon-dark-mode-glow-ui.html" class="">neon dark mode glow ui<small>Neon dark mode</small></a><a href="05-automate-palette-workflow.html" class="active">automate palette workflow<small>Automation</small></a></nav>
   <div>
     <article>
-      <img class="cover" src="https://placehold.co/1000x420/10002B/FF006E.png" alt="cover" />
+      
       <div class="meta">
         <div class="tags"><span class="tag">#python</span><span class="tag">#css</span><span class="tag">#productivity</span><span class="tag">#webdev</span></div>
         <h1>Automate Your Color Workflow: One Script, Any Palette → Tokens, Swatches &amp; README Badges</h1>
-        <p class="desc">A single CLI turns four hex codes from ColorFiind into CSS variables, Tailwind config, design tokens, a contrast report, README swatch tables and DEV.to-ready markdown. Python, Node and PHP versions included.</p>
-        <div class="fm">published: <b>false</b> · tags: 4/4 · cover_image: set</div>
+        <p class="desc">One script turns four hex codes into CSS variables, Tailwind config, design tokens, a contrast report and README swatches. Python, Node and PHP versions.</p>
+        <div class="fm">published: <b>false</b> · tags: 4/4 · cover_image: none</div>
       </div>
-      <div class="post"><p class='band'><img src="https://placehold.co/250x110/10002B/10002B.png" alt="Clay Flare Spectrum" /><img src="https://placehold.co/250x110/240046/240046.png" alt="Clay Flare Spectrum" /><img src="https://placehold.co/250x110/FF006E/FF006E.png" alt="Clay Flare Spectrum" /><img src="https://placehold.co/250x110/00F5D4/00F5D4.png" alt="Clay Flare Spectrum" /></p>
-<blockquote><p>🎨 <strong>Palette in play</strong> — <a href="https://colorfiind.com/palette/clay-flare-spectrum" target="_blank" rel="noopener">Clay Flare Spectrum</a> · <code>#10002B</code> <code>#240046</code> <code>#FF006E</code> <code>#00F5D4</code></p></blockquote>
-<p>Here is a thing I did by hand far too many times: open a palette on <a href="https://colorfiind.com" target="_blank" rel="noopener">ColorFiind</a>, copy four hexes, paste them into a CSS file, retype them into <code>tailwind.config.js</code>, retype them <em>again</em> into a tokens file, then paste each one into a contrast checker, then build a swatch table for the README.</p>
+      <div class="post"><p class='band'><img src="https://placehold.co/250x110/10002B/10002B.png" alt="deep indigo swatch #10002B in a divider rule" /><img src="https://placehold.co/250x110/240046/240046.png" alt="deep indigo swatch #240046 in a divider rule" /><img src="https://placehold.co/250x110/FF006E/FF006E.png" alt="vivid pink swatch #FF006E in a divider rule" /><img src="https://placehold.co/250x110/00F5D4/00F5D4.png" alt="vivid teal swatch #00F5D4 in a divider rule" /></p>
+<blockquote><p>🎨 <strong>Palette in play</strong> — <strong>Clay Flare Spectrum</strong> · <code>#10002B</code> <code>#240046</code> <code>#FF006E</code> <code>#00F5D4</code></p></blockquote>
+<p>Here is a thing I did by hand far too many times: open a palette, copy four hexes, paste them into a CSS file, retype them into <code>tailwind.config.js</code>, retype them <em>again</em> into a tokens file, then paste each one into a contrast checker, then build a swatch table for the README.</p>
 <p>Twelve minutes. Per palette. With at least one typo.</p>
 <p>So I wrote the script. This post is the script, in three languages, plus the CI job that keeps it honest.</p>
-<p class='band'><img src="https://placehold.co/250x12/10002B/10002B.png" alt="rule" /><img src="https://placehold.co/250x12/240046/240046.png" alt="rule" /><img src="https://placehold.co/250x12/FF006E/FF006E.png" alt="rule" /><img src="https://placehold.co/250x12/00F5D4/00F5D4.png" alt="rule" /></p>
+<p class='band'><img src="https://placehold.co/250x12/10002B/10002B.png" alt="deep indigo swatch #10002B in a divider rule" /><img src="https://placehold.co/250x12/240046/240046.png" alt="deep indigo swatch #240046 in a divider rule" /><img src="https://placehold.co/250x12/FF006E/FF006E.png" alt="vivid pink swatch #FF006E in a divider rule" /><img src="https://placehold.co/250x12/00F5D4/00F5D4.png" alt="vivid teal swatch #00F5D4 in a divider rule" /></p>
 <h2>🎯 What &quot;done&quot; looks like</h2>
 <pre class="code lang-console" data-lang="console"><code><span class="sh-prompt">$</span><span class="sh-cmd"> palette-kit all --name &quot;Clay Flare Spectrum&quot; \</span>
 <span class="sh-out">    --slug clay-flare-spectrum \</span>
@@ -173,7 +173,7 @@ font-family:ui-monospace,monospace;color:var(--primary);margin:1.2em 0}
 
 <span class="t-kw">def</span> css_vars(name, colors):
     body = &quot;\n&quot;.join(f&quot;  --color-{k}: {c};&quot; <span class="t-kw">for</span> k, c <span class="t-kw">in</span> zip(NAMES, colors))
-    <span class="t-kw">return</span> f&quot;<span <span class="t-kw">class</span>="t-comment">/* {name} — colorfiind.com */</span>\n:root {{\n{body}\n}}&quot;
+    <span class="t-kw">return</span> f&quot;<span <span class="t-kw">class</span>="t-comment">/* {name} */</span>\n:root {{\n{body}\n}}&quot;
 
 
 <span class="t-kw">def</span> tailwind(colors):
@@ -187,7 +187,7 @@ font-family:ui-monospace,monospace;color:var(--primary);margin:1.2em 0}
     <span class="t-kw">import</span> json
     <span class="t-kw">return</span> json.dumps({
         &quot;palette&quot;: {
-            &quot;$description&quot;: f&quot;{name} — colorfiind.com/palette/{slug}&quot;,
+            &quot;$description&quot;: f&quot;{name} ({slug})&quot;,
             **{k: {&quot;$type&quot;: &quot;color&quot;, &quot;$value&quot;: c} <span class="t-kw">for</span> k, c <span class="t-kw">in</span> zip(NAMES, colors)},
         }
     }, indent=<span <span class="t-kw">class</span>="t-number">2</span>)
@@ -216,8 +216,8 @@ font-family:ui-monospace,monospace;color:var(--primary);margin:1.2em 0}
     <span class="t-kw">return</span> &quot;\n&quot;.join(rows)
 </code></pre>
 <p>Passing the same hex as background <strong>and</strong> text color hides placehold.co&#x27;s default size label, leaving a clean block. Output:</p>
-<p class='band'><img src="https://placehold.co/210x110/10002B/10002B.png" alt="" /><img src="https://placehold.co/210x110/240046/240046.png" alt="" /><img src="https://placehold.co/210x110/FF006E/FF006E.png" alt="" /><img src="https://placehold.co/210x110/00F5D4/00F5D4.png" alt="" /></p>
-<div class='tw'><table><thead><tr><th>Swatch</th><th>HEX</th><th>Contrast vs white</th><th>Grade</th></tr></thead><tbody><tr><td><img src="https://placehold.co/110x44/10002B/10002B.png" alt="" /></td><td><code>#10002B</code></td><td>19.87:1</td><td>AAA</td></tr><tr><td><img src="https://placehold.co/110x44/240046/240046.png" alt="" /></td><td><code>#240046</code></td><td>18.05:1</td><td>AAA</td></tr><tr><td><img src="https://placehold.co/110x44/FF006E/FF006E.png" alt="" /></td><td><code>#FF006E</code></td><td>3.83:1</td><td>AA Large</td></tr><tr><td><img src="https://placehold.co/110x44/00F5D4/00F5D4.png" alt="" /></td><td><code>#00F5D4</code></td><td>1.40:1</td><td>fail</td></tr></tbody></table></div>
+<p class='band'><img src="https://placehold.co/210x110/10002B/10002B.png" alt="deep indigo swatch #10002B" /><img src="https://placehold.co/210x110/240046/240046.png" alt="deep indigo swatch #240046" /><img src="https://placehold.co/210x110/FF006E/FF006E.png" alt="vivid pink swatch #FF006E" /><img src="https://placehold.co/210x110/00F5D4/00F5D4.png" alt="vivid teal swatch #00F5D4" /></p>
+<div class='tw'><table><thead><tr><th>Swatch</th><th>HEX</th><th>Contrast vs white</th><th>Grade</th></tr></thead><tbody><tr><td><img src="https://placehold.co/110x44/10002B/10002B.png" alt="deep indigo swatch #10002B" /></td><td><code>#10002B</code></td><td>19.87:1</td><td>AAA</td></tr><tr><td><img src="https://placehold.co/110x44/240046/240046.png" alt="deep indigo swatch #240046" /></td><td><code>#240046</code></td><td>18.05:1</td><td>AAA</td></tr><tr><td><img src="https://placehold.co/110x44/FF006E/FF006E.png" alt="vivid pink swatch #FF006E" /></td><td><code>#FF006E</code></td><td>3.83:1</td><td>AA Large</td></tr><tr><td><img src="https://placehold.co/110x44/00F5D4/00F5D4.png" alt="vivid teal swatch #00F5D4" /></td><td><code>#00F5D4</code></td><td>1.40:1</td><td>fail</td></tr></tbody></table></div>
 <details class='liquid' open><summary>🏷️ Prefer shields.io badges? Here&#x27;s that variant</summary>
 <pre class="code lang-python" data-lang="python"><code>BADGE = &quot;https:<span <span class="t-kw">class</span>="t-comment">//img.shields.io/badge/{label}-{hex}?style=<span class="t-kw">for</span>-the-badge&amp;labelColor={hex}&quot;</span>
 
@@ -229,7 +229,7 @@ font-family:ui-monospace,monospace;color:var(--primary);margin:1.2em 0}
 </code></pre>
 <p>Badges give you the hex printed on the chip; <code>placehold.co</code> gives you a clean block. Use badges in READMEs, blocks in articles.</p>
 </details>
-<p class='band'><img src="https://placehold.co/250x12/10002B/10002B.png" alt="rule" /><img src="https://placehold.co/250x12/240046/240046.png" alt="rule" /><img src="https://placehold.co/250x12/FF006E/FF006E.png" alt="rule" /><img src="https://placehold.co/250x12/00F5D4/00F5D4.png" alt="rule" /></p>
+<p class='band'><img src="https://placehold.co/250x12/10002B/10002B.png" alt="deep indigo swatch #10002B in a divider rule" /><img src="https://placehold.co/250x12/240046/240046.png" alt="deep indigo swatch #240046 in a divider rule" /><img src="https://placehold.co/250x12/FF006E/FF006E.png" alt="vivid pink swatch #FF006E in a divider rule" /><img src="https://placehold.co/250x12/00F5D4/00F5D4.png" alt="vivid teal swatch #00F5D4 in a divider rule" /></p>
 <h2>🟨 4 · The Node version</h2>
 <p>Same idea, drop it in any JS project as <code>scripts/palette.mjs</code>:</p>
 <pre class="code lang-js" data-lang="js"><code><span <span class="t-kw">class</span>="t-comment">#!/usr/bin/env node</span>
@@ -304,7 +304,7 @@ console.table(pairs.map(([name, value]) =&gt; ({
 
 <span class="t-kw">function</span> cssVars(<span class="t-kw">string</span> $name, <span class="t-kw">array</span> $colors): <span class="t-kw">string</span> {
     $keys = [&<span <span class="t-kw">class</span>="t-comment">#x27;surface&#x27;, &#x27;primary&#x27;, &#x27;accent&#x27;, &#x27;support&#x27;];</span>
-    $out  = &quot;<span <span class="t-kw">class</span>="t-comment">/* {$name} — colorfiind.com */</span>\n:root {\n&quot;;
+    $out  = &quot;<span <span class="t-kw">class</span>="t-comment">/* {$name} */</span>\n:root {\n&quot;;
     <span class="t-kw">foreach</span> ($colors <span class="t-kw">as</span> $i =&gt; $hex) {
         $out .= sprintf(&quot;  --color-%s: %s;\n&quot;, $keys[$i] ?? &quot;extra-{$i}&quot;, $hex);
     }
@@ -348,9 +348,8 @@ jobs</span>:
 </code></pre>
 <p><em>(<code>#7A5AA8</code> on <code>#240046</code> is 3.31:1 — a fail for label text. Lightening the violet to <code>#B9A6E0</code> takes it to 8.25:1.)</em></p>
 <h2>🧾 The checklist</h2>
-<ol><li>Store the palette <strong>once</strong>, in JSON, with the ColorFiind URL next to it.</li><li>Generate CSS, Tailwind and tokens — never retype a hex.</li><li>Generate swatch markdown too; your README should show the colors, not list them.</li><li>Compute <code>onWhite</code> / <code>onBlack</code> for every color to decide light vs dark mode roles.</li><li>Put a contrast assertion in CI with the pairs you really ship.</li><li>Regenerate, don&#x27;t edit. The script is the source of truth; the artifacts are build output.</li></ol>
+<ol><li>Store the palette <strong>once</strong>, in JSON, with its source URL next to it.</li><li>Generate CSS, Tailwind and tokens — never retype a hex.</li><li>Generate swatch markdown too; your README should show the colors, not list them.</li><li>Compute <code>onWhite</code> / <code>onBlack</code> for every color to decide light vs dark mode roles.</li><li>Put a contrast assertion in CI with the pairs you really ship.</li><li>Regenerate, don&#x27;t edit. The script is the source of truth; the artifacts are build output.</li></ol>
 <p>The full generator used for this series — bands, tables, contrast matrices and 1000×420 cover art — lives in the repo linked below. Point it at any palette and it prints a post&#x27;s worth of markdown.</p>
-<a class='cta' href='https://colorfiind.com' target='_blank' rel='noopener'>Find a palette to feed the script</a>
 <p><em>What&#x27;s the most tedious part of your color workflow? Tell me and I&#x27;ll add a flag for it.</em> 👇</p></div>
     </article>
     <p class="note">Static local preview — Liquid tags are simulated, DEV renders them natively.
