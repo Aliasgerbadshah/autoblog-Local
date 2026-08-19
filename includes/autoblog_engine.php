@@ -14,6 +14,13 @@ class BloggerOAuthHelper {
         if (empty($clientId) || empty($clientSecret) || empty($refreshToken)) {
             return ['success' => false, 'error' => 'Client ID, Client Secret, and Refresh Token are all required.'];
         }
+        
+        // Validate Client ID format — must end with .apps.googleusercontent.com
+        $clientIdLower = strtolower(trim($clientId));
+        if (!str_ends_with($clientIdLower, '.apps.googleusercontent.com')) {
+            return ['success' => false, 'error' => 'Invalid Client ID format. It must end with ".apps.googleusercontent.com". You appear to be using a Service Account or wrong credential type. Go to Google Cloud Console → APIs & Services → Credentials → Create "OAuth 2.0 Client ID" → Application type: "Web application". Copy the Client ID (ends with .apps.googleusercontent.com) and Client Secret.'];
+        }
+        
         $payload = [
             'client_id' => $clientId,
             'client_secret' => $clientSecret,
@@ -26,14 +33,81 @@ class BloggerOAuthHelper {
             return ['success' => true, 'access_token' => $result['data']['access_token']];
         }
         
-        // Build a clear error message
+        // Build a clear error message with specific guidance per error type
         $errData = $result['data'] ?? [];
         $errMsg = $errData['error'] ?? '';
         $errDesc = $errData['error_description'] ?? '';
+        
+        if ($errMsg === 'unauthorized_client') {
+            return [
+                'success' => false, 
+                'error' => "Google OAuth Error: unauthorized_client — This means your Refresh Token was generated with a DIFFERENT Client ID/Secret than what you entered. FIX: (1) Go to Google OAuth Playground (https://developers.google.com/oauthplayground), (2) Click the gear/settings icon, (3) Check 'Use your own OAuth credentials', (4) Enter YOUR Client ID and Client Secret, (5) Add https://developers.google.com/oauthplayground as Authorized Redirect URI in your Google Cloud Console → Credentials → OAuth 2.0 Client → Authorized redirect URIs, (6) Authorize with scope https://www.googleapis.com/auth/blogger, (7) Exchange the auth code for tokens, (8) Copy the NEW refresh_token and paste it in the vault. The old refresh token will NOT work with your custom client ID."
+            ];
+        }
+        
+        if ($errMsg === 'invalid_grant') {
+            return [
+                'success' => false,
+                'error' => "Google OAuth Error: invalid_grant — Your Refresh Token has expired or been revoked. Google refresh tokens expire after 7 days if the OAuth app is in 'Testing' mode. FIX: (1) Go to Google Cloud Console → OAuth consent screen → Publish App to 'In production', OR (2) Generate a new Refresh Token from OAuth Playground using your own Client ID/Secret."
+            ];
+        }
+        
+        if ($errMsg === 'invalid_client') {
+            return [
+                'success' => false,
+                'error' => "Google OAuth Error: invalid_client — The Client Secret is wrong. FIX: Go to Google Cloud Console → APIs & Services → Credentials → Click your OAuth 2.0 Client ID → Copy the EXACT Client Secret (starts with GOCSPX-). Do NOT use a Service Account key."
+            ];
+        }
+        
         if ($errMsg) {
             return ['success' => false, 'error' => "Google OAuth Error: $errMsg — $errDesc (HTTP {$result['http_code']})"];
         }
         return ['success' => false, 'error' => "Token Refresh Failed (HTTP {$result['http_code']}): " . substr($result['raw'] ?? 'Unknown', 0, 500)];
+    }
+    
+    /**
+     * Generate the Google OAuth authorization URL for manual token generation.
+     * User visits this URL, authorizes, gets an auth code, then exchanges it for tokens.
+     */
+    public static function getOAuthAuthorizationUrl($clientId, $redirectUri = 'https://developers.google.com/oauthplayground') {
+        $params = [
+            'client_id' => $clientId,
+            'redirect_uri' => $redirectUri,
+            'scope' => 'https://www.googleapis.com/auth/blogger',
+            'access_type' => 'offline',
+            'response_type' => 'code',
+            'prompt' => 'consent',
+        ];
+        return 'https://accounts.google.com/o/oauth2/v2/auth?' . http_build_query($params);
+    }
+    
+    /**
+     * Exchange an authorization code for access token + refresh token.
+     * Called after user visits the OAuth URL and gets an auth code.
+     */
+    public static function exchangeAuthCode($clientId, $clientSecret, $authCode, $redirectUri = 'https://developers.google.com/oauthplayground') {
+        $payload = [
+            'client_id' => $clientId,
+            'client_secret' => $clientSecret,
+            'code' => $authCode,
+            'redirect_uri' => $redirectUri,
+            'grant_type' => 'authorization_code'
+        ];
+        $result = curlPostForm('https://oauth2.googleapis.com/token', $payload, [], 15);
+        
+        if ($result['success'] && $result['http_code'] === 200 && !empty($result['data']['access_token'])) {
+            return [
+                'success' => true,
+                'access_token' => $result['data']['access_token'],
+                'refresh_token' => $result['data']['refresh_token'] ?? '',
+                'expires_in' => $result['data']['expires_in'] ?? 3600
+            ];
+        }
+        
+        $errData = $result['data'] ?? [];
+        $errMsg = $errData['error'] ?? '';
+        $errDesc = $errData['error_description'] ?? '';
+        return ['success' => false, 'error' => "Auth code exchange failed: $errMsg — $errDesc (HTTP {$result['http_code']})"];
     }
 }
 
