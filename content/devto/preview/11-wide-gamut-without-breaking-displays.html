@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Ship Wide-Gamut Colour Without Breaking Every Older Display — DEV preview</title>
+<style>
+:root{--bg:#0B0F1A;--panel:#111827;--panel2:#0F172A;--line:#1F2A44;--ink:#E7E9EE;
+--muted:#94A3B8;--primary:#00F5D4;--accent:#F15BB5;--support:#9B5DE5;--radius:14px}
+html[data-theme=light]{--bg:#F5F7F9;--panel:#fff;--panel2:#EFF2F6;--line:#DDE3EC;
+--ink:#1B2333;--muted:#5B6478;--primary:#0E7C86;--accent:#B4276F;--support:#6D3FBF}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+font:16px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+a{color:var(--primary)}
+header.top{position:sticky;top:0;z-index:20;display:flex;gap:14px;align-items:center;padding:12px 18px;
+background:var(--bg);border-bottom:1px solid var(--line)}
+.brand{font-weight:800}.brand span{color:var(--primary)}
+.rule{display:flex;height:6px;width:150px;border-radius:99px;overflow:hidden}.rule i{flex:1}
+.spacer{flex:1}
+.btn{font:inherit;cursor:pointer;border:1px solid var(--line);background:var(--panel);color:var(--ink);
+border-radius:99px;padding:6px 14px;text-decoration:none}
+.btn:hover{border-color:var(--primary)}
+.btn-dl{background:var(--primary);color:#08121A;border-color:var(--primary);font-weight:700}
+.layout{display:grid;grid-template-columns:290px minmax(0,1fr);gap:26px;padding:22px;align-items:start}
+@media(max-width:900px){.layout{grid-template-columns:1fr}}
+nav.files{position:sticky;top:70px;background:var(--panel);border:1px solid var(--line);
+border-radius:var(--radius);padding:12px;display:flex;flex-direction:column;gap:6px}
+nav.files h2{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin:6px 8px 8px}
+nav.files a{display:block;padding:9px 11px;border-radius:10px;text-decoration:none;color:var(--ink);
+font-size:14px;border:1px solid transparent}
+nav.files a:hover{background:var(--panel2)}
+nav.files a.active{background:var(--panel2);border-color:var(--primary);color:var(--primary)}
+nav.files small{display:block;color:var(--muted);font-size:11.5px}
+article{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+padding-bottom:48px;max-width:840px;width:100%;overflow:hidden}
+.cover{width:100%;display:block;border-bottom:1px solid var(--line)}
+.meta{padding:22px clamp(18px,4vw,44px) 0}
+.meta h1{font-size:clamp(26px,4vw,40px);line-height:1.18;margin:.2em 0 .3em}
+.tags{display:flex;flex-wrap:wrap;gap:8px}
+.tag{font-size:12.5px;color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:2px 8px}
+.desc{color:var(--muted);font-size:15px}
+.fm{font-size:12px;color:var(--muted);border-top:1px dashed var(--line);
+border-bottom:1px dashed var(--line);padding:8px 0;margin-bottom:6px}
+.post{padding:0 clamp(18px,4vw,44px)}
+.post img{max-width:100%;display:block;margin:.4em 0}
+.post td img{margin:0 auto}
+
+.post h2{margin-top:1.9em;font-size:26px;border-bottom:1px solid var(--line);padding-bottom:.25em}
+.post h3{margin-top:1.5em;font-size:20px}
+.post blockquote{margin:1.4em 0;padding:.9em 1.1em;background:var(--panel2);
+border-left:4px solid var(--accent);border-radius:0 10px 10px 0}
+.post blockquote p{margin:0}
+.tw{overflow-x:auto;margin:1.3em 0}
+.post table{border-collapse:collapse;width:100%;font-size:14.5px}
+.post th,.post td{border:1px solid var(--line);padding:8px 11px;text-align:left;vertical-align:middle}
+.post th{background:var(--panel2)}
+.post td img{vertical-align:middle}
+.post :not(pre)>code{background:var(--panel2);padding:.15em .4em;border-radius:6px;font-size:.9em;
+font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+pre.code{background:#0d1117;border:1px solid var(--line);border-radius:12px;padding:18px;
+overflow-x:auto;position:relative;margin:1.3em 0}
+pre.code code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13.5px;
+line-height:1.62;color:#C9D1D9;white-space:pre}
+pre.code::before{content:attr(data-lang);position:absolute;top:0;right:0;font-size:10.5px;
+letter-spacing:.12em;text-transform:uppercase;color:#0B0F1A;background:var(--primary);
+padding:2px 10px;border-radius:0 11px 0 10px;font-family:ui-monospace,monospace}
+pre.lang-diff{border-color:#F15BB5}
+pre.lang-console,pre.lang-bash{background:#05070d;border-color:#00F5D4}
+.t-comment{color:#6E7A8A;font-style:italic}
+.t-string{color:#A5D6FF}.t-number{color:#F0A868}.t-kw{color:#FF7B9C}
+.t-prop{color:#9B5DE5;font-weight:600}.t-tag{color:#7EE787}
+.t-color{color:#FFD479}
+.chip{display:inline-block;width:.78em;height:.78em;margin-right:.35em;border-radius:3px;
+border:1px solid rgba(255,255,255,.35);vertical-align:-1px}
+.d-add{color:#7EE787;display:block;background:rgba(46,160,67,.15)}
+.d-del{color:#FF9492;display:block;background:rgba(248,81,73,.14)}
+.d-hunk{color:#79C0FF;display:block}
+.sh-prompt{color:#F15BB5;font-weight:700}.sh-cmd{color:#E7E9EE}
+.sh-ok{color:#7EE787;display:block}.sh-out{color:#9DF7E4;display:block}
+details.liquid{background:var(--panel2);border:1px solid var(--line);border-radius:12px;
+padding:10px 16px;margin:1.4em 0}
+details.liquid summary{cursor:pointer;font-weight:650}
+.cta{display:block;text-align:center;margin:1.8em 0;padding:14px 20px;border-radius:12px;
+background:linear-gradient(90deg,var(--primary),var(--support));color:#08121A;font-weight:750;
+text-decoration:none}
+.katex{background:var(--panel2);border:1px dashed var(--line);border-radius:10px;padding:12px 16px;
+font-family:ui-monospace,monospace;color:var(--primary);margin:1.2em 0}
+.embed{color:var(--muted);font-family:ui-monospace,monospace;font-size:13px}
+.note{max-width:840px;color:var(--muted);font-size:13px;margin-top:14px}
+.post hr{border:0;border-top:1px solid var(--line);margin:2em 0}
+.post p:empty,.post p.spacer{margin:1.1em 0;min-height:1.1em}
+.post h2{margin-top:1.2em}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand">Swatch<span>Deck</span> · DEV.to preview</div>
+  <div class="rule"><i style="background:#0F172A"></i><i style="background:#00F5D4"></i>
+    <i style="background:#F15BB5"></i><i style="background:#9B5DE5"></i></div>
+  <div class="spacer"></div>
+  <a class="btn" href="/downloads">⬇ Downloads</a>
+  <a class="btn btn-dl" href="/download/11-wide-gamut-without-breaking-displays.md">⬇ This post (.md)</a>
+  <a class="btn" href="../11-wide-gamut-without-breaking-displays.md" target="_blank">View raw</a>
+  <button class="btn" onclick="var d=document.documentElement;
+    d.dataset.theme=d.dataset.theme==='dark'?'light':'dark'">🌗 Theme</button>
+</header>
+<div class="layout">
+  <nav class="files"><h2>Articles</h2><a href="00-swatch-deck-theme-kit.html" class="">swatch deck theme kit<small>Reusable theme kit</small></a><a href="01-choose-a-color-palette.html" class="">choose a color palette<small>Choosing a palette</small></a><a href="02-hex-to-design-tokens.html" class="">hex to design tokens<small>Tokens pipeline</small></a><a href="03-seasonal-palettes-ui-themes.html" class="">seasonal palettes ui themes<small>Seasonal themes</small></a><a href="04-neon-dark-mode-glow-ui.html" class="">neon dark mode glow ui<small>Neon dark mode</small></a><a href="05-automate-palette-workflow.html" class="">automate palette workflow<small>Automation</small></a><a href="06-css-color-mix-dynamic-variations.html" class="">css color mix dynamic variations<small>color-mix()</small></a><a href="07-css-relative-color-syntax.html" class="">css relative color syntax<small>Relative colour</small></a><a href="08-light-dark-css-theme-aware.html" class="">light dark css theme aware<small>light-dark()</small></a><a href="09-hwb-color-explained.html" class="">hwb color explained<small>HWB</small></a><a href="10-display-p3-vs-srgb-wide-gamut.html" class="">display p3 vs srgb wide gamut<small>Display-P3</small></a><a href="11-wide-gamut-without-breaking-displays.html" class="active">wide gamut without breaking displays<small>Wide gamut safely</small></a><a href="12-color-gamut-media-queries.html" class="">color gamut media queries<small>Gamut media queries</small></a><a href="13-same-hex-different-monitors.html" class="">same hex different monitors<small>Monitor variance</small></a><a href="14-browser-color-management.html" class="">browser color management<small>Colour management</small></a><a href="15-icc-color-profiles-guide.html" class="">icc color profiles guide<small>ICC profiles</small></a></nav>
+  <div>
+    <article>
+      
+      <div class="meta">
+        <div class="tags"><span class="tag">#css</span><span class="tag">#webdev</span><span class="tag">#design</span><span class="tag">#frontend</span></div>
+        <h1>Ship Wide-Gamut Colour Without Breaking Every Older Display</h1>
+        <p class="desc">A P3 enhancement that looks incredible on your MacBook can look broken on a five-year-old office monitor. Here&#x27;s the layering order, the QA matrix and the traps.</p>
+        <div class="fm">published: <b>false</b> · tags: 4/4 · cover_image: none</div>
+      </div>
+      <div class="post"><div class='tw'><table><thead><tr><th><code>#03071E</code></th><th><code>#DC2F02</code></th><th><code>#F48C06</code></th><th><code>#FFBA08</code></th></tr></thead><tbody><tr><td><img src="https://placehold.co/120x56/03071E/03071E.png" alt="near-black swatch #03071E" /></td><td><img src="https://placehold.co/120x56/DC2F02/DC2F02.png" alt="dark red swatch #DC2F02" /></td><td><img src="https://placehold.co/120x56/F48C06/F48C06.png" alt="vivid orange swatch #F48C06" /></td><td><img src="https://placehold.co/120x56/FFBA08/FFBA08.png" alt="vivid orange swatch #FFBA08" /></td></tr></tbody></table></div>
+<blockquote><p>🎨 <strong>Palette in play</strong> — <a href="https://colorfiind.com/palette/pine-field-gallery" target="_blank" rel="noopener">Pine Field Gallery</a> · <code>#03071E</code> <code>#DC2F02</code> <code>#F48C06</code> <code>#FFBA08</code></p></blockquote>
+<p>Wide-gamut colour has a specific failure mode, and it isn&#x27;t &quot;old browsers see nothing&quot;. It&#x27;s this: the designer builds on a P3 MacBook, everything sings, and three weeks later a customer on a 2019 office monitor reports that the primary button and the danger button now look like the same orange.</p>
+<p class='spacer'>&nbsp;</p>
+<p>Nothing crashed. The enhancement simply collapsed two distinct colours into one on a narrower screen.</p>
+<p class='spacer'>&nbsp;</p>
+<p>Here&#x27;s how to add wide-gamut colour so the degraded version is still a <em>designed</em> version.</p>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/DC2F02/DC2F02.png" alt="Section divider bar in dark red" /></p>
+<h2>🧱 Rule one: the sRGB value is the product</h2>
+<p>Treat P3 the way you treat a hover state — an improvement on top of something that already works.</p>
+<pre class="code lang-css" data-lang="css"><code>.btn-primary {
+  <span class="t-prop">background</span>: <span class="t-color"><i class="chip" style="background:#F48C06"></i>#F48C06</span>;                                   <span class="t-comment">/* the product */</span>
+}
+
+<span class="t-kw">@media</span> (color-gamut: p3) {
+  .btn-primary {
+    <span class="t-prop">background</span>: color(display-p3 <span class="t-number">0.9017</span> <span class="t-number">0.5690</span> <span class="t-number">0.2094</span>);  <span class="t-comment">/* the enhancement */</span>
+  }
+}
+</code></pre>
+<p>Those P3 numbers are <code>#F48C06</code> converted exactly — same colour, wider container. That&#x27;s your <strong>baseline</strong>, the safe starting point you then push outward from. Pushing before you&#x27;ve matched is how the two-oranges bug happens.</p>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/F48C06/F48C06.png" alt="Section divider bar in vivid orange" /></p>
+<h2>📏 Rule two: enhance chroma, never lightness or hue</h2>
+<p>The three channels behave very differently when a display can&#x27;t keep up.</p>
+<div class='tw'><table><thead><tr><th>You change</th><th>On a P3 screen</th><th>On an sRGB screen</th><th>Risk</th></tr></thead><tbody><tr><td><strong>Chroma</strong> (saturation)</td><td>richer</td><td>clips to the nearest sRGB colour</td><td>🟢 low — same hue, same lightness</td></tr><tr><td><strong>Lightness</strong></td><td>brighter</td><td>clips, contrast ratio shifts</td><td>🔴 high — can break WCAG</td></tr><tr><td><strong>Hue</strong></td><td>different colour</td><td>different colour, differently</td><td>🔴 high — brand drift</td></tr></tbody></table></div>
+<p>So the safe enhancement is: <strong>same hue, same lightness, more chroma.</strong> In OKLCH that&#x27;s mechanical:</p>
+<pre class="code lang-css" data-lang="css"><code>:root {
+  <span class="t-prop">--flame</span>: <span class="t-color"><i class="chip" style="background:#DC2F02"></i>#DC2F02</span>;                                     <span class="t-comment">/* oklch(0.581 0.213 33.1) */</span>
+}
+
+<span class="t-kw">@media</span> (color-gamut: p3) {
+  :root {
+    <span class="t-prop">--flame</span>: oklch(<span class="t-number">0.581</span> <span class="t-number">0.26</span> <span class="t-number">33.1</span>);                    <span class="t-comment">/* +22% chroma, nothing else */</span>
+  }
+}
+</code></pre>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/FFBA08/FFBA08.png" alt="Section divider bar in vivid orange" /></p>
+<h2>🧮 Rule three: check that your colours stay <em>distinguishable</em></h2>
+<p>This is the check nobody runs. Two colours that are clearly different in P3 can converge when clipped into sRGB. Test the pairs, not the individual colours:</p>
+<pre class="code lang-js" data-lang="js"><code><span <span class="t-kw">class</span>="t-comment">// gamut-collapse.test.js — do these stay different after sRGB clipping?</span>
+<span class="t-kw">import</span> { clipToSrgb, deltaE } <span class="t-kw">from</span> &<span <span class="t-kw">class</span>="t-comment">#x27;./color-utils.js&#x27;;</span>
+
+<span class="t-kw">const</span> p3Pairs = [
+  [&<span <span class="t-kw">class</span>="t-comment">#x27;oklch(0.68 0.26 36)&#x27;,  &#x27;oklch(0.74 0.24 61)&#x27;],   // flame vs amber</span>
+  [&<span <span class="t-kw">class</span>="t-comment">#x27;oklch(0.83 0.20 81)&#x27;,  &#x27;oklch(0.74 0.24 61)&#x27;],   // gold vs amber</span>
+];
+
+<span class="t-kw">for</span> (<span class="t-kw">const</span> [a, b] <span class="t-kw">of</span> p3Pairs) {
+  <span class="t-kw">const</span> distance = deltaE(clipToSrgb(a), clipToSrgb(b));
+  it(<span <span class="t-kw">class</span>="t-string">`${a} stays distinct <span class="t-kw">from</span> ${b}`</span>, () =&gt; {
+    expect(distance).toBeGreaterThan(<span <span class="t-kw">class</span>="t-number">10</span>);              <span <span class="t-kw">class</span>="t-comment">// ~10 ΔE = comfortably different</span>
+  });
+}
+</code></pre>
+<p>If the assertion fails, your two P3 colours are relying on gamut you can&#x27;t guarantee. Pull them apart in <strong>lightness</strong> instead — lightness survives clipping.</p>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/DC2F02/DC2F02.png" alt="Section divider bar in dark red" /></p>
+<h2>🎛️ Rule four: one enhancement layer, not three</h2>
+<p>The most common mess I see is P3 declared in five places: a media query, an <code>@supports</code>, a shorthand fallback, an inline style, and a JS check. They disagree, and debugging is miserable.</p>
+<p class='spacer'>&nbsp;</p>
+<p>Do it once, at the token layer:</p>
+<p class='spacer'>&nbsp;</p>
+<p><strong><code>tokens.css</code></strong> ⌁ <em>the only place P3 appears</em></p>
+<pre class="code lang-css" data-lang="css"><code>:root {
+  <span class="t-comment">/* sRGB — the contract */</span>
+  <span class="t-prop">--ink</span>:     <span class="t-color"><i class="chip" style="background:#03071E"></i>#03071E</span>;
+  <span class="t-prop">--flame</span>:   <span class="t-color"><i class="chip" style="background:#DC2F02"></i>#DC2F02</span>;
+  <span class="t-prop">--amber</span>:   <span class="t-color"><i class="chip" style="background:#F48C06"></i>#F48C06</span>;
+  <span class="t-prop">--gold</span>:    <span class="t-color"><i class="chip" style="background:#FFBA08"></i>#FFBA08</span>;
+}
+
+<span class="t-kw">@media</span> (color-gamut: p3) {
+  :root {
+    <span class="t-comment">/* same hue, same lightness, more chroma */</span>
+    <span class="t-prop">--flame</span>: oklch(<span class="t-number">0.581</span> <span class="t-number">0.260</span> <span class="t-number">33.1</span>);
+    <span class="t-prop">--amber</span>: oklch(<span class="t-number">0.736</span> <span class="t-number">0.205</span> <span class="t-number">61.1</span>);
+    <span class="t-prop">--gold</span>:  oklch(<span class="t-number">0.831</span> <span class="t-number">0.200</span> <span class="t-number">81.4</span>);
+  }
+}
+</code></pre>
+<p>Every component keeps using <code>var(--flame)</code> and never knows a gamut question exists.</p>
+<pre class="code lang-diff" data-lang="diff"><code>  .alert--danger {
+<span class="d-del">-   background: #DC2F02;</span>
+<span class="d-del">-   /* plus a duplicated @media block down here somewhere */</span>
+<span class="d-add">+   background: var(--flame);</span>
+  }
+</code></pre>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/F48C06/F48C06.png" alt="Section divider bar in vivid orange" /></p>
+<h2>🖼️ Don&#x27;t forget the images</h2>
+<p>CSS is the easy half. Images carry their own colour space, and this is where &quot;broken on old displays&quot; usually comes from:</p>
+<ul><li><strong>Export web images as sRGB with the profile embedded.</strong> An untagged Display-P3 JPEG is interpreted as sRGB by browsers and renders desaturated and wrong.</li><li><strong>If you ship P3 images, tag them and provide an sRGB fallback</strong> with <code>&lt;picture&gt;</code>:</li></ul>
+<pre class="code lang-html" data-lang="html"><code><span class="t-tag">&lt;picture</span>&gt;
+  <span class="t-tag">&lt;source</span> srcset=&quot;hero-p3.avif&quot;  type=&quot;image/avif&quot; media=&quot;(color-gamut: p3)&quot;&gt;
+  <span class="t-tag">&lt;source</span> srcset=&quot;hero-srgb.avif&quot; type=&quot;image/avif&quot;&gt;
+  <span class="t-tag">&lt;img</span> src=&quot;hero-srgb.jpg&quot; alt=&quot;Product on a workbench&quot; width=&quot;<span class="t-number">1200</span>&quot; height=&quot;<span class="t-number">630</span>&quot;&gt;
+<span class="t-tag">&lt;/picture</span>&gt;
+</code></pre>
+<ul><li><strong>Watch your image CDN.</strong> Many pipelines strip ICC profiles to save bytes. A P3 file that arrives untagged is a P3 file being displayed as sRGB — the exact failure this post is about.</li></ul>
+<blockquote><p>🚧 <strong>Trap</strong> — a P3 photo next to an sRGB-defined CSS background will visibly mismatch on a wide-gamut screen, even though they &quot;match&quot; in your design file. Pick one space per surface.</p></blockquote>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/FFBA08/FFBA08.png" alt="Section divider bar in vivid orange" /></p>
+<h2>🧪 The QA matrix that actually catches things</h2>
+<p>You do not need a lab. You need four checks:</p>
+<pre class="code lang-console" data-lang="console"><code><span class="sh-prompt">$</span><span class="sh-cmd"> # 1 · sRGB emulation (catches the collapse bug)</span>
+<span class="sh-out">    DevTools → Rendering → Emulate CSS media feature color-gamut: srgb</span>
+<span class="sh-out"></span>
+<span class="sh-prompt">$</span><span class="sh-cmd"> # 2 · Real narrow-gamut hardware, once per release</span>
+<span class="sh-out">    any 2018-2021 office monitor, a budget Android, a Windows laptop</span>
+<span class="sh-out"></span>
+<span class="sh-prompt">$</span><span class="sh-cmd"> # 3 · Forced colours / high contrast mode</span>
+<span class="sh-out">    Windows High Contrast — P3 enhancements must simply drop away</span>
+<span class="sh-out"></span>
+<span class="sh-prompt">$</span><span class="sh-cmd"> # 4 · Contrast, measured on the sRGB values only</span>
+<span class="sh-out">    #DC2F02 on white → 4.72:1  ✓ AA</span>
+<span class="sh-out">    #F48C06 on white → 2.44:1  ✗ decorative or large text only</span>
+<span class="sh-out">    #FFBA08 on #03071E → 11.66:1 ✓ AAA</span>
+<span class="sh-out"></span></code></pre>
+<p>That last block is the point of the whole exercise: the amber fails on white regardless of gamut. Wide colour makes it <em>prettier</em>, not more readable — and if you only ever review on a P3 screen, the extra vibrance can trick you into thinking it&#x27;s fine.</p>
+<p class='spacer'>&nbsp;</p>
+<details class='liquid' open><summary>🧯 Supporting genuinely ancient browsers</summary>
+<pre class="code lang-css" data-lang="css"><code>.badge {
+  <span class="t-prop">background</span>: <span class="t-color"><i class="chip" style="background:#F48C06"></i>#F48C06</span>;                                  <span class="t-comment">/* everyone */</span>
+  <span class="t-prop">background</span>: color(display-p3 <span class="t-number">0.9</span> <span class="t-number">0.57</span> <span class="t-number">0.21</span>);          <span class="t-comment">/* dropped by old parsers */</span>
+}
+
+<span class="t-comment">/* or gate it explicitly */</span>
+<span class="t-kw">@supports</span> (color: color(display-p3 <span class="t-number">1</span> <span class="t-number">1</span> <span class="t-number">1</span>)) {
+  <span class="t-kw">@media</span> (color-gamut: p3) {
+    .badge { background: color(display-p3 <span class="t-number">0.94</span> <span class="t-number">0.58</span> <span class="t-number">0.18</span>); }
+  }
+}
+</code></pre>
+<p><code>@supports</code> asks whether the <strong>browser</strong> can parse the syntax; <code>@media (color-gamut: p3)</code> asks whether the <strong>display</strong> can show it. They&#x27;re different questions and you occasionally need both.</p>
+<p class='spacer'>&nbsp;</p>
+</details>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/DC2F02/DC2F02.png" alt="Section divider bar in dark red" /></p>
+<h2>🧾 The checklist</h2>
+<ol><li>Ship a complete, verified <strong>sRGB</strong> theme first. P3 is a layer on top.</li><li>Convert exactly, then push <strong>chroma only</strong> — never lightness or hue.</li><li>Test that colour <em>pairs</em> stay distinguishable after sRGB clipping.</li><li>Put the enhancement in one token block; components stay gamut-agnostic.</li><li>Export images as tagged sRGB, or ship both with <code>&lt;picture&gt;</code>.</li><li>Verify your CDN isn&#x27;t stripping ICC profiles.</li><li>Measure contrast on the sRGB values, and review on a narrow-gamut screen at least once.</li></ol>
+<p>A palette that already reads clearly in sRGB degrades gracefully by definition — that&#x27;s why I start from published sets like the ones on <a href="https://colorfiind.com" target="_blank" rel="noopener">ColorFiind</a> rather than pushing sliders on a P3 monitor until it looks exciting.</p>
+<p class='spacer'>&nbsp;</p>
+<a class='cta' href='https://colorfiind.com' target='_blank' rel='noopener'>Start from an sRGB-safe palette</a>
+<p class='spacer'>&nbsp;</p>
+<p><em>Have you shipped a P3 enhancement that looked wrong on someone else&#x27;s screen? What gave it away?</em> 👇</p></div>
+    </article>
+    <p class="note">Static local preview — Liquid tags are simulated, DEV renders them natively.
+    Colour swatches load from placehold.co, so they need internet access.</p>
+  </div>
+</div>
+</body>
+</html>

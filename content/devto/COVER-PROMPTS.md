@@ -407,6 +407,165 @@ DO NOT INCLUDE: text, axis labels, numbers, logos, watermarks, photographs of mo
 
 &nbsp;
 
+&nbsp;
+
+## 11 — Ship Wide-Gamut Colour Without Breaking Every Older Display
+
+**Palette:** `#03071E` midnight navy · `#DC2F02` flame · `#F48C06` amber · `#FFBA08` gold
+
+```text
+A wide horizontal banner illustration, 1000x420 pixels, aspect ratio 50:21, flat vector editorial
+style on a deep midnight navy #03071E background.
+
+SUBJECT: two side-by-side rectangular display panels shown at a slight three-quarter angle, like
+monitors on a desk. The left panel is older and thicker-bezelled, showing a simple abstract composition
+in slightly muted flame #DC2F02 and amber #F48C06. The right panel is thin and modern, showing the
+exact same composition but in noticeably richer, more saturated versions of the same colours plus gold
+#FFBA08. A soft luminous arc connects the two panels, suggesting the same design gracefully adapting
+rather than breaking.
+
+COMPOSITION: the two panels sit in the right two-thirds, the older one slightly smaller and further
+back. The left third stays dark and empty for a title overlay. All elements inside the central 900x380
+safe area. Clear visual pairing, generous negative space.
+
+LIGHT: soft ambient light from the upper left; both panels emit a gentle glow matching their content;
+subtle contact shadows beneath each panel.
+
+STYLE: clean flat vector illustration with light dimensional shading, product-marketing polish,
+consistent stroke weights, no photorealistic reflections.
+
+DO NOT INCLUDE: text, UI screenshots, readable interface elements, brand logos, watermarks, cables,
+people.
+```
+
+**Alt text:** `An older monitor and a modern monitor showing the same design, the modern one in richer colour`
+
+&nbsp;
+
+## 12 — Color-Gamut Media Queries: Better Product Colour for P3 Displays
+
+**Palette:** `#BDE0FE` powder · `#CDB4DB` lilac · `#FFC8DD` blush · `#A8DADC` mint
+
+```text
+A wide horizontal banner illustration, 1000x420 pixels, aspect ratio 50:21, flat vector e-commerce
+illustration on a clean white #FDFDFD background.
+
+SUBJECT: a horizontal row of four large circular fabric swatches in powder blue #BDE0FE, lilac
+#CDB4DB, blush pink #FFC8DD and mint #A8DADC, each with a subtle woven-textile texture and a small
+metal eyelet at the top, like a retail colour sample ring. A thin elegant metal ring threads through
+all four. In front of the row, a simple rounded rectangle representing a phone screen displays the same
+four circles, slightly more vivid, implying the digital rendering matching the physical samples.
+
+COMPOSITION: the swatch ring occupies the right two-thirds, angled gently; the phone shape overlaps the
+lower centre. The left third stays clean white for a title overlay. All elements inside the central
+900x380 safe area.
+
+LIGHT: bright soft studio light from above, delicate contact shadows under the swatches, subtle sheen
+on the metal ring; airy and premium retail feel.
+
+STYLE: refined flat vector with soft textile texture, boutique e-commerce aesthetic, muted pastel
+palette, plenty of white space.
+
+DO NOT INCLUDE: text, price tags with numbers, brand logos, watermarks, hands, faces, hangers.
+```
+
+**Alt text:** `Four pastel fabric swatches on a metal ring beside a phone showing the same four colours`
+
+&nbsp;
+
+## 13 — Why the Same HEX Colour Looks Different on Every Monitor
+
+**Palette:** `#232E43` navy · `#49627F` steel blue · `#7F95B1` slate · `#E8E9E5` off-white
+
+```text
+A wide horizontal banner illustration, 1000x420 pixels, aspect ratio 50:21, flat vector editorial
+style on an off-white #E8E9E5 background.
+
+SUBJECT: five simplified monitor shapes of different sizes and ages arranged in a loose row, each one
+displaying the same single filled rectangle — but each rendered in a visibly different version of the
+same blue, ranging from washed-out pale slate #7F95B1 through steel blue #49627F to deep navy #232E43,
+with one screen slightly too warm and one slightly too cool. Above the row, a single small blue square
+labelled by nothing acts as the "source of truth", with thin lines fanning down to each screen.
+
+COMPOSITION: the row of screens runs along the lower two-thirds; the source square sits upper centre
+right. The left third remains clean off-white for a title overlay. All elements inside the central
+900x380 safe area.
+
+LIGHT: flat even illustration lighting; each screen has a faint internal glow in its own colour cast;
+minimal soft shadows below the monitors.
+
+STYLE: precise editorial infographic vector, thin consistent lines, muted analytical palette,
+documentation-diagram clarity.
+
+DO NOT INCLUDE: text, labels, numbers, logos, watermarks, desks with clutter, people, cables.
+```
+
+**Alt text:** `One blue square fanning out to five monitors, each displaying a slightly different version of it`
+
+&nbsp;
+
+## 14 — How Browser Colour Management Changes What Your Users See
+
+**Palette:** `#08161C` near-black teal · `#5500FF` electric violet · `#FF5724` coral · `#38FF59` lime
+
+```text
+A wide horizontal banner illustration, 1000x420 pixels, aspect ratio 50:21, flat vector technical
+illustration on a very dark teal-black #08161C background.
+
+SUBJECT: a colour conversion pipeline shown as a horizontal flow. On the left, three image tiles enter
+the flow — one clearly tagged with a small profile marker icon, one untagged and slightly faded. They
+pass through a central translucent prism or lens shape that splits and re-aligns the light. On the
+right, the tiles emerge onto a stylised screen shape, the tagged one rendering in vivid electric violet
+#5500FF, coral #FF5724 and lime #38FF59, the untagged one visibly duller and shifted.
+
+COMPOSITION: strict left-to-right flow along the horizontal centre. The prism sits at the middle. The
+left third above the incoming tiles stays dark and open for a title overlay. All elements inside the
+central 900x380 safe area.
+
+LIGHT: the prism and the vivid output glow with soft bloom against the near-black background; the
+untagged path is lit more dimly to reinforce the difference; no external light source.
+
+STYLE: precise technical vector diagram meets neon poster, thin luminous strokes, high contrast,
+premium developer-documentation aesthetic.
+
+DO NOT INCLUDE: text, file names, readable icons with words, logos, watermarks, photographs, people.
+```
+
+**Alt text:** `Two image tiles passing through a prism, one emerging vivid and one emerging dull and shifted`
+
+&nbsp;
+
+## 15 — A Designer's Guide to ICC Colour Profiles
+
+**Palette:** `#75A1C7` bluebell · `#D9ABB7` blush · `#EADEB8` cream · `#C5AFDE` lilac
+
+```text
+A wide horizontal banner illustration, 1000x420 pixels, aspect ratio 50:21, warm flat vector
+illustration with subtle paper grain on a cream #F7F3EA background.
+
+SUBJECT: a print-studio still life, top-down. On the left, a printed colour test strip on textured
+paper showing four bands in bluebell #75A1C7, blush #D9ABB7, cream #EADEB8 and lilac #C5AFDE. On the
+right, a simplified tablet screen showing the same four bands slightly brighter. Between them sits a
+small colorimeter puck and a folded paper swatch book, tying screen and paper together. One band on the
+printed strip is subtly different from its on-screen counterpart, hinting at gamut shift.
+
+COMPOSITION: printed strip lower left of centre, screen upper right, measuring device between them.
+The left third is calm cream paper for a title overlay. All elements inside the central 900x380 safe
+area. Balanced flat-lay arrangement, generous space.
+
+LIGHT: soft diffuse overhead studio light, gentle paper texture shadows, matte finish everywhere, no
+glare on the screen.
+
+STYLE: warm editorial vector flat-lay, print-workshop atmosphere, precise geometry with tactile paper
+texture, muted sophisticated palette.
+
+DO NOT INCLUDE: text, printed labels, numbers, brand logos, watermarks, hands, faces.
+```
+
+**Alt text:** `A printed colour test strip beside a tablet showing the same four colours, with a colorimeter between them`
+
+&nbsp;
+
 ## Sample renders
 
 Two of these prompts run through an image model, unedited, resized to 1000×420 —

@@ -34,6 +34,11 @@ ARTICLES = [
     ("08-light-dark-css-theme-aware.md", "light-dark()"),
     ("09-hwb-color-explained.md", "HWB"),
     ("10-display-p3-vs-srgb-wide-gamut.md", "Display-P3"),
+    ("11-wide-gamut-without-breaking-displays.md", "Wide gamut safely"),
+    ("12-color-gamut-media-queries.md", "Gamut media queries"),
+    ("13-same-hex-different-monitors.md", "Monitor variance"),
+    ("14-browser-color-management.md", "Colour management"),
+    ("15-icc-color-profiles-guide.md", "ICC profiles"),
 ]
 
 # --------------------------------------------------------------- highlighting

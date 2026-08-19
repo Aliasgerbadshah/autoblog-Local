@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Why the Same HEX Colour Looks Different on Every Monitor — DEV preview</title>
+<style>
+:root{--bg:#0B0F1A;--panel:#111827;--panel2:#0F172A;--line:#1F2A44;--ink:#E7E9EE;
+--muted:#94A3B8;--primary:#00F5D4;--accent:#F15BB5;--support:#9B5DE5;--radius:14px}
+html[data-theme=light]{--bg:#F5F7F9;--panel:#fff;--panel2:#EFF2F6;--line:#DDE3EC;
+--ink:#1B2333;--muted:#5B6478;--primary:#0E7C86;--accent:#B4276F;--support:#6D3FBF}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+font:16px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+a{color:var(--primary)}
+header.top{position:sticky;top:0;z-index:20;display:flex;gap:14px;align-items:center;padding:12px 18px;
+background:var(--bg);border-bottom:1px solid var(--line)}
+.brand{font-weight:800}.brand span{color:var(--primary)}
+.rule{display:flex;height:6px;width:150px;border-radius:99px;overflow:hidden}.rule i{flex:1}
+.spacer{flex:1}
+.btn{font:inherit;cursor:pointer;border:1px solid var(--line);background:var(--panel);color:var(--ink);
+border-radius:99px;padding:6px 14px;text-decoration:none}
+.btn:hover{border-color:var(--primary)}
+.btn-dl{background:var(--primary);color:#08121A;border-color:var(--primary);font-weight:700}
+.layout{display:grid;grid-template-columns:290px minmax(0,1fr);gap:26px;padding:22px;align-items:start}
+@media(max-width:900px){.layout{grid-template-columns:1fr}}
+nav.files{position:sticky;top:70px;background:var(--panel);border:1px solid var(--line);
+border-radius:var(--radius);padding:12px;display:flex;flex-direction:column;gap:6px}
+nav.files h2{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin:6px 8px 8px}
+nav.files a{display:block;padding:9px 11px;border-radius:10px;text-decoration:none;color:var(--ink);
+font-size:14px;border:1px solid transparent}
+nav.files a:hover{background:var(--panel2)}
+nav.files a.active{background:var(--panel2);border-color:var(--primary);color:var(--primary)}
+nav.files small{display:block;color:var(--muted);font-size:11.5px}
+article{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+padding-bottom:48px;max-width:840px;width:100%;overflow:hidden}
+.cover{width:100%;display:block;border-bottom:1px solid var(--line)}
+.meta{padding:22px clamp(18px,4vw,44px) 0}
+.meta h1{font-size:clamp(26px,4vw,40px);line-height:1.18;margin:.2em 0 .3em}
+.tags{display:flex;flex-wrap:wrap;gap:8px}
+.tag{font-size:12.5px;color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:2px 8px}
+.desc{color:var(--muted);font-size:15px}
+.fm{font-size:12px;color:var(--muted);border-top:1px dashed var(--line);
+border-bottom:1px dashed var(--line);padding:8px 0;margin-bottom:6px}
+.post{padding:0 clamp(18px,4vw,44px)}
+.post img{max-width:100%;display:block;margin:.4em 0}
+.post td img{margin:0 auto}
+
+.post h2{margin-top:1.9em;font-size:26px;border-bottom:1px solid var(--line);padding-bottom:.25em}
+.post h3{margin-top:1.5em;font-size:20px}
+.post blockquote{margin:1.4em 0;padding:.9em 1.1em;background:var(--panel2);
+border-left:4px solid var(--accent);border-radius:0 10px 10px 0}
+.post blockquote p{margin:0}
+.tw{overflow-x:auto;margin:1.3em 0}
+.post table{border-collapse:collapse;width:100%;font-size:14.5px}
+.post th,.post td{border:1px solid var(--line);padding:8px 11px;text-align:left;vertical-align:middle}
+.post th{background:var(--panel2)}
+.post td img{vertical-align:middle}
+.post :not(pre)>code{background:var(--panel2);padding:.15em .4em;border-radius:6px;font-size:.9em;
+font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+pre.code{background:#0d1117;border:1px solid var(--line);border-radius:12px;padding:18px;
+overflow-x:auto;position:relative;margin:1.3em 0}
+pre.code code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13.5px;
+line-height:1.62;color:#C9D1D9;white-space:pre}
+pre.code::before{content:attr(data-lang);position:absolute;top:0;right:0;font-size:10.5px;
+letter-spacing:.12em;text-transform:uppercase;color:#0B0F1A;background:var(--primary);
+padding:2px 10px;border-radius:0 11px 0 10px;font-family:ui-monospace,monospace}
+pre.lang-diff{border-color:#F15BB5}
+pre.lang-console,pre.lang-bash{background:#05070d;border-color:#00F5D4}
+.t-comment{color:#6E7A8A;font-style:italic}
+.t-string{color:#A5D6FF}.t-number{color:#F0A868}.t-kw{color:#FF7B9C}
+.t-prop{color:#9B5DE5;font-weight:600}.t-tag{color:#7EE787}
+.t-color{color:#FFD479}
+.chip{display:inline-block;width:.78em;height:.78em;margin-right:.35em;border-radius:3px;
+border:1px solid rgba(255,255,255,.35);vertical-align:-1px}
+.d-add{color:#7EE787;display:block;background:rgba(46,160,67,.15)}
+.d-del{color:#FF9492;display:block;background:rgba(248,81,73,.14)}
+.d-hunk{color:#79C0FF;display:block}
+.sh-prompt{color:#F15BB5;font-weight:700}.sh-cmd{color:#E7E9EE}
+.sh-ok{color:#7EE787;display:block}.sh-out{color:#9DF7E4;display:block}
+details.liquid{background:var(--panel2);border:1px solid var(--line);border-radius:12px;
+padding:10px 16px;margin:1.4em 0}
+details.liquid summary{cursor:pointer;font-weight:650}
+.cta{display:block;text-align:center;margin:1.8em 0;padding:14px 20px;border-radius:12px;
+background:linear-gradient(90deg,var(--primary),var(--support));color:#08121A;font-weight:750;
+text-decoration:none}
+.katex{background:var(--panel2);border:1px dashed var(--line);border-radius:10px;padding:12px 16px;
+font-family:ui-monospace,monospace;color:var(--primary);margin:1.2em 0}
+.embed{color:var(--muted);font-family:ui-monospace,monospace;font-size:13px}
+.note{max-width:840px;color:var(--muted);font-size:13px;margin-top:14px}
+.post hr{border:0;border-top:1px solid var(--line);margin:2em 0}
+.post p:empty,.post p.spacer{margin:1.1em 0;min-height:1.1em}
+.post h2{margin-top:1.2em}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand">Swatch<span>Deck</span> · DEV.to preview</div>
+  <div class="rule"><i style="background:#0F172A"></i><i style="background:#00F5D4"></i>
+    <i style="background:#F15BB5"></i><i style="background:#9B5DE5"></i></div>
+  <div class="spacer"></div>
+  <a class="btn" href="/downloads">⬇ Downloads</a>
+  <a class="btn btn-dl" href="/download/13-same-hex-different-monitors.md">⬇ This post (.md)</a>
+  <a class="btn" href="../13-same-hex-different-monitors.md" target="_blank">View raw</a>
+  <button class="btn" onclick="var d=document.documentElement;
+    d.dataset.theme=d.dataset.theme==='dark'?'light':'dark'">🌗 Theme</button>
+</header>
+<div class="layout">
+  <nav class="files"><h2>Articles</h2><a href="00-swatch-deck-theme-kit.html" class="">swatch deck theme kit<small>Reusable theme kit</small></a><a href="01-choose-a-color-palette.html" class="">choose a color palette<small>Choosing a palette</small></a><a href="02-hex-to-design-tokens.html" class="">hex to design tokens<small>Tokens pipeline</small></a><a href="03-seasonal-palettes-ui-themes.html" class="">seasonal palettes ui themes<small>Seasonal themes</small></a><a href="04-neon-dark-mode-glow-ui.html" class="">neon dark mode glow ui<small>Neon dark mode</small></a><a href="05-automate-palette-workflow.html" class="">automate palette workflow<small>Automation</small></a><a href="06-css-color-mix-dynamic-variations.html" class="">css color mix dynamic variations<small>color-mix()</small></a><a href="07-css-relative-color-syntax.html" class="">css relative color syntax<small>Relative colour</small></a><a href="08-light-dark-css-theme-aware.html" class="">light dark css theme aware<small>light-dark()</small></a><a href="09-hwb-color-explained.html" class="">hwb color explained<small>HWB</small></a><a href="10-display-p3-vs-srgb-wide-gamut.html" class="">display p3 vs srgb wide gamut<small>Display-P3</small></a><a href="11-wide-gamut-without-breaking-displays.html" class="">wide gamut without breaking displays<small>Wide gamut safely</small></a><a href="12-color-gamut-media-queries.html" class="">color gamut media queries<small>Gamut media queries</small></a><a href="13-same-hex-different-monitors.html" class="active">same hex different monitors<small>Monitor variance</small></a><a href="14-browser-color-management.html" class="">browser color management<small>Colour management</small></a><a href="15-icc-color-profiles-guide.html" class="">icc color profiles guide<small>ICC profiles</small></a></nav>
+  <div>
+    <article>
+      
+      <div class="meta">
+        <div class="tags"><span class="tag">#css</span><span class="tag">#design</span><span class="tag">#dataviz</span><span class="tag">#webdev</span></div>
+        <h1>Why the Same HEX Colour Looks Different on Every Monitor</h1>
+        <p class="desc">One hex value, five screens, five colours. Here&#x27;s the chain of gamut, calibration, white point and ambient light — and how to build data visualisations that survive it.</p>
+        <div class="fm">published: <b>false</b> · tags: 4/4 · cover_image: none</div>
+      </div>
+      <div class="post"><div class='tw'><table><thead><tr><th><code>#232E43</code></th><th><code>#49627F</code></th><th><code>#7F95B1</code></th><th><code>#E8E9E5</code></th></tr></thead><tbody><tr><td><img src="https://placehold.co/120x56/232E43/232E43.png" alt="navy swatch #232E43" /></td><td><img src="https://placehold.co/120x56/49627F/49627F.png" alt="dark blue swatch #49627F" /></td><td><img src="https://placehold.co/120x56/7F95B1/7F95B1.png" alt="muted blue swatch #7F95B1" /></td><td><img src="https://placehold.co/120x56/E8E9E5/E8E9E5.png" alt="light grey swatch #E8E9E5" /></td></tr></tbody></table></div>
+<blockquote><p>🎨 <strong>Palette in play</strong> — <a href="https://colorfiind.com/palette/winter-beach-wave-colorway" target="_blank" rel="noopener">Winter Beach Wave</a> · <code>#232E43</code> <code>#49627F</code> <code>#7F95B1</code> <code>#E8E9E5</code></p></blockquote>
+<p>You send a dashboard screenshot to a colleague. They reply: &quot;why is the alert series brown?&quot;</p>
+<p class='spacer'>&nbsp;</p>
+<p>It isn&#x27;t brown on your screen. Nothing is broken, nobody made a mistake, and both of you are looking at exactly <code>#DC2F02</code>. A hex code is not a colour — it&#x27;s <strong>an instruction to a display</strong>, and the display gets a lot of say in how it&#x27;s carried out.</p>
+<p class='spacer'>&nbsp;</p>
+<p>For anyone building charts, heatmaps or status colours, this is not trivia. It decides whether your encoding survives contact with real screens.</p>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/232E43/232E43.png" alt="Section divider bar in navy" /></p>
+<h2>⛓️ The chain from hex to eyeball</h2>
+<p>Six things happen between your CSS and someone&#x27;s retina. Each one can shift the result.</p>
+<div class='tw'><table><thead><tr><th>#</th><th>Stage</th><th>What varies</th><th>Can you control it?</th></tr></thead><tbody><tr><td>1</td><td><strong>Colour space of the value</strong></td><td>sRGB unless stated otherwise</td><td>✅ yes</td></tr><tr><td>2</td><td><strong>Panel gamut</strong></td><td>sRGB, P3, or a partial mix</td><td>🚫 no</td></tr><tr><td>3</td><td><strong>Calibration</strong></td><td>how far the panel drifts from its spec</td><td>🚫 no</td></tr><tr><td>4</td><td><strong>White point</strong></td><td>6500K vs 7500K+ on cheap panels</td><td>🚫 no</td></tr><tr><td>5</td><td><strong>OS colour management</strong></td><td>conversion, night-shift, HDR mode</td><td>🚫 mostly no</td></tr><tr><td>6</td><td><strong>Ambient light</strong></td><td>daylight vs a dim room</td><td>🚫 absolutely not</td></tr></tbody></table></div>
+<p>You control step one. Steps two to six are the user&#x27;s world. Good colour engineering means <strong>choosing values whose meaning survives all five uncontrolled steps</strong>.</p>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/49627F/49627F.png" alt="Section divider bar in dark blue" /></p>
+<h2>🔍 What actually goes wrong</h2>
+<p><strong>Gamut stretch.</strong> <code>#7F95B1</code> is defined in sRGB. Send it untagged to a wide-gamut panel with colour management off — common on Windows and Android — and the hardware maps those numbers onto <em>its</em> wider primaries. Everything becomes more saturated than intended. Your muted slate becomes a chalky periwinkle.</p>
+<p class='spacer'>&nbsp;</p>
+<p><strong>White point drift.</strong> Your MacBook targets D65. A cheap TN panel might run noticeably cooler. Every colour picks up a blue cast, and near-neutrals like <code>#E8E9E5</code> — which is a hair warm at <code>oklch(0.932 0.005 117.9)</code> — flip to reading as slightly cold.</p>
+<p class='spacer'>&nbsp;</p>
+<p><strong>Contrast is unreliable at the extremes.</strong> A dark grey at 8% lightness and one at 12% are visibly different on a good IPS panel and can be <em>identical</em> on a laptop at 40% brightness in a sunny room. If your chart distinguishes two series by dark shades of the same hue, half your users see one series.</p>
+<p class='spacer'>&nbsp;</p>
+<p><strong>Night-shift filters.</strong> A large share of users have a warmth filter running all evening. Nothing you specify survives it, and it hits blues hardest — which is exactly what dashboards are made of.</p>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/7F95B1/7F95B1.png" alt="Section divider bar in muted blue" /></p>
+<h2>🛡️ Encoding that survives all of it</h2>
+<p>The fix isn&#x27;t to fight the hardware. It&#x27;s to encode information in the channel that degrades most gracefully.</p>
+<p class='spacer'>&nbsp;</p>
+<p><strong>Lightness is robust. Hue is fragile. Saturation is the most fragile of all.</strong></p>
+<p class='spacer'>&nbsp;</p>
+<p>That single sentence rewrites how you build a chart palette:</p>
+<pre class="code lang-diff" data-lang="diff"><code><span class="d-del">- /* four series separated by hue only, all similar lightness */</span>
+<span class="d-del">- --series-1: #4C72B0;   /* L 0.52 */</span>
+<span class="d-del">- --series-2: #55A868;   /* L 0.63 */</span>
+<span class="d-del">- --series-3: #C44E52;   /* L 0.55 */</span>
+<span class="d-del">- --series-4: #8172B2;   /* L 0.56 */</span>
+
+<span class="d-add">+ /* four series separated by lightness first, hue second */</span>
+<span class="d-add">+ --series-1: #232E43;   /* L 0.30 */</span>
+<span class="d-add">+ --series-2: #49627F;   /* L 0.49 */</span>
+<span class="d-add">+ --series-3: #7F95B1;   /* L 0.66 */</span>
+<span class="d-add">+ --series-4: #E8E9E5;   /* L 0.93 */</span>
+</code></pre>
+<p>The palette above is a ready-made example: four steps that are ~0.18–0.27 apart in OKLCH lightness. On a perfectly calibrated P3 monitor they read as a cool blue ramp. On a washed-out laptop in daylight they <em>still</em> read as four distinct steps, because lightness ordering survives almost everything — including greyscale printing and most forms of colour vision deficiency.</p>
+<p class='spacer'>&nbsp;</p>
+<p>Measured against the lightest step:</p>
+<div class='tw'><table><thead><tr><th>Series</th><th>On <code>#E8E9E5</code></th><th>Grade</th></tr></thead><tbody><tr><td><img src="https://placehold.co/70x26/232E43/232E43.png" alt="navy swatch #232E43" /> <code>#232E43</code></td><td><strong>11.16:1</strong></td><td>✅ AAA</td></tr><tr><td><img src="https://placehold.co/70x26/49627F/49627F.png" alt="dark blue swatch #49627F" /> <code>#49627F</code></td><td><strong>5.16:1</strong></td><td>✅ AA</td></tr><tr><td><img src="https://placehold.co/70x26/7F95B1/7F95B1.png" alt="muted blue swatch #7F95B1" /> <code>#7F95B1</code></td><td><strong>2.52:1</strong></td><td>🚫 fills and strokes only</td></tr></tbody></table></div>
+<p>That third row is honest information: <code>#7F95B1</code> is a perfectly good area fill or gridline, and a bad choice for a data label.</p>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/E8E9E5/E8E9E5.png" alt="Section divider bar in light grey" /></p>
+<h2>🧰 Four defensive techniques</h2>
+<p><strong>1 · Redundant encoding.</strong> Every colour distinction gets a second cue — a dash pattern, a marker shape, a direct label, an icon:</p>
+<pre class="code lang-css" data-lang="css"><code>.series-<span class="t-number">1</span> { stroke: var(--series-<span class="t-number">1</span>); stroke-dasharray: none; }
+.series-<span class="t-number">2</span> { stroke: var(--series-<span class="t-number">2</span>); stroke-dasharray: <span class="t-number">6</span> <span class="t-number">3</span>; }
+.series-<span class="t-number">3</span> { stroke: var(--series-<span class="t-number">3</span>); stroke-dasharray: <span class="t-number">2</span> <span class="t-number">3</span>; }
+</code></pre>
+<p><strong>2 · Direct labelling beats a legend.</strong> A legend forces the reader to match colours across space, which is precisely the task an inaccurate display makes hard. Put the label at the end of the line.</p>
+<p class='spacer'>&nbsp;</p>
+<p><strong>3 · Build ramps in OKLCH, with even lightness steps.</strong></p>
+<pre class="code lang-css" data-lang="css"><code>:root {
+  --ramp-<span class="t-number">1</span>: oklch(<span class="t-number">0.30</span> <span class="t-number">0.041</span> <span class="t-number">263</span>);
+  --ramp-<span class="t-number">2</span>: oklch(<span class="t-number">0.49</span> <span class="t-number">0.056</span> <span class="t-number">253</span>);
+  --ramp-<span class="t-number">3</span>: oklch(<span class="t-number">0.66</span> <span class="t-number">0.049</span> <span class="t-number">255</span>);
+  --ramp-<span class="t-number">4</span>: oklch(<span class="t-number">0.93</span> <span class="t-number">0.005</span> <span class="t-number">118</span>);
+}
+</code></pre>
+<p>Even steps in OKLCH lightness are even steps to the eye — on any panel. Even steps in HSL lightness are not.</p>
+<p class='spacer'>&nbsp;</p>
+<p><strong>4 · Never encode meaning in saturation alone.</strong> &quot;More saturated = more urgent&quot; is invisible on an uncalibrated screen and on a printout.</p>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/232E43/232E43.png" alt="Section divider bar in navy" /></p>
+<h2>🖨️ The two-minute test suite</h2>
+<pre class="code lang-console" data-lang="console"><code><span class="sh-prompt">$</span><span class="sh-cmd"> # 1 · greyscale — the fastest proxy for &quot;any bad display&quot;</span>
+<span class="sh-out">    DevTools → Rendering → Emulate vision deficiencies → Achromatopsia</span>
+<span class="sh-out"></span>
+<span class="sh-prompt">$</span><span class="sh-cmd"> # 2 · reduce brightness to ~30% and step back a metre</span>
+<span class="sh-out">    if two series merge, they will merge for someone else too</span>
+<span class="sh-out"></span>
+<span class="sh-prompt">$</span><span class="sh-cmd"> # 3 · print it to a black-and-white printer</span>
+<span class="sh-out">    still the most brutal and most honest test there is</span>
+<span class="sh-out"></span>
+<span class="sh-prompt">$</span><span class="sh-cmd"> # 4 · check the numbers, don&#x27;t trust your monitor</span>
+<span class="sh-out">    #232E43 vs #E8E9E5 → 11.16:1</span>
+<span class="sh-out">    #7F95B1 vs #E8E9E5 →  2.52:1</span>
+<span class="sh-out"></span></code></pre>
+<p>If a chart passes the greyscale test, monitor variance stops being your problem.</p>
+<p class='spacer'>&nbsp;</p>
+<details class='liquid' open><summary>🧑‍🔬 A quick script to audit an existing chart palette</summary>
+<pre class="code lang-js" data-lang="js"><code><span class="t-kw">import</span> { contrast, oklchLightness } <span class="t-kw">from</span> &<span <span class="t-kw">class</span>="t-comment">#x27;./color-utils.js&#x27;;</span>
+
+<span class="t-kw">export</span> <span class="t-kw">function</span> auditPalette(colors, background) {
+  <span class="t-kw">const</span> rows = colors.map((c) =&gt; ({
+    color: c,
+    L: +oklchLightness(c).toFixed(<span <span class="t-kw">class</span>="t-number">3</span>),
+    onBg: contrast(c, background),
+  }));
+
+  <span <span class="t-kw">class</span>="t-comment">// flag any two series closer than 0.12 <span class="t-kw">in</span> lightness</span>
+  <span class="t-kw">const</span> collisions = [];
+  <span class="t-kw">for</span> (<span class="t-kw">let</span> i = <span <span class="t-kw">class</span>="t-number">0</span>; i &lt; rows.length; i++) {
+    <span class="t-kw">for</span> (<span class="t-kw">let</span> j = i + <span <span class="t-kw">class</span>="t-number">1</span>; j &lt; rows.length; j++) {
+      <span class="t-kw">if</span> (Math.abs(rows[i].L - rows[j].L) &lt; <span <span class="t-kw">class</span>="t-number">0.12</span>) collisions.push([rows[i].color, rows[j].color]);
+    }
+  }
+  <span class="t-kw">return</span> { rows, collisions };
+}
+
+auditPalette([&<span <span class="t-kw">class</span>="t-comment">#x27;#232E43&#x27;, &#x27;#49627F&#x27;, &#x27;#7F95B1&#x27;, &#x27;#E8E9E5&#x27;], &#x27;#FFFFFF&#x27;);</span>
+<span <span class="t-kw">class</span>="t-comment">// collisions: []  ← every series is at least 0.12 apart <span class="t-kw">in</span> lightness</span>
+</code></pre>
+<p>Run it in CI and a well-meaning &quot;let&#x27;s make series 3 a nicer blue&quot; PR can&#x27;t quietly break the encoding.</p>
+<p class='spacer'>&nbsp;</p>
+</details>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/49627F/49627F.png" alt="Section divider bar in dark blue" /></p>
+<h2>🎯 What about matching a brand colour exactly?</h2>
+<p>Sometimes you genuinely need &quot;this must be <em>our</em> red&quot;. Then:</p>
+<ul><li>Tag your images with an ICC profile and export as sRGB.</li><li>Specify CSS colours knowing they&#x27;re interpreted as sRGB by default.</li><li>Accept that a screen match is approximate — pick the colour that&#x27;s <em>robust</em>, not the one that&#x27;s perfect on the art director&#x27;s monitor.</li><li>For physical products, the screen is a preview, never a proof. That&#x27;s what printed samples are for.</li></ul>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/7F95B1/7F95B1.png" alt="Section divider bar in muted blue" /></p>
+<h2>🧾 The checklist</h2>
+<ol><li>A hex is an instruction, not a colour. Five of six links in the chain are outside your control.</li><li>Encode with <strong>lightness first</strong>, hue second, saturation never alone.</li><li>Keep chart series ≥ 0.12 apart in OKLCH lightness.</li><li>Add a redundant cue — dash, shape, direct label — to every colour distinction.</li><li>Test in greyscale, at low brightness, and on paper.</li><li>Measure contrast numerically; your monitor is not a measuring device.</li></ol>
+<p>Palettes that are built as ordered ramps — rather than four colours that merely look nice together — are the ones that hold up. <a href="https://colorfiind.com" target="_blank" rel="noopener">ColorFiind</a> labels each palette&#x27;s contrast and tone structure, which makes picking a ramp-shaped one much faster.</p>
+<p class='spacer'>&nbsp;</p>
+<a class='cta' href='https://colorfiind.com' target='_blank' rel='noopener'>Find a ramp-shaped palette for charts</a>
+<p class='spacer'>&nbsp;</p>
+<p><em>What&#x27;s the worst &quot;it looked fine on my screen&quot; bug you&#x27;ve shipped? Mine was a light grey that was pure white on half the team&#x27;s laptops.</em> 👇</p></div>
+    </article>
+    <p class="note">Static local preview — Liquid tags are simulated, DEV renders them natively.
+    Colour swatches load from placehold.co, so they need internet access.</p>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>A Designer&#x27;s Guide to ICC Colour Profiles (Without the Colour Science Degree) — DEV preview</title>
+<style>
+:root{--bg:#0B0F1A;--panel:#111827;--panel2:#0F172A;--line:#1F2A44;--ink:#E7E9EE;
+--muted:#94A3B8;--primary:#00F5D4;--accent:#F15BB5;--support:#9B5DE5;--radius:14px}
+html[data-theme=light]{--bg:#F5F7F9;--panel:#fff;--panel2:#EFF2F6;--line:#DDE3EC;
+--ink:#1B2333;--muted:#5B6478;--primary:#0E7C86;--accent:#B4276F;--support:#6D3FBF}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+font:16px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+a{color:var(--primary)}
+header.top{position:sticky;top:0;z-index:20;display:flex;gap:14px;align-items:center;padding:12px 18px;
+background:var(--bg);border-bottom:1px solid var(--line)}
+.brand{font-weight:800}.brand span{color:var(--primary)}
+.rule{display:flex;height:6px;width:150px;border-radius:99px;overflow:hidden}.rule i{flex:1}
+.spacer{flex:1}
+.btn{font:inherit;cursor:pointer;border:1px solid var(--line);background:var(--panel);color:var(--ink);
+border-radius:99px;padding:6px 14px;text-decoration:none}
+.btn:hover{border-color:var(--primary)}
+.btn-dl{background:var(--primary);color:#08121A;border-color:var(--primary);font-weight:700}
+.layout{display:grid;grid-template-columns:290px minmax(0,1fr);gap:26px;padding:22px;align-items:start}
+@media(max-width:900px){.layout{grid-template-columns:1fr}}
+nav.files{position:sticky;top:70px;background:var(--panel);border:1px solid var(--line);
+border-radius:var(--radius);padding:12px;display:flex;flex-direction:column;gap:6px}
+nav.files h2{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin:6px 8px 8px}
+nav.files a{display:block;padding:9px 11px;border-radius:10px;text-decoration:none;color:var(--ink);
+font-size:14px;border:1px solid transparent}
+nav.files a:hover{background:var(--panel2)}
+nav.files a.active{background:var(--panel2);border-color:var(--primary);color:var(--primary)}
+nav.files small{display:block;color:var(--muted);font-size:11.5px}
+article{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+padding-bottom:48px;max-width:840px;width:100%;overflow:hidden}
+.cover{width:100%;display:block;border-bottom:1px solid var(--line)}
+.meta{padding:22px clamp(18px,4vw,44px) 0}
+.meta h1{font-size:clamp(26px,4vw,40px);line-height:1.18;margin:.2em 0 .3em}
+.tags{display:flex;flex-wrap:wrap;gap:8px}
+.tag{font-size:12.5px;color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:2px 8px}
+.desc{color:var(--muted);font-size:15px}
+.fm{font-size:12px;color:var(--muted);border-top:1px dashed var(--line);
+border-bottom:1px dashed var(--line);padding:8px 0;margin-bottom:6px}
+.post{padding:0 clamp(18px,4vw,44px)}
+.post img{max-width:100%;display:block;margin:.4em 0}
+.post td img{margin:0 auto}
+
+.post h2{margin-top:1.9em;font-size:26px;border-bottom:1px solid var(--line);padding-bottom:.25em}
+.post h3{margin-top:1.5em;font-size:20px}
+.post blockquote{margin:1.4em 0;padding:.9em 1.1em;background:var(--panel2);
+border-left:4px solid var(--accent);border-radius:0 10px 10px 0}
+.post blockquote p{margin:0}
+.tw{overflow-x:auto;margin:1.3em 0}
+.post table{border-collapse:collapse;width:100%;font-size:14.5px}
+.post th,.post td{border:1px solid var(--line);padding:8px 11px;text-align:left;vertical-align:middle}
+.post th{background:var(--panel2)}
+.post td img{vertical-align:middle}
+.post :not(pre)>code{background:var(--panel2);padding:.15em .4em;border-radius:6px;font-size:.9em;
+font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+pre.code{background:#0d1117;border:1px solid var(--line);border-radius:12px;padding:18px;
+overflow-x:auto;position:relative;margin:1.3em 0}
+pre.code code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13.5px;
+line-height:1.62;color:#C9D1D9;white-space:pre}
+pre.code::before{content:attr(data-lang);position:absolute;top:0;right:0;font-size:10.5px;
+letter-spacing:.12em;text-transform:uppercase;color:#0B0F1A;background:var(--primary);
+padding:2px 10px;border-radius:0 11px 0 10px;font-family:ui-monospace,monospace}
+pre.lang-diff{border-color:#F15BB5}
+pre.lang-console,pre.lang-bash{background:#05070d;border-color:#00F5D4}
+.t-comment{color:#6E7A8A;font-style:italic}
+.t-string{color:#A5D6FF}.t-number{color:#F0A868}.t-kw{color:#FF7B9C}
+.t-prop{color:#9B5DE5;font-weight:600}.t-tag{color:#7EE787}
+.t-color{color:#FFD479}
+.chip{display:inline-block;width:.78em;height:.78em;margin-right:.35em;border-radius:3px;
+border:1px solid rgba(255,255,255,.35);vertical-align:-1px}
+.d-add{color:#7EE787;display:block;background:rgba(46,160,67,.15)}
+.d-del{color:#FF9492;display:block;background:rgba(248,81,73,.14)}
+.d-hunk{color:#79C0FF;display:block}
+.sh-prompt{color:#F15BB5;font-weight:700}.sh-cmd{color:#E7E9EE}
+.sh-ok{color:#7EE787;display:block}.sh-out{color:#9DF7E4;display:block}
+details.liquid{background:var(--panel2);border:1px solid var(--line);border-radius:12px;
+padding:10px 16px;margin:1.4em 0}
+details.liquid summary{cursor:pointer;font-weight:650}
+.cta{display:block;text-align:center;margin:1.8em 0;padding:14px 20px;border-radius:12px;
+background:linear-gradient(90deg,var(--primary),var(--support));color:#08121A;font-weight:750;
+text-decoration:none}
+.katex{background:var(--panel2);border:1px dashed var(--line);border-radius:10px;padding:12px 16px;
+font-family:ui-monospace,monospace;color:var(--primary);margin:1.2em 0}
+.embed{color:var(--muted);font-family:ui-monospace,monospace;font-size:13px}
+.note{max-width:840px;color:var(--muted);font-size:13px;margin-top:14px}
+.post hr{border:0;border-top:1px solid var(--line);margin:2em 0}
+.post p:empty,.post p.spacer{margin:1.1em 0;min-height:1.1em}
+.post h2{margin-top:1.2em}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand">Swatch<span>Deck</span> · DEV.to preview</div>
+  <div class="rule"><i style="background:#0F172A"></i><i style="background:#00F5D4"></i>
+    <i style="background:#F15BB5"></i><i style="background:#9B5DE5"></i></div>
+  <div class="spacer"></div>
+  <a class="btn" href="/downloads">⬇ Downloads</a>
+  <a class="btn btn-dl" href="/download/15-icc-color-profiles-guide.md">⬇ This post (.md)</a>
+  <a class="btn" href="../15-icc-color-profiles-guide.md" target="_blank">View raw</a>
+  <button class="btn" onclick="var d=document.documentElement;
+    d.dataset.theme=d.dataset.theme==='dark'?'light':'dark'">🌗 Theme</button>
+</header>
+<div class="layout">
+  <nav class="files"><h2>Articles</h2><a href="00-swatch-deck-theme-kit.html" class="">swatch deck theme kit<small>Reusable theme kit</small></a><a href="01-choose-a-color-palette.html" class="">choose a color palette<small>Choosing a palette</small></a><a href="02-hex-to-design-tokens.html" class="">hex to design tokens<small>Tokens pipeline</small></a><a href="03-seasonal-palettes-ui-themes.html" class="">seasonal palettes ui themes<small>Seasonal themes</small></a><a href="04-neon-dark-mode-glow-ui.html" class="">neon dark mode glow ui<small>Neon dark mode</small></a><a href="05-automate-palette-workflow.html" class="">automate palette workflow<small>Automation</small></a><a href="06-css-color-mix-dynamic-variations.html" class="">css color mix dynamic variations<small>color-mix()</small></a><a href="07-css-relative-color-syntax.html" class="">css relative color syntax<small>Relative colour</small></a><a href="08-light-dark-css-theme-aware.html" class="">light dark css theme aware<small>light-dark()</small></a><a href="09-hwb-color-explained.html" class="">hwb color explained<small>HWB</small></a><a href="10-display-p3-vs-srgb-wide-gamut.html" class="">display p3 vs srgb wide gamut<small>Display-P3</small></a><a href="11-wide-gamut-without-breaking-displays.html" class="">wide gamut without breaking displays<small>Wide gamut safely</small></a><a href="12-color-gamut-media-queries.html" class="">color gamut media queries<small>Gamut media queries</small></a><a href="13-same-hex-different-monitors.html" class="">same hex different monitors<small>Monitor variance</small></a><a href="14-browser-color-management.html" class="">browser color management<small>Colour management</small></a><a href="15-icc-color-profiles-guide.html" class="active">icc color profiles guide<small>ICC profiles</small></a></nav>
+  <div>
+    <article>
+      
+      <div class="meta">
+        <div class="tags"><span class="tag">#design</span><span class="tag">#webdev</span><span class="tag">#printdesign</span><span class="tag">#workflow</span></div>
+        <h1>A Designer&#x27;s Guide to ICC Colour Profiles (Without the Colour Science Degree)</h1>
+        <p class="desc">What an ICC profile actually contains, which one to use when, what the four rendering intents really do, and how to hand files to a printer without a colour surprise.</p>
+        <div class="fm">published: <b>false</b> · tags: 4/4 · cover_image: none</div>
+      </div>
+      <div class="post"><div class='tw'><table><thead><tr><th><code>#75A1C7</code></th><th><code>#D9ABB7</code></th><th><code>#EADEB8</code></th><th><code>#C5AFDE</code></th></tr></thead><tbody><tr><td><img src="https://placehold.co/120x56/75A1C7/75A1C7.png" alt="cyan swatch #75A1C7" /></td><td><img src="https://placehold.co/120x56/D9ABB7/D9ABB7.png" alt="light pink swatch #D9ABB7" /></td><td><img src="https://placehold.co/120x56/EADEB8/EADEB8.png" alt="light yellow swatch #EADEB8" /></td><td><img src="https://placehold.co/120x56/C5AFDE/C5AFDE.png" alt="light indigo swatch #C5AFDE" /></td></tr></tbody></table></div>
+<blockquote><p>🎨 <strong>Palette in play</strong> — <a href="https://colorfiind.com/palette/bluebell-mood-horizon" target="_blank" rel="noopener">Bluebell Mood Horizon</a> · <code>#75A1C7</code> <code>#D9ABB7</code> <code>#EADEB8</code> <code>#C5AFDE</code></p></blockquote>
+<p>An ICC profile is not a filter, a look, or a setting that makes colours nicer. It is a <strong>translation dictionary</strong> for one device.</p>
+<p class='spacer'>&nbsp;</p>
+<p>That&#x27;s the whole concept. Everything else — the four rendering intents, the v2/v4 argument, why your blue printed purple — follows from it, and you can learn the useful parts in ten minutes.</p>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/EADEB8/EADEB8.png" alt="Section divider bar in light yellow" /></p>
+<h2>📖 What&#x27;s actually inside a profile</h2>
+<p>A profile answers one question: <em>for this device, what real-world colour do these numbers produce?</em></p>
+<p class='spacer'>&nbsp;</p>
+<p>It does that by mapping device numbers to a device-independent reference space — the <strong>Profile Connection Space</strong>, either CIE XYZ or Lab. Convert from one device to another and you go via the PCS:</p>
+<pre class="code lang-console" data-lang="console"><code><span class="sh-out">your file (Adobe RGB)  →  PCS (Lab)  →  the press (FOGRA51 CMYK)</span>
+<span class="sh-out">        ^source profile        ^          ^destination profile</span>
+<span class="sh-out">                        device-independent</span>
+<span class="sh-out"></span></code></pre>
+<p>Two profiles per conversion, always: one to interpret the source, one to target the destination. If either is missing or wrong, the result is wrong — confidently and silently.</p>
+<div class='tw'><table><thead><tr><th>Profile class</th><th>What it describes</th><th>You meet it as</th></tr></thead><tbody><tr><td><strong>Colour space</strong> (<code>spac</code>)</td><td>an abstract space, not a device</td><td>sRGB, Adobe RGB, Display P3, ProPhoto</td></tr><tr><td><strong>Display</strong> (<code>mntr</code>)</td><td>a specific monitor</td><td>what calibration writes</td></tr><tr><td><strong>Output</strong> (<code>prtr</code>)</td><td>a printer + ink + paper combination</td><td>FOGRA51, GRACoL, your vendor&#x27;s file</td></tr><tr><td><strong>Input</strong> (<code>scnr</code>)</td><td>a camera or scanner</td><td>rarely handled by hand</td></tr></tbody></table></div>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/EADEB8/EADEB8.png" alt="Section divider bar in light yellow" /></p>
+<h2>🎯 Which one to use, and when</h2>
+<div class='tw'><table><thead><tr><th>Situation</th><th>Profile</th><th>Why</th></tr></thead><tbody><tr><td>Anything for the web</td><td><strong>sRGB IEC61966-2.1</strong></td><td>the web&#x27;s assumed default; anything else risks being misread</td></tr><tr><td>Wide-gamut web imagery</td><td><strong>Display P3</strong></td><td>tag it, always, and provide an sRGB fallback</td></tr><tr><td>Photo editing you&#x27;ll output later</td><td><strong>Adobe RGB</strong> or <strong>ProPhoto</strong></td><td>keeps gamut you&#x27;d otherwise throw away early</td></tr><tr><td>European offset, coated stock</td><td><strong>FOGRA51 / PSO Coated v3</strong></td><td>current European standard</td></tr><tr><td>North American offset</td><td><strong>GRACoL 2013</strong></td><td>the equivalent over there</td></tr><tr><td>Newsprint / uncoated</td><td>vendor&#x27;s profile</td><td>tiny gamut; never guess this one</td></tr><tr><td>A specific press</td><td><strong>whatever your printer sends you</strong></td><td>beats every generic profile</td></tr></tbody></table></div>
+<p>The rule that saves the most grief: <strong>ask the print vendor for their profile before you start</strong>, not after the proof looks wrong.</p>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/EADEB8/EADEB8.png" alt="Section divider bar in light yellow" /></p>
+<h2>🔀 The four rendering intents, in plain terms</h2>
+<p>When a colour can&#x27;t be reproduced by the destination, the intent decides what happens instead.</p>
+<div class='tw'><table><thead><tr><th>Intent</th><th>What it does</th><th>Use for</th></tr></thead><tbody><tr><td><strong>Perceptual</strong></td><td>compresses the <em>whole</em> gamut so relationships survive; everything shifts a little</td><td>photographs, gradients, big gamut → small gamut</td></tr><tr><td><strong>Relative colorimetric</strong></td><td>keeps in-gamut colours exact, clips out-of-gamut ones to the nearest match; maps source white to paper white</td><td>logos, brand colours, most print work</td></tr><tr><td><strong>Absolute colorimetric</strong></td><td>like relative, but keeps the <em>source</em> white — simulating another paper&#x27;s tint</td><td>proofing only</td></tr><tr><td><strong>Saturation</strong></td><td>prioritises vividness over accuracy</td><td>charts and business graphics, rarely else</td></tr></tbody></table></div>
+<p>Two practical defaults:</p>
+<ul><li><strong>Relative colorimetric with Black Point Compensation</strong> for general work, and for anything where a specific brand colour must be right.</li><li><strong>Perceptual</strong> when converting rich photography into a genuinely small gamut like uncoated stock or newsprint, where clipping would flatten the shadows.</li></ul>
+<blockquote><p>🧪 <strong>Lab note</strong> — Black Point Compensation maps the source black to the destination black instead of clipping it. Without it, shadow detail disappears into a flat dark patch. It effectively only applies to the colorimetric intents.</p></blockquote>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/EADEB8/EADEB8.png" alt="Section divider bar in light yellow" /></p>
+<h2>💜 Why your blue prints purple</h2>
+<p>This is the single most common packaging surprise, and this palette demonstrates it nicely. <code>#75A1C7</code> is a calm, slightly greyed blue on screen. RGB blues live in a region that CMYK inks simply cannot reach: process cyan plus magenta cannot produce the <em>brightness</em> of emitted blue light, so the nearest printable colour sits darker and more toward violet.</p>
+<p class='spacer'>&nbsp;</p>
+<p>Your options, in order:</p>
+<ol><li><strong>Soft-proof before you commit.</strong> Photoshop/Illustrator/InDesign → <em>View → Proof Setup</em> → the destination profile, then <em>Proof Colors</em>. Turn on the gamut warning to see which areas will shift.</li><li><strong>Pull the colour into gamut yourself</strong> in the source file, so you choose the compromise rather than the algorithm.</li><li><strong>Use a spot colour</strong> for a brand blue that must be exact. That&#x27;s what spot inks are for.</li><li><strong>Adjust the design</strong> so the blue doesn&#x27;t sit next to a colour it will suddenly resemble.</li></ol>
+<p>Pastels like the rest of this palette convert far more happily — a warm cream <code>#EADEB8</code> or a soft blush <code>#D9ABB7</code> are well inside CMYK&#x27;s reach. Saturated blues, bright oranges and vivid greens are the risky ones.</p>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/EADEB8/EADEB8.png" alt="Section divider bar in light yellow" /></p>
+<h2>🌐 The web half of the workflow</h2>
+<p>Print people know profiles; web people often assume they don&#x27;t apply. They do:</p>
+<ul><li><strong>CSS colours are sRGB by definition.</strong> No profile is embedded and none is needed.</li><li><strong>Images carry their own profile.</strong> Untagged images are assumed sRGB by browsers — fine if they really are sRGB, wrong if they aren&#x27;t.</li><li><strong>Export web assets as sRGB with the profile embedded.</strong> The few kilobytes are worth it.</li><li><strong>CDNs and optimisers strip profiles.</strong> Check the delivered file, not the source file.</li></ul>
+<pre class="code lang-bash" data-lang="bash"><code><span class="sh-out"># what profile is actually in the file that shipped?</span>
+<span class="sh-out">exiftool -icc_profile:all -ProfileDescription dist/hero.jpg</span>
+<span class="sh-out">#   Profile Description : sRGB IEC61966-2.1     ← good</span>
+<span class="sh-out"></span>
+<span class="sh-out"># convert and tag in one step</span>
+<span class="sh-out">magick source.tif -profile AdobeRGB1998.icc -profile sRGB.icc -quality 88 dist/hero.jpg</span>
+<span class="sh-out"></span></code></pre>
+<p>That second command reads the file <em>as</em> Adobe RGB and converts it <em>into</em> sRGB. Order matters: assigning a profile reinterprets the numbers, converting changes them so the appearance is preserved. <strong>Assign is a relabel; convert is a translation.</strong> Mixing them up is how images end up oversaturated or flat.</p>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/EADEB8/EADEB8.png" alt="Section divider bar in light yellow" /></p>
+<h2>🎨 A packaging handoff that doesn&#x27;t come back</h2>
+<pre class="code lang-console" data-lang="console"><code><span class="sh-prompt">$</span><span class="sh-cmd"> # the file you send should be able to answer all of these</span>
+<span class="sh-out">  1. What profile is embedded?            → the destination CMYK, or tagged RGB if the vendor prefers</span>
+<span class="sh-out">  2. Which rendering intent was used?      → relative colorimetric + BPC, unless photography said otherwise</span>
+<span class="sh-out">  3. Are brand colours spot or process?    → spot for exact-match, process for everything else</span>
+<span class="sh-out">  4. Total ink coverage within limits?     → typically ≤ 300% coated, ≤ 260% uncoated — ask</span>
+<span class="sh-out">  5. Is black text 100% K only?            → not a four-colour mush that misregisters</span>
+<span class="sh-out">  6. Do die lines stay as spot colours?    → yes, and set to overprint</span>
+<span class="sh-out">  7. Was it soft-proofed and signed off?   → screenshot of the soft proof in the handoff notes</span>
+<span class="sh-out"></span></code></pre>
+<p>Answer those seven and most reprints disappear.</p>
+<p class='spacer'>&nbsp;</p>
+<details class='liquid' open><summary>🧾 Building a small colour-handoff spec for a brand</summary>
+<pre class="code lang-markdown" data-lang="markdown"><code><span class="t-comment">## Brand colour: Bluebell #75A1C7</span>
+
+| Medium            | Value                                  | Notes                        |
+| ----------------- | -------------------------------------- | ---------------------------- |
+| Web / sRGB        | <span class="t-color"><i class="chip" style="background:#75A1C7"></i>#75A1C7</span>                                | CSS default, no profile      |
+| Wide gamut        | color(display-p3 <span class="t-number">0.4952</span> <span class="t-number">0.6266</span> <span class="t-number">0.7666</span>) | same colour, P3 coordinates  |
+| Coated offset     | ask vendor → FOGRA51 conversion        | rel. colorimetric + BPC      |
+| Uncoated          | expect a duller result; consider spot  | soft-proof before sign-off   |
+| Spot (if critical)| specify a Pantone match                | for logo use only            |
+</code></pre>
+<p>One table per brand colour, stored with the brand guidelines. It ends the &quot;which blue is the real blue&quot; conversation permanently.</p>
+<p class='spacer'>&nbsp;</p>
+</details>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/EADEB8/EADEB8.png" alt="Section divider bar in light yellow" /></p>
+<h2>🧾 The checklist</h2>
+<ol><li>A profile is a translation dictionary for one device — nothing more.</li><li>Every conversion uses two: source and destination.</li><li>Web = sRGB, tagged. Print = the vendor&#x27;s profile, always ask.</li><li>Default to <strong>relative colorimetric + BPC</strong>; use perceptual for photos into small gamuts.</li><li><strong>Assign</strong> relabels, <strong>convert</strong> translates. Know which one you&#x27;re doing.</li><li>Soft-proof with gamut warning before any print commitment.</li><li>Saturated blues, oranges and greens are your CMYK risk list — pastels are safe.</li></ol>
+<p>Starting from a palette that already lives comfortably in both worlds saves a conversion argument later; sets like the pastels on <a href="https://colorfiind.com" target="_blank" rel="noopener">ColorFiind</a> convert to CMYK with far fewer surprises than a screen-native neon.</p>
+<p class='spacer'>&nbsp;</p>
+<a class='cta' href='https://colorfiind.com' target='_blank' rel='noopener'>Browse print-friendly palettes</a>
+<p class='spacer'>&nbsp;</p>
+<p><em>What&#x27;s the worst colour shift you&#x27;ve had come back from a printer? Mine was a &quot;rich navy&quot; that arrived as denim.</em> 👇</p></div>
+    </article>
+    <p class="note">Static local preview — Liquid tags are simulated, DEV renders them natively.
+    Colour swatches load from placehold.co, so they need internet access.</p>
+  </div>
+</div>
+</body>
+</html>

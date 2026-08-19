@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>How Browser Colour Management Changes What Your Users Actually See — DEV preview</title>
+<style>
+:root{--bg:#0B0F1A;--panel:#111827;--panel2:#0F172A;--line:#1F2A44;--ink:#E7E9EE;
+--muted:#94A3B8;--primary:#00F5D4;--accent:#F15BB5;--support:#9B5DE5;--radius:14px}
+html[data-theme=light]{--bg:#F5F7F9;--panel:#fff;--panel2:#EFF2F6;--line:#DDE3EC;
+--ink:#1B2333;--muted:#5B6478;--primary:#0E7C86;--accent:#B4276F;--support:#6D3FBF}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+font:16px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+a{color:var(--primary)}
+header.top{position:sticky;top:0;z-index:20;display:flex;gap:14px;align-items:center;padding:12px 18px;
+background:var(--bg);border-bottom:1px solid var(--line)}
+.brand{font-weight:800}.brand span{color:var(--primary)}
+.rule{display:flex;height:6px;width:150px;border-radius:99px;overflow:hidden}.rule i{flex:1}
+.spacer{flex:1}
+.btn{font:inherit;cursor:pointer;border:1px solid var(--line);background:var(--panel);color:var(--ink);
+border-radius:99px;padding:6px 14px;text-decoration:none}
+.btn:hover{border-color:var(--primary)}
+.btn-dl{background:var(--primary);color:#08121A;border-color:var(--primary);font-weight:700}
+.layout{display:grid;grid-template-columns:290px minmax(0,1fr);gap:26px;padding:22px;align-items:start}
+@media(max-width:900px){.layout{grid-template-columns:1fr}}
+nav.files{position:sticky;top:70px;background:var(--panel);border:1px solid var(--line);
+border-radius:var(--radius);padding:12px;display:flex;flex-direction:column;gap:6px}
+nav.files h2{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin:6px 8px 8px}
+nav.files a{display:block;padding:9px 11px;border-radius:10px;text-decoration:none;color:var(--ink);
+font-size:14px;border:1px solid transparent}
+nav.files a:hover{background:var(--panel2)}
+nav.files a.active{background:var(--panel2);border-color:var(--primary);color:var(--primary)}
+nav.files small{display:block;color:var(--muted);font-size:11.5px}
+article{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+padding-bottom:48px;max-width:840px;width:100%;overflow:hidden}
+.cover{width:100%;display:block;border-bottom:1px solid var(--line)}
+.meta{padding:22px clamp(18px,4vw,44px) 0}
+.meta h1{font-size:clamp(26px,4vw,40px);line-height:1.18;margin:.2em 0 .3em}
+.tags{display:flex;flex-wrap:wrap;gap:8px}
+.tag{font-size:12.5px;color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:2px 8px}
+.desc{color:var(--muted);font-size:15px}
+.fm{font-size:12px;color:var(--muted);border-top:1px dashed var(--line);
+border-bottom:1px dashed var(--line);padding:8px 0;margin-bottom:6px}
+.post{padding:0 clamp(18px,4vw,44px)}
+.post img{max-width:100%;display:block;margin:.4em 0}
+.post td img{margin:0 auto}
+
+.post h2{margin-top:1.9em;font-size:26px;border-bottom:1px solid var(--line);padding-bottom:.25em}
+.post h3{margin-top:1.5em;font-size:20px}
+.post blockquote{margin:1.4em 0;padding:.9em 1.1em;background:var(--panel2);
+border-left:4px solid var(--accent);border-radius:0 10px 10px 0}
+.post blockquote p{margin:0}
+.tw{overflow-x:auto;margin:1.3em 0}
+.post table{border-collapse:collapse;width:100%;font-size:14.5px}
+.post th,.post td{border:1px solid var(--line);padding:8px 11px;text-align:left;vertical-align:middle}
+.post th{background:var(--panel2)}
+.post td img{vertical-align:middle}
+.post :not(pre)>code{background:var(--panel2);padding:.15em .4em;border-radius:6px;font-size:.9em;
+font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+pre.code{background:#0d1117;border:1px solid var(--line);border-radius:12px;padding:18px;
+overflow-x:auto;position:relative;margin:1.3em 0}
+pre.code code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13.5px;
+line-height:1.62;color:#C9D1D9;white-space:pre}
+pre.code::before{content:attr(data-lang);position:absolute;top:0;right:0;font-size:10.5px;
+letter-spacing:.12em;text-transform:uppercase;color:#0B0F1A;background:var(--primary);
+padding:2px 10px;border-radius:0 11px 0 10px;font-family:ui-monospace,monospace}
+pre.lang-diff{border-color:#F15BB5}
+pre.lang-console,pre.lang-bash{background:#05070d;border-color:#00F5D4}
+.t-comment{color:#6E7A8A;font-style:italic}
+.t-string{color:#A5D6FF}.t-number{color:#F0A868}.t-kw{color:#FF7B9C}
+.t-prop{color:#9B5DE5;font-weight:600}.t-tag{color:#7EE787}
+.t-color{color:#FFD479}
+.chip{display:inline-block;width:.78em;height:.78em;margin-right:.35em;border-radius:3px;
+border:1px solid rgba(255,255,255,.35);vertical-align:-1px}
+.d-add{color:#7EE787;display:block;background:rgba(46,160,67,.15)}
+.d-del{color:#FF9492;display:block;background:rgba(248,81,73,.14)}
+.d-hunk{color:#79C0FF;display:block}
+.sh-prompt{color:#F15BB5;font-weight:700}.sh-cmd{color:#E7E9EE}
+.sh-ok{color:#7EE787;display:block}.sh-out{color:#9DF7E4;display:block}
+details.liquid{background:var(--panel2);border:1px solid var(--line);border-radius:12px;
+padding:10px 16px;margin:1.4em 0}
+details.liquid summary{cursor:pointer;font-weight:650}
+.cta{display:block;text-align:center;margin:1.8em 0;padding:14px 20px;border-radius:12px;
+background:linear-gradient(90deg,var(--primary),var(--support));color:#08121A;font-weight:750;
+text-decoration:none}
+.katex{background:var(--panel2);border:1px dashed var(--line);border-radius:10px;padding:12px 16px;
+font-family:ui-monospace,monospace;color:var(--primary);margin:1.2em 0}
+.embed{color:var(--muted);font-family:ui-monospace,monospace;font-size:13px}
+.note{max-width:840px;color:var(--muted);font-size:13px;margin-top:14px}
+.post hr{border:0;border-top:1px solid var(--line);margin:2em 0}
+.post p:empty,.post p.spacer{margin:1.1em 0;min-height:1.1em}
+.post h2{margin-top:1.2em}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand">Swatch<span>Deck</span> · DEV.to preview</div>
+  <div class="rule"><i style="background:#0F172A"></i><i style="background:#00F5D4"></i>
+    <i style="background:#F15BB5"></i><i style="background:#9B5DE5"></i></div>
+  <div class="spacer"></div>
+  <a class="btn" href="/downloads">⬇ Downloads</a>
+  <a class="btn btn-dl" href="/download/14-browser-color-management.md">⬇ This post (.md)</a>
+  <a class="btn" href="../14-browser-color-management.md" target="_blank">View raw</a>
+  <button class="btn" onclick="var d=document.documentElement;
+    d.dataset.theme=d.dataset.theme==='dark'?'light':'dark'">🌗 Theme</button>
+</header>
+<div class="layout">
+  <nav class="files"><h2>Articles</h2><a href="00-swatch-deck-theme-kit.html" class="">swatch deck theme kit<small>Reusable theme kit</small></a><a href="01-choose-a-color-palette.html" class="">choose a color palette<small>Choosing a palette</small></a><a href="02-hex-to-design-tokens.html" class="">hex to design tokens<small>Tokens pipeline</small></a><a href="03-seasonal-palettes-ui-themes.html" class="">seasonal palettes ui themes<small>Seasonal themes</small></a><a href="04-neon-dark-mode-glow-ui.html" class="">neon dark mode glow ui<small>Neon dark mode</small></a><a href="05-automate-palette-workflow.html" class="">automate palette workflow<small>Automation</small></a><a href="06-css-color-mix-dynamic-variations.html" class="">css color mix dynamic variations<small>color-mix()</small></a><a href="07-css-relative-color-syntax.html" class="">css relative color syntax<small>Relative colour</small></a><a href="08-light-dark-css-theme-aware.html" class="">light dark css theme aware<small>light-dark()</small></a><a href="09-hwb-color-explained.html" class="">hwb color explained<small>HWB</small></a><a href="10-display-p3-vs-srgb-wide-gamut.html" class="">display p3 vs srgb wide gamut<small>Display-P3</small></a><a href="11-wide-gamut-without-breaking-displays.html" class="">wide gamut without breaking displays<small>Wide gamut safely</small></a><a href="12-color-gamut-media-queries.html" class="">color gamut media queries<small>Gamut media queries</small></a><a href="13-same-hex-different-monitors.html" class="">same hex different monitors<small>Monitor variance</small></a><a href="14-browser-color-management.html" class="active">browser color management<small>Colour management</small></a><a href="15-icc-color-profiles-guide.html" class="">icc color profiles guide<small>ICC profiles</small></a></nav>
+  <div>
+    <article>
+      
+      <div class="meta">
+        <div class="tags"><span class="tag">#css</span><span class="tag">#webdev</span><span class="tag">#frontend</span><span class="tag">#design</span></div>
+        <h1>How Browser Colour Management Changes What Your Users Actually See</h1>
+        <p class="desc">Browsers convert colour before it reaches the screen. Tagged images, untagged images, CSS colours and canvas all follow different rules — here&#x27;s the model that explains the bugs.</p>
+        <div class="fm">published: <b>false</b> · tags: 4/4 · cover_image: none</div>
+      </div>
+      <div class="post"><div class='tw'><table><thead><tr><th><code>#08161C</code></th><th><code>#5500FF</code></th><th><code>#FF5724</code></th><th><code>#38FF59</code></th></tr></thead><tbody><tr><td><img src="https://placehold.co/120x56/08161C/08161C.png" alt="near-black swatch #08161C" /></td><td><img src="https://placehold.co/120x56/5500FF/5500FF.png" alt="vivid indigo swatch #5500FF" /></td><td><img src="https://placehold.co/120x56/FF5724/FF5724.png" alt="vivid red swatch #FF5724" /></td><td><img src="https://placehold.co/120x56/38FF59/38FF59.png" alt="vivid green swatch #38FF59" /></td></tr></tbody></table></div>
+<blockquote><p>🎨 <strong>Palette in play</strong> — <a href="https://colorfiind.com/palette/coral-breeze-edition" target="_blank" rel="noopener">Coral Breeze Edition</a> · <code>#08161C</code> <code>#5500FF</code> <code>#FF5724</code> <code>#38FF59</code></p></blockquote>
+<p>Here&#x27;s a bug report that will eventually land in your queue: <em>&quot;the hero image doesn&#x27;t match the background colour, but only on my MacBook.&quot;</em></p>
+<p class='spacer'>&nbsp;</p>
+<p>The CSS is <code>background: #FF5724</code>. The image was exported from the same design file with the same value. On most machines they blend seamlessly. On a wide-gamut display, there&#x27;s a visible seam.</p>
+<p class='spacer'>&nbsp;</p>
+<p>Nothing is broken. You&#x27;re watching <strong>colour management</strong> do its job — on one of them and not the other.</p>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/5500FF/5500FF.png" alt="Section divider bar in vivid indigo" /></p>
+<h2>🧠 The model in one paragraph</h2>
+<p>Every piece of content on a page has a colour space, either declared or assumed. Before compositing, the browser converts everything into the display&#x27;s space using <strong>relative colorimetric</strong> intent — roughly &quot;keep what fits, clamp what doesn&#x27;t to the nearest thing the screen can show&quot;.</p>
+<p class='spacer'>&nbsp;</p>
+<p>The bugs all come from one place: <strong>what the browser assumes when the content doesn&#x27;t say.</strong></p>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/FF5724/FF5724.png" alt="Section divider bar in vivid red" /></p>
+<h2>📋 What gets assumed, per content type</h2>
+<div class='tw'><table><thead><tr><th>Content</th><th>Declared how</th><th>If it says nothing</th></tr></thead><tbody><tr><td>CSS colour (<code>#hex</code>, <code>rgb()</code>, <code>hsl()</code>)</td><td>always sRGB by definition</td><td>— sRGB, no ambiguity</td></tr><tr><td>CSS <code>color(display-p3 …)</code>, <code>oklch()</code></td><td>explicitly wide / perceptual</td><td>—</td></tr><tr><td><code>&lt;img&gt;</code> with embedded ICC profile</td><td>the profile</td><td>—</td></tr><tr><td><code>&lt;img&gt;</code> <strong>without</strong> a profile</td><td>—</td><td><strong>assumed sRGB</strong> and converted</td></tr><tr><td><code>&lt;video&gt;</code></td><td>container/stream metadata</td><td>assumed Rec. 709 (≈ sRGB primaries)</td></tr><tr><td><code>&lt;canvas&gt;</code> 2D</td><td><code>colorSpace</code> context option</td><td><strong>sRGB</strong> — clamps everything drawn into it</td></tr><tr><td>WebGL / WebGPU</td><td>drawing buffer config</td><td>sRGB unless configured</td></tr></tbody></table></div>
+<p>Two rows in that table cause almost every real-world problem.</p>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/38FF59/38FF59.png" alt="Section divider bar in vivid green" /></p>
+<h2>🐛 Bug #1 — the untagged wide-gamut export</h2>
+<p>Somebody exports a hero image from a design tool with &quot;Display P3&quot; as the document profile, and the export drops the profile — either the tool&#x27;s &quot;smallest file size&quot; option, or an image CDN stripping metadata to save bytes.</p>
+<p class='spacer'>&nbsp;</p>
+<p>The browser now sees raw numbers with no profile, assumes sRGB, and converts sRGB → display. But those numbers <em>were</em> P3. The result: <strong>desaturated, slightly shifted colour</strong>, most noticeable in saturated reds and greens.</p>
+<pre class="code lang-console" data-lang="console"><code><span class="sh-prompt">$</span><span class="sh-cmd"> # what the file should say</span>
+<span class="sh-prompt">$</span><span class="sh-cmd"> exiftool hero.jpg | grep -i profile</span>
+<span class="sh-out">Profile Description             : Display P3</span>
+<span class="sh-out"></span>
+<span class="sh-prompt">$</span><span class="sh-cmd"> # what a stripped file says</span>
+<span class="sh-prompt">$</span><span class="sh-cmd"> exiftool hero-cdn.jpg | grep -i profile</span>
+<span class="sh-out">(nothing)                      ← browser will assume sRGB and be wrong</span>
+<span class="sh-out"></span></code></pre>
+<p><strong>Fixes, in order of preference</strong></p>
+<ol><li>Export web images as <strong>sRGB with the profile embedded</strong> — smallest surprise, works everywhere.</li><li>If the image must be P3, keep the profile and configure your CDN to preserve ICC data.</li><li>Verify after the CDN, not before. This is the step everyone skips.</li></ol>
+<pre class="code lang-bash" data-lang="bash"><code><span class="sh-out"># a CI check worth having</span>
+<span class="sh-out">for f in dist/images/*.{jpg,png,avif}; do</span>
+<span class="sh-out">  if ! exiftool -icc_profile:all &quot;$f&quot; | grep -q .; then</span>
+<span class="sh-out">    echo &quot;❌ $f has no colour profile&quot;; exit 1</span>
+<span class="sh-out">  fi</span>
+<span class="sh-out">done</span>
+<span class="sh-out"></span></code></pre>
+<blockquote><p>🚧 <strong>Trap for AI-generated imagery</strong> — assets from image models are frequently untagged, and some pipelines write odd or inconsistent profiles. Normalise every generated asset to sRGB with an embedded profile <em>before</em> it enters your repo, or your hero images will drift from your CSS in exactly the way described above.</p></blockquote>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/5500FF/5500FF.png" alt="Section divider bar in vivid indigo" /></p>
+<h2>🐛 Bug #2 — canvas clamps and you never notice</h2>
+<p>A 2D canvas is sRGB by default. Draw a P3 image into it and it is <strong>clamped to sRGB on the way in</strong> — permanently, for that canvas.</p>
+<pre class="code lang-js" data-lang="js"><code><span <span class="t-kw">class</span>="t-comment">// the <span class="t-kw">default</span>: everything drawn here is clamped to sRGB</span>
+<span class="t-kw">const</span> ctx = canvas.getContext(&<span <span class="t-kw">class</span>="t-comment">#x27;2d&#x27;);</span>
+
+<span <span class="t-kw">class</span>="t-comment">// opt <span class="t-kw">in</span> to wide gamut</span>
+<span class="t-kw">const</span> wide = canvas.getContext(&<span <span class="t-kw">class</span>="t-comment">#x27;2d&#x27;, { colorSpace: &#x27;display-p3&#x27; });</span>
+
+<span <span class="t-kw">class</span>="t-comment">// same <span class="t-kw">for</span> pixel data</span>
+<span class="t-kw">const</span> data = <span class="t-kw">new</span> ImageData(w, h, { colorSpace: &<span <span class="t-kw">class</span>="t-comment">#x27;display-p3&#x27; });</span>
+</code></pre>
+<p>If half your UI shows a photo via <code>&lt;img&gt;</code> and the other half draws the same photo into a canvas — an editor, a cropper, a colour picker — the two will not match on a wide-gamut screen until you opt the canvas in.</p>
+<p class='spacer'>&nbsp;</p>
+<p>Worse, colour-picking tools built on canvas will report <strong>clamped</strong> values. Your user picks a vivid P3 green and your picker hands you the sRGB approximation.</p>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/FF5724/FF5724.png" alt="Section divider bar in vivid red" /></p>
+<h2>🐛 Bug #3 — the seam between CSS and imagery</h2>
+<p>Back to the original report. The CSS colour is sRGB and gets converted to the display space; the image, if tagged P3, keeps more of its saturation. Side by side, they don&#x27;t line up.</p>
+<p class='spacer'>&nbsp;</p>
+<p><strong>Fix:</strong> put both in the same space at the boundary.</p>
+<pre class="code lang-css" data-lang="css"><code>.hero {
+  <span class="t-prop">background</span>: <span class="t-color"><i class="chip" style="background:#FF5724"></i>#FF5724</span>;                                     <span class="t-comment">/* sRGB baseline */</span>
+}
+
+<span class="t-kw">@media</span> (color-gamut: p3) {
+  .hero {
+    <span class="t-prop">background</span>: color(display-p3 <span class="t-number">0.9258</span> <span class="t-number">0.3891</span> <span class="t-number">0.2210</span>);    <span class="t-comment">/* matches the P3 asset */</span>
+  }
+}
+</code></pre>
+<p>Those coordinates are <code>#FF5724</code> converted exactly, so on an sRGB screen nothing changes and on a P3 screen the CSS follows the image instead of lagging behind it.</p>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/38FF59/38FF59.png" alt="Section divider bar in vivid green" /></p>
+<h2>🎨 How much headroom is actually out there?</h2>
+<p>Running this palette through a gamut check makes the stakes concrete — every one of these saturated colours is already at or beyond the sRGB boundary:</p>
+<div class='tw'><table><thead><tr><th>Colour</th><th>sRGB</th><th>Chroma +15%</th><th>Verdict</th></tr></thead><tbody><tr><td><img src="https://placehold.co/70x26/5500FF/5500FF.png" alt="vivid indigo swatch #5500FF" /> <code>#5500FF</code></td><td>at the edge</td><td><code>#5A00FF</code></td><td>🚫 clipped — P3 shows more</td></tr><tr><td><img src="https://placehold.co/70x26/FF5724/FF5724.png" alt="vivid red swatch #FF5724" /> <code>#FF5724</code></td><td>at the edge</td><td><code>#FF4300</code></td><td>🚫 clipped — P3 shows more</td></tr><tr><td><img src="https://placehold.co/70x26/38FF59/38FF59.png" alt="vivid green swatch #38FF59" /> <code>#38FF59</code></td><td>at the edge</td><td><code>#00FF34</code></td><td>🚫 clipped — P3 shows more</td></tr></tbody></table></div>
+<p>&quot;Clipped&quot; is the browser doing relative-colorimetric mapping for you: it keeps the hue and lightness roughly, and pulls the chroma back to the nearest colour the display can produce. That&#x27;s why your neon greens look slightly different on every machine — each display clamps to a different boundary.</p>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/5500FF/5500FF.png" alt="Section divider bar in vivid indigo" /></p>
+<h2>🧪 How to debug a colour-management problem</h2>
+<pre class="code lang-console" data-lang="console"><code><span class="sh-prompt">$</span><span class="sh-cmd"> # 1 · is the asset tagged?</span>
+<span class="sh-out">    exiftool -icc_profile:all image.jpg</span>
+<span class="sh-out"></span>
+<span class="sh-prompt">$</span><span class="sh-cmd"> # 2 · what does the browser think it is?</span>
+<span class="sh-out">    DevTools → Network → the image → Preview, compare against the file in a colour-managed viewer</span>
+<span class="sh-out"></span>
+<span class="sh-prompt">$</span><span class="sh-cmd"> # 3 · is the display wide-gamut?</span>
+<span class="sh-out">    matchMedia(&#x27;(color-gamut: p3)&#x27;).matches</span>
+<span class="sh-out"></span>
+<span class="sh-prompt">$</span><span class="sh-cmd"> # 4 · is my canvas clamping?</span>
+<span class="sh-out">    ctx.getContextAttributes().colorSpace        // &quot;srgb&quot; or &quot;display-p3&quot;</span>
+<span class="sh-out"></span>
+<span class="sh-prompt">$</span><span class="sh-cmd"> # 5 · take the screen out of the equation</span>
+<span class="sh-out">    compare pixel values, not appearances — screenshots are usually re-encoded to sRGB</span>
+<span class="sh-out"></span></code></pre>
+<p>Point 5 is why so many of these bugs survive review: the screenshot in the ticket has already been flattened, so the reviewer literally cannot see the problem.</p>
+<p class='spacer'>&nbsp;</p>
+<details class='liquid' open><summary>🧰 Normalising every image in a build step</summary>
+<pre class="code lang-bash" data-lang="bash"><code><span class="sh-out"># ImageMagick: convert to sRGB and embed the profile</span>
+<span class="sh-out">magick input.png -profile sRGB.icc -strip -profile sRGB.icc output.png</span>
+<span class="sh-out"></span>
+<span class="sh-out"># sharp, in a Node pipeline</span>
+<span class="sh-out">await sharp(input)</span>
+<span class="sh-out">  .toColorspace(&#x27;srgb&#x27;)</span>
+<span class="sh-out">  .withMetadata({ icc: &#x27;srgb&#x27; })     // keep the profile, drop everything else</span>
+<span class="sh-out">  .toFile(output);</span>
+<span class="sh-out"></span></code></pre>
+<p>Note the order in the ImageMagick line: convert <strong>into</strong> sRGB first, then strip other metadata, then re-attach the profile. Stripping before converting is how images lose their meaning.</p>
+<p class='spacer'>&nbsp;</p>
+</details>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/FF5724/FF5724.png" alt="Section divider bar in vivid red" /></p>
+<h2>🧾 The checklist</h2>
+<ol><li>Everything has a colour space — declared, or assumed by the browser.</li><li>Untagged images are assumed sRGB. If they weren&#x27;t sRGB, they now render wrong.</li><li>Export web imagery as sRGB <strong>with</strong> the profile embedded; verify after the CDN.</li><li>Normalise AI-generated and third-party assets before they enter the repo.</li><li>Canvas clamps to sRGB unless you pass <code>colorSpace: &#x27;display-p3&#x27;</code>.</li><li>Match CSS to imagery at any visible seam, per gamut.</li><li>Debug with file metadata and pixel values — screenshots lie.</li></ol>
+<p>The one thing that never surprises you is a plain sRGB hex from a published palette; that&#x27;s why I keep the CSS side boring and let the imagery be the interesting part. <a href="https://colorfiind.com" target="_blank" rel="noopener">ColorFiind</a> is where I grab those.</p>
+<p class='spacer'>&nbsp;</p>
+<a class='cta' href='https://colorfiind.com' target='_blank' rel='noopener'>Grab a dependable sRGB palette</a>
+<p class='spacer'>&nbsp;</p>
+<p><em>Ever chased a colour bug that turned out to be a stripped ICC profile? How long did it take to find?</em> 👇</p></div>
+    </article>
+    <p class="note">Static local preview — Liquid tags are simulated, DEV renders them natively.
+    Colour swatches load from placehold.co, so they need internet access.</p>
+  </div>
+</div>
+</body>
+</html>
