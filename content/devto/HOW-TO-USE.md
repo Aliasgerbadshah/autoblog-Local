@@ -5,14 +5,26 @@ Three things you can do with it — pick the one you need.
 
 ---
 
+## Getting the files
+
+Three ways, use whichever works:
+
+| Where | How |
+| :-- | :-- |
+| **Preview server** | start it (below) and open **`/downloads`** — every `.md` plus the ZIP, one click each |
+| **GitHub** | branch `arena/01a01974-autoblog-local` → `content/devto/` → open a file → **Download raw** |
+| **Local disk** | the files are simply in `content/devto/`; `devto-posts.zip` bundles them |
+
+---
+
 ## A. Read / review the posts (2 minutes)
 
 **Option 1 — the preview app (recommended).** It renders the Markdown exactly the way DEV will:
 cover image, tags, colour swatches, highlighted code blocks, collapsibles, CTA buttons.
 
 ```bash
-python3 content/devto/tools/build_preview.py      # only needed after editing a .md
-python3 -m http.server 8080 --bind 0.0.0.0 --directory content/devto
+python3 content/devto/tools/build_preview.py   # only needed after editing a .md
+python3 content/devto/tools/serve.py           # preview + downloads on :8080
 ```
 
 Open <http://localhost:8080/> → pick an article in the left sidebar → 🌗 toggles light/dark.

@@ -26,10 +26,12 @@ content/devto/
 ## 1. Preview locally
 
 ```bash
-python3 content/devto/tools/build_preview.py            # rebuild after editing any .md
-python3 -m http.server 8080 --bind 0.0.0.0 --directory content/devto
-# open http://localhost:8080/
+python3 content/devto/tools/build_preview.py   # rebuild after editing any .md
+python3 content/devto/tools/serve.py           # http://localhost:8080
 ```
+
+Open <http://localhost:8080/> for the articles, or <http://localhost:8080/downloads> to save any
+`.md` file (served with `Content-Disposition: attachment`, so the browser downloads instead of rendering).
 
 The preview is **pre-rendered static HTML** — no JavaScript, no CDN, nothing to install. Only the
 colour swatches need internet (they load from placehold.co).

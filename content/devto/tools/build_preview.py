@@ -296,6 +296,7 @@ background:var(--bg);border-bottom:1px solid var(--line)}
 .btn{font:inherit;cursor:pointer;border:1px solid var(--line);background:var(--panel);color:var(--ink);
 border-radius:99px;padding:6px 14px;text-decoration:none}
 .btn:hover{border-color:var(--primary)}
+.btn-dl{background:var(--primary);color:#08121A;border-color:var(--primary);font-weight:700}
 .layout{display:grid;grid-template-columns:290px minmax(0,1fr);gap:26px;padding:22px;align-items:start}
 @media(max-width:900px){.layout{grid-template-columns:1fr}}
 nav.files{position:sticky;top:70px;background:var(--panel);border:1px solid var(--line);
@@ -378,7 +379,9 @@ PAGE = """<!DOCTYPE html>
   <div class="rule"><i style="background:#0F172A"></i><i style="background:#00F5D4"></i>
     <i style="background:#F15BB5"></i><i style="background:#9B5DE5"></i></div>
   <div class="spacer"></div>
-  <a class="btn" href="{raw}" target="_blank">View raw .md</a>
+  <a class="btn" href="/downloads">⬇ Downloads</a>
+  <a class="btn btn-dl" href="/download/{mdname}">⬇ This post (.md)</a>
+  <a class="btn" href="{raw}" target="_blank">View raw</a>
   <button class="btn" onclick="var d=document.documentElement;
     d.dataset.theme=d.dataset.theme==='dark'?'light':'dark'">🌗 Theme</button>
 </header>
@@ -432,7 +435,7 @@ def build() -> None:
             published=fm.get("published", "false"),
             ntags=len([t for t in fm.get("tags", "").split(",") if t.strip()]),
             hascover="set" if fm.get("cover_image") else "none",
-            raw=f"../{md_name}",
+            raw=f"../{md_name}", mdname=md_name,
             body=render(body_md),
         )
         (OUT / md_name.replace(".md", ".html")).write_text(page)
