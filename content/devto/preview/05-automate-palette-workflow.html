@@ -197,10 +197,15 @@ font-family:ui-monospace,monospace;color:var(--primary);margin:1.2em 0}
 <pre class="code lang-python" data-lang="python"><code>SWATCH = &quot;https:<span <span class="t-kw">class</span>="t-comment">//placehold.co/{w}x{h}/{hex}/{hex}.png&quot;</span>
 
 
+<span class="t-kw">def</span> alt(c):
+    &quot;&quot;&quot;Never ship an empty ![]( ) — describe the colour.&quot;&quot;&quot;
+    <span class="t-kw">return</span> f&quot;{color_name(c)} swatch {c}&quot;        <span <span class="t-kw">class</span>="t-comment"># e.g. &quot;vivid teal swatch #00F5D4&quot;</span>
+
+
 <span class="t-kw">def</span> band(colors, w=<span <span class="t-kw">class</span>="t-number">210</span>, h=<span <span class="t-kw">class</span>="t-number">110</span>):
     &quot;&quot;&quot;Touching images on one line = a seamless palette bar.&quot;&quot;&quot;
     <span class="t-kw">return</span> &quot;&quot;.join(
-        f&quot;![{c}]({SWATCH.format(w=w, h=h, hex=c.lstrip(&<span <span class="t-kw">class</span>="t-comment">#x27;#&#x27;))})&quot; <span class="t-kw">for</span> c <span class="t-kw">in</span> colors</span>
+        f&quot;![{alt(c)}]({SWATCH.format(w=w, h=h, hex=c.lstrip(&<span <span class="t-kw">class</span>="t-comment">#x27;#&#x27;))})&quot; <span class="t-kw">for</span> c <span class="t-kw">in</span> colors</span>
     )
 
 
@@ -210,12 +215,12 @@ font-family:ui-monospace,monospace;color:var(--primary);margin:1.2em 0}
     <span class="t-kw">for</span> c <span class="t-kw">in</span> colors:
         r = contrast(c, &quot;<span <span class="t-kw">class</span>="t-color"><i <span class="t-kw">class</span>="chip" style="background:#FFFFFF"></i>#FFFFFF</span>&quot;)
         rows.append(
-            f&quot;| ![]({SWATCH.format(w=<span <span class="t-kw">class</span>="t-number">110</span>, h=<span <span class="t-kw">class</span>="t-number">44</span>, hex=c.lstrip(&<span <span class="t-kw">class</span>="t-comment">#x27;#&#x27;))}) &quot;</span>
+            f&quot;| ![{alt(c)}]({SWATCH.format(w=<span <span class="t-kw">class</span>="t-number">110</span>, h=<span <span class="t-kw">class</span>="t-number">44</span>, hex=c.lstrip(&<span <span class="t-kw">class</span>="t-comment">#x27;#&#x27;))}) &quot;</span>
             f&quot;| <span <span class="t-kw">class</span>="t-string">`{c}`</span> | {r}:<span <span class="t-kw">class</span>="t-number">1</span> | {grade(r)} |&quot;
         )
     <span class="t-kw">return</span> &quot;\n&quot;.join(rows)
 </code></pre>
-<p>Passing the same hex as background <strong>and</strong> text color hides placehold.co&#x27;s default size label, leaving a clean block. Output:</p>
+<p>Passing the same hex as background <strong>and</strong> text color hides placehold.co&#x27;s default size label, leaving a clean block. The <code>alt()</code> helper matters more than it looks: DEV&#x27;s editor runs an accessibility check and will nag you for every <code>![]()</code> with empty square brackets, so generate the description instead of typing it 40 times. Output:</p>
 <p class='band'><img src="https://placehold.co/210x110/10002B/10002B.png" alt="deep indigo swatch #10002B" /><img src="https://placehold.co/210x110/240046/240046.png" alt="deep indigo swatch #240046" /><img src="https://placehold.co/210x110/FF006E/FF006E.png" alt="vivid pink swatch #FF006E" /><img src="https://placehold.co/210x110/00F5D4/00F5D4.png" alt="vivid teal swatch #00F5D4" /></p>
 <div class='tw'><table><thead><tr><th>Swatch</th><th>HEX</th><th>Contrast vs white</th><th>Grade</th></tr></thead><tbody><tr><td><img src="https://placehold.co/110x44/10002B/10002B.png" alt="deep indigo swatch #10002B" /></td><td><code>#10002B</code></td><td>19.87:1</td><td>AAA</td></tr><tr><td><img src="https://placehold.co/110x44/240046/240046.png" alt="deep indigo swatch #240046" /></td><td><code>#240046</code></td><td>18.05:1</td><td>AAA</td></tr><tr><td><img src="https://placehold.co/110x44/FF006E/FF006E.png" alt="vivid pink swatch #FF006E" /></td><td><code>#FF006E</code></td><td>3.83:1</td><td>AA Large</td></tr><tr><td><img src="https://placehold.co/110x44/00F5D4/00F5D4.png" alt="vivid teal swatch #00F5D4" /></td><td><code>#00F5D4</code></td><td>1.40:1</td><td>fail</td></tr></tbody></table></div>
 <details class='liquid' open><summary>🏷️ Prefer shields.io badges? Here&#x27;s that variant</summary>

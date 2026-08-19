@@ -127,10 +127,15 @@ READMEs, DEV.to posts, GitHub issues, Notion — none of them let you set a back
 SWATCH = "https://placehold.co/{w}x{h}/{hex}/{hex}.png"
 
 
+def alt(c):
+    """Never ship an empty ![]( ) — describe the colour."""
+    return f"{color_name(c)} swatch {c}"        # e.g. "vivid teal swatch #00F5D4"
+
+
 def band(colors, w=210, h=110):
     """Touching images on one line = a seamless palette bar."""
     return "".join(
-        f"![{c}]({SWATCH.format(w=w, h=h, hex=c.lstrip('#'))})" for c in colors
+        f"![{alt(c)}]({SWATCH.format(w=w, h=h, hex=c.lstrip('#'))})" for c in colors
     )
 
 
@@ -140,13 +145,13 @@ def table(colors):
     for c in colors:
         r = contrast(c, "#FFFFFF")
         rows.append(
-            f"| ![]({SWATCH.format(w=110, h=44, hex=c.lstrip('#'))}) "
+            f"| ![{alt(c)}]({SWATCH.format(w=110, h=44, hex=c.lstrip('#'))}) "
             f"| `{c}` | {r}:1 | {grade(r)} |"
         )
     return "\n".join(rows)
 ```
 
-Passing the same hex as background **and** text color hides placehold.co's default size label, leaving a clean block. Output:
+Passing the same hex as background **and** text color hides placehold.co's default size label, leaving a clean block. The `alt()` helper matters more than it looks: DEV's editor runs an accessibility check and will nag you for every `![]()` with empty square brackets, so generate the description instead of typing it 40 times. Output:
 
 ![deep indigo swatch #10002B](https://placehold.co/210x110/10002B/10002B.png)![deep indigo swatch #240046](https://placehold.co/210x110/240046/240046.png)![vivid pink swatch #FF006E](https://placehold.co/210x110/FF006E/FF006E.png)![vivid teal swatch #00F5D4](https://placehold.co/210x110/00F5D4/00F5D4.png)
 

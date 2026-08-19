@@ -43,8 +43,8 @@ Hex codes inside code blocks even get a little colour chip.
 1. Open <https://dev.to/new>.
 2. Switch to the **Markdown** editor (Settings → Customization → "rich + markdown" if you prefer split fields).
 3. Paste the whole `.md` file, front matter included.
-4. Upload the matching cover from `assets/` (drag it into the editor), then replace the
-   `cover_image:` value with the URL DEV gives back. Covers are already the recommended **1000 × 420**.
+4. Create your own **1000 × 420** cover (see `COVER-PROMPTS.md` for a ready-made generation prompt per
+   post), drag it into the editor, and paste the returned URL into a new `cover_image:` line.
 5. Flip `published: false` → `true`.
 
 Front matter used in every file:
@@ -55,7 +55,7 @@ title: ...
 published: false        # flip when you're happy with the preview
 description: ...        # 120-160 chars, shows in feed + OG card
 tags: css, webdev, ...  # max 4, comma separated, no '#'
-cover_image: https://... # 1000x420
+# cover_image: ...     ← intentionally absent: upload your own 1000x420 in the editor
 # canonical_url: https://colorfiind.com/blog/...   ← add if you cross-post
 # series: "Color for Developers"                   ← optional, links the 5 posts
 ---
