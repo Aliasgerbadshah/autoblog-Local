@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>CSS color-mix(): Create Every Colour Variation From One Token — DEV preview</title>
+<style>
+:root{--bg:#0B0F1A;--panel:#111827;--panel2:#0F172A;--line:#1F2A44;--ink:#E7E9EE;
+--muted:#94A3B8;--primary:#00F5D4;--accent:#F15BB5;--support:#9B5DE5;--radius:14px}
+html[data-theme=light]{--bg:#F5F7F9;--panel:#fff;--panel2:#EFF2F6;--line:#DDE3EC;
+--ink:#1B2333;--muted:#5B6478;--primary:#0E7C86;--accent:#B4276F;--support:#6D3FBF}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+font:16px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+a{color:var(--primary)}
+header.top{position:sticky;top:0;z-index:20;display:flex;gap:14px;align-items:center;padding:12px 18px;
+background:var(--bg);border-bottom:1px solid var(--line)}
+.brand{font-weight:800}.brand span{color:var(--primary)}
+.rule{display:flex;height:6px;width:150px;border-radius:99px;overflow:hidden}.rule i{flex:1}
+.spacer{flex:1}
+.btn{font:inherit;cursor:pointer;border:1px solid var(--line);background:var(--panel);color:var(--ink);
+border-radius:99px;padding:6px 14px;text-decoration:none}
+.btn:hover{border-color:var(--primary)}
+.btn-dl{background:var(--primary);color:#08121A;border-color:var(--primary);font-weight:700}
+.layout{display:grid;grid-template-columns:290px minmax(0,1fr);gap:26px;padding:22px;align-items:start}
+@media(max-width:900px){.layout{grid-template-columns:1fr}}
+nav.files{position:sticky;top:70px;background:var(--panel);border:1px solid var(--line);
+border-radius:var(--radius);padding:12px;display:flex;flex-direction:column;gap:6px}
+nav.files h2{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin:6px 8px 8px}
+nav.files a{display:block;padding:9px 11px;border-radius:10px;text-decoration:none;color:var(--ink);
+font-size:14px;border:1px solid transparent}
+nav.files a:hover{background:var(--panel2)}
+nav.files a.active{background:var(--panel2);border-color:var(--primary);color:var(--primary)}
+nav.files small{display:block;color:var(--muted);font-size:11.5px}
+article{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+padding-bottom:48px;max-width:840px;width:100%;overflow:hidden}
+.cover{width:100%;display:block;border-bottom:1px solid var(--line)}
+.meta{padding:22px clamp(18px,4vw,44px) 0}
+.meta h1{font-size:clamp(26px,4vw,40px);line-height:1.18;margin:.2em 0 .3em}
+.tags{display:flex;flex-wrap:wrap;gap:8px}
+.tag{font-size:12.5px;color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:2px 8px}
+.desc{color:var(--muted);font-size:15px}
+.fm{font-size:12px;color:var(--muted);border-top:1px dashed var(--line);
+border-bottom:1px dashed var(--line);padding:8px 0;margin-bottom:6px}
+.post{padding:0 clamp(18px,4vw,44px)}
+.post img{max-width:100%;display:block;margin:.4em 0}
+.post td img{margin:0 auto}
+
+.post h2{margin-top:1.9em;font-size:26px;border-bottom:1px solid var(--line);padding-bottom:.25em}
+.post h3{margin-top:1.5em;font-size:20px}
+.post blockquote{margin:1.4em 0;padding:.9em 1.1em;background:var(--panel2);
+border-left:4px solid var(--accent);border-radius:0 10px 10px 0}
+.post blockquote p{margin:0}
+.tw{overflow-x:auto;margin:1.3em 0}
+.post table{border-collapse:collapse;width:100%;font-size:14.5px}
+.post th,.post td{border:1px solid var(--line);padding:8px 11px;text-align:left;vertical-align:middle}
+.post th{background:var(--panel2)}
+.post td img{vertical-align:middle}
+.post :not(pre)>code{background:var(--panel2);padding:.15em .4em;border-radius:6px;font-size:.9em;
+font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+pre.code{background:#0d1117;border:1px solid var(--line);border-radius:12px;padding:18px;
+overflow-x:auto;position:relative;margin:1.3em 0}
+pre.code code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13.5px;
+line-height:1.62;color:#C9D1D9;white-space:pre}
+pre.code::before{content:attr(data-lang);position:absolute;top:0;right:0;font-size:10.5px;
+letter-spacing:.12em;text-transform:uppercase;color:#0B0F1A;background:var(--primary);
+padding:2px 10px;border-radius:0 11px 0 10px;font-family:ui-monospace,monospace}
+pre.lang-diff{border-color:#F15BB5}
+pre.lang-console,pre.lang-bash{background:#05070d;border-color:#00F5D4}
+.t-comment{color:#6E7A8A;font-style:italic}
+.t-string{color:#A5D6FF}.t-number{color:#F0A868}.t-kw{color:#FF7B9C}
+.t-prop{color:#9B5DE5;font-weight:600}.t-tag{color:#7EE787}
+.t-color{color:#FFD479}
+.chip{display:inline-block;width:.78em;height:.78em;margin-right:.35em;border-radius:3px;
+border:1px solid rgba(255,255,255,.35);vertical-align:-1px}
+.d-add{color:#7EE787;display:block;background:rgba(46,160,67,.15)}
+.d-del{color:#FF9492;display:block;background:rgba(248,81,73,.14)}
+.d-hunk{color:#79C0FF;display:block}
+.sh-prompt{color:#F15BB5;font-weight:700}.sh-cmd{color:#E7E9EE}
+.sh-ok{color:#7EE787;display:block}.sh-out{color:#9DF7E4;display:block}
+details.liquid{background:var(--panel2);border:1px solid var(--line);border-radius:12px;
+padding:10px 16px;margin:1.4em 0}
+details.liquid summary{cursor:pointer;font-weight:650}
+.cta{display:block;text-align:center;margin:1.8em 0;padding:14px 20px;border-radius:12px;
+background:linear-gradient(90deg,var(--primary),var(--support));color:#08121A;font-weight:750;
+text-decoration:none}
+.katex{background:var(--panel2);border:1px dashed var(--line);border-radius:10px;padding:12px 16px;
+font-family:ui-monospace,monospace;color:var(--primary);margin:1.2em 0}
+.embed{color:var(--muted);font-family:ui-monospace,monospace;font-size:13px}
+.note{max-width:840px;color:var(--muted);font-size:13px;margin-top:14px}
+.post hr{border:0;border-top:1px solid var(--line);margin:2em 0}
+.post p:empty,.post p.spacer{margin:1.1em 0;min-height:1.1em}
+.post h2{margin-top:1.2em}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand">Swatch<span>Deck</span> · DEV.to preview</div>
+  <div class="rule"><i style="background:#0F172A"></i><i style="background:#00F5D4"></i>
+    <i style="background:#F15BB5"></i><i style="background:#9B5DE5"></i></div>
+  <div class="spacer"></div>
+  <a class="btn" href="/downloads">⬇ Downloads</a>
+  <a class="btn btn-dl" href="/download/06-css-color-mix-dynamic-variations.md">⬇ This post (.md)</a>
+  <a class="btn" href="../06-css-color-mix-dynamic-variations.md" target="_blank">View raw</a>
+  <button class="btn" onclick="var d=document.documentElement;
+    d.dataset.theme=d.dataset.theme==='dark'?'light':'dark'">🌗 Theme</button>
+</header>
+<div class="layout">
+  <nav class="files"><h2>Articles</h2><a href="00-swatch-deck-theme-kit.html" class="">swatch deck theme kit<small>Reusable theme kit</small></a><a href="01-choose-a-color-palette.html" class="">choose a color palette<small>Choosing a palette</small></a><a href="02-hex-to-design-tokens.html" class="">hex to design tokens<small>Tokens pipeline</small></a><a href="03-seasonal-palettes-ui-themes.html" class="">seasonal palettes ui themes<small>Seasonal themes</small></a><a href="04-neon-dark-mode-glow-ui.html" class="">neon dark mode glow ui<small>Neon dark mode</small></a><a href="05-automate-palette-workflow.html" class="">automate palette workflow<small>Automation</small></a><a href="06-css-color-mix-dynamic-variations.html" class="active">css color mix dynamic variations<small>color-mix()</small></a><a href="07-css-relative-color-syntax.html" class="">css relative color syntax<small>Relative colour</small></a><a href="08-light-dark-css-theme-aware.html" class="">light dark css theme aware<small>light-dark()</small></a><a href="09-hwb-color-explained.html" class="">hwb color explained<small>HWB</small></a><a href="10-display-p3-vs-srgb-wide-gamut.html" class="">display p3 vs srgb wide gamut<small>Display-P3</small></a></nav>
+  <div>
+    <article>
+      
+      <div class="meta">
+        <div class="tags"><span class="tag">#css</span><span class="tag">#webdev</span><span class="tag">#frontend</span><span class="tag">#designsystems</span></div>
+        <h1>CSS color-mix(): Create Every Colour Variation From One Token</h1>
+        <p class="desc">Stop hand-picking hover, tint, border and disabled colours. color-mix() derives them all from one brand token — and the colour space you pick changes everything.</p>
+        <div class="fm">published: <b>false</b> · tags: 4/4 · cover_image: none</div>
+      </div>
+      <div class="post"><div class='tw'><table><thead><tr><th><code>#003566</code></th><th><code>#0077B6</code></th><th><code>#D0006F</code></th><th><code>#C1121F</code></th></tr></thead><tbody><tr><td><img src="https://placehold.co/120x56/003566/003566.png" alt="deep cyan swatch #003566" /></td><td><img src="https://placehold.co/120x56/0077B6/0077B6.png" alt="dark cyan swatch #0077B6" /></td><td><img src="https://placehold.co/120x56/D0006F/D0006F.png" alt="vivid pink swatch #D0006F" /></td><td><img src="https://placehold.co/120x56/C1121F/C1121F.png" alt="vivid red swatch #C1121F" /></td></tr></tbody></table></div>
+<blockquote><p>🎨 <strong>Palette in play</strong> — <a href="https://colorfiind.com/palette/cool-winter-harmony" target="_blank" rel="noopener">Cool Winter Harmony</a> · <code>#003566</code> <code>#0077B6</code> <code>#D0006F</code> <code>#C1121F</code></p></blockquote>
+<p>Open the colour section of almost any stylesheet and you&#x27;ll find the same fossil record: a brand colour, then eleven cousins that somebody eyeballed in a picker at 6pm — <code>--primary-hover</code>, <code>--primary-light</code>, <code>--primary-border</code>, <code>--primary-disabled</code>. Change the brand colour and all eleven are quietly wrong.</p>
+<p class='spacer'>&nbsp;</p>
+<p><code>color-mix()</code> removes that entire category of work. One token in, every variant out, recalculated by the browser whenever the base changes.</p>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/003566/003566.png" alt="Section divider bar in deep cyan" /></p>
+<h2>🧪 The anatomy</h2>
+<pre class="code lang-css" data-lang="css"><code>color-mix(in oklch, var(--brand), white <span class="t-number">30</span>%)
+<span class="t-comment">/*        ^space    ^colour 1     ^colour 2 + how much of it */</span>
+</code></pre>
+<p>Three things to know and you have the whole function:</p>
+<ul><li><strong>The colour space is mandatory.</strong> <code>in srgb</code>, <code>in oklch</code>, <code>in oklab</code>, <code>in hsl</code>, <code>in srgb-linear</code> and friends.</li><li><strong>Percentages are optional.</strong> With none, it&#x27;s a 50/50 mix. With one, the other is inferred.</li><li><strong><code>transparent</code> counts as a colour.</strong> That&#x27;s how you get alpha variants without touching <code>rgba()</code>.</li></ul>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/0077B6/0077B6.png" alt="Section divider bar in dark cyan" /></p>
+<h2>🎛️ The colour space is not a detail</h2>
+<p>Same two colours, same 50%, two very different results:</p>
+<div class='tw'><table><thead><tr><th>Mix</th><th>Result</th><th>Swatch</th></tr></thead><tbody><tr><td><code>color-mix(in srgb, #D0006F, #0077B6)</code></td><td><code>#683C92</code></td><td><img src="https://placehold.co/120x40/683C92/683C92.png" alt="deep purple swatch #683C92" /></td></tr><tr><td><code>color-mix(in oklch, #D0006F, #0077B6)</code></td><td><code>#8551C7</code></td><td><img src="https://placehold.co/120x40/8551C7/8551C7.png" alt="indigo swatch #8551C7" /></td></tr></tbody></table></div>
+<p>sRGB mixing dips through a muddy middle because it averages gamma-encoded numbers, not perceived colour. OKLCH interpolates lightness, chroma and hue separately, so the midpoint stays as vivid as its parents.</p>
+<p class='spacer'>&nbsp;</p>
+<p>The rule I use: <strong><code>in oklch</code> for anything a human will look at, <code>in srgb</code> only when you need to match a legacy value exactly.</strong></p>
+<p class='spacer'>&nbsp;</p>
+<p>Tints and shades show the same split:</p>
+<div class='tw'><table><thead><tr><th>Recipe</th><th>sRGB</th><th>OKLCH</th></tr></thead><tbody><tr><td><code>#003566</code> + white 40%</td><td><code>#6686A3</code> <img src="https://placehold.co/60x22/6686A3/6686A3.png" alt="muted cyan swatch #6686A3" /></td><td><code>#6682A3</code> <img src="https://placehold.co/60x22/6682A3/6682A3.png" alt="muted cyan swatch #6682A3" /></td></tr><tr><td><code>#0077B6</code> + black 15%</td><td><code>#00659B</code> <img src="https://placehold.co/60x22/00659B/00659B.png" alt="dark cyan swatch #00659B" /></td><td><code>#005F92</code> <img src="https://placehold.co/60x22/005F92/005F92.png" alt="dark cyan swatch #005F92" /></td></tr><tr><td>white + <code>#0077B6</code> 8%</td><td><code>#EBF4F9</code> <img src="https://placehold.co/60x22/EBF4F9/EBF4F9.png" alt="pale cyan swatch #EBF4F9" /></td><td><code>#EDF4FA</code> <img src="https://placehold.co/60x22/EDF4FA/EDF4FA.png" alt="pale cyan swatch #EDF4FA" /></td></tr></tbody></table></div>
+<p>Close on light tints, meaningfully different on shades — and the OKLCH shade is the one that keeps its blue identity instead of drifting grey.</p>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/D0006F/D0006F.png" alt="Section divider bar in dark magenta" /></p>
+<h2>🧱 The five patterns that cover 90% of a UI</h2>
+<p><strong><code>theme.css</code></strong> ⌁ <em>one base colour, five derived roles</em></p>
+<pre class="code lang-css" data-lang="css"><code>:root {
+  <span class="t-prop">--brand</span>: <span class="t-color"><i class="chip" style="background:#0077B6"></i>#0077B6</span>;
+
+  <span class="t-comment">/* 1 · interaction states */</span>
+  <span class="t-prop">--brand-hover</span>:    color-mix(in oklch, var(--brand), black <span class="t-number">15</span>%);
+  <span class="t-prop">--brand-active</span>:   color-mix(in oklch, var(--brand), black <span class="t-number">28</span>%);
+
+  <span class="t-comment">/* 2 · tinted surfaces — mix INTO the page colour, not the brand */</span>
+  <span class="t-prop">--brand-surface</span>:  color-mix(in oklch, Canvas, var(--brand) <span class="t-number">8</span>%);
+  <span class="t-prop">--brand-raised</span>:   color-mix(in oklch, Canvas, var(--brand) <span class="t-number">14</span>%);
+
+  <span class="t-comment">/* 3 · borders and rings — alpha, via transparent */</span>
+  <span class="t-prop">--brand-border</span>:   color-mix(in oklch, var(--brand) <span class="t-number">35</span>%, transparent);
+  <span class="t-prop">--brand-ring</span>:     color-mix(in oklch, var(--brand) <span class="t-number">55</span>%, transparent);
+
+  <span class="t-comment">/* 4 · disabled — pull chroma out toward grey */</span>
+  <span class="t-prop">--brand-disabled</span>: color-mix(in oklch, var(--brand) <span class="t-number">40</span>%, <span class="t-color"><i class="chip" style="background:#808080"></i>#808080</span>);
+
+  <span class="t-comment">/* 5 · text on brand — the partner colour, derived too */</span>
+  <span class="t-prop">--brand-ink</span>:      color-mix(in oklch, var(--brand), black <span class="t-number">78</span>%);
+}
+</code></pre>
+<p>Everything downstream now reads as intent:</p>
+<pre class="code lang-css" data-lang="css"><code>.btn {
+  <span class="t-prop">background</span>: var(--brand);
+  <span class="t-prop">color</span>: white;
+  <span class="t-prop">border</span>: <span class="t-number">1px</span> solid var(--brand-border);
+  <span class="t-prop">border-radius</span>: <span class="t-number">10px</span>;
+  <span class="t-prop">padding</span>: <span class="t-number">0.7rem</span> <span class="t-number">1.4rem</span>;
+}
+.btn:hover           { background: var(--brand-hover); }
+.btn:active          { background: var(--brand-active); }
+.btn:focus-visible   { outline: <span class="t-number">3px</span> solid var(--brand-ring); outline-offset: <span class="t-number">2px</span>; }
+.btn:disabled        { background: var(--brand-disabled); cursor: not-allowed; }
+
+.callout {
+  <span class="t-prop">background</span>: var(--brand-surface);
+  <span class="t-prop">border-left</span>: <span class="t-number">3px</span> solid var(--brand);
+}
+</code></pre>
+<p>Rebrand day is now a <strong>one-line diff</strong>:</p>
+<pre class="code lang-diff" data-lang="diff"><code>  :root {
+<span class="d-del">-   --brand: #0077B6;</span>
+<span class="d-add">+   --brand: #D0006F;</span>
+  }
+</code></pre>
+<p>Hover, active, surface, border, ring, disabled and ink all move with it, in the same relationships.</p>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/C1121F/C1121F.png" alt="Section divider bar in dark red" /></p>
+<h2>🌗 Where it really pays: theme switching</h2>
+<p>Because <code>color-mix()</code> re-evaluates at computed-value time, mixing against a <em>variable</em> background gives you both themes from one rule:</p>
+<pre class="code lang-css" data-lang="css"><code>:root {
+  <span class="t-prop">color-scheme</span>: light dark;
+  <span class="t-prop">--page</span>: <span class="t-color"><i class="chip" style="background:#FFFFFF"></i>#FFFFFF</span>;
+  <span class="t-prop">--brand</span>: <span class="t-color"><i class="chip" style="background:#0077B6"></i>#0077B6</span>;
+  <span class="t-prop">--surface</span>: color-mix(in oklch, var(--page), var(--brand) <span class="t-number">8</span>%);
+}
+
+<span class="t-kw">@media</span> (prefers-color-scheme: dark) {
+  :root {
+    <span class="t-prop">--page</span>: <span class="t-color"><i class="chip" style="background:#0B1220"></i>#0B1220</span>;
+    <span class="t-prop">--brand</span>: <span class="t-color"><i class="chip" style="background:#4FA8DC"></i>#4FA8DC</span>;      <span class="t-comment">/* lift the brand so it survives a dark background */</span>
+  }
+}
+</code></pre>
+<p><code>--surface</code> is written once. In light mode it resolves to a pale blue wash; in dark mode it becomes a deep navy tint. No second block of tokens to keep in sync.</p>
+<blockquote><p>🧪 <strong>Lab note</strong> — mixing with the CSS system colours <code>Canvas</code> and <code>CanvasText</code> instead of literal white and black makes your tints follow forced-colors and user stylesheets for free.</p></blockquote>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/8551C7/8551C7.png" alt="Section divider bar in indigo" /></p>
+<h2>🚧 Four traps</h2>
+<p><strong>1 · Contrast is not preserved by mixing.</strong> A tint that looks safe at 8% can fail at 20%, and a hover shade can pass while the base only scrapes through. Derive, then measure:</p>
+<pre class="code lang-console" data-lang="console"><code><span class="sh-prompt">$</span><span class="sh-cmd"> contrast &quot;#0077B6&quot; &quot;#FFFFFF&quot;      4.87:1   AA ✓ (but only just)</span>
+<span class="sh-prompt">$</span><span class="sh-cmd"> contrast &quot;#005F92&quot; &quot;#FFFFFF&quot;      6.88:1   AA ✓  ← the oklch hover shade</span>
+<span class="sh-out"></span></code></pre>
+<p><strong>2 · Percentages that don&#x27;t sum to 100 get normalised.</strong> <code>color-mix(in oklch, red 20%, blue 20%)</code> is a 50/50 mix at 40% total alpha, not what most people expect. Specify one percentage and let the other be implicit.</p>
+<p class='spacer'>&nbsp;</p>
+<p><strong>3 · Animation needs <code>@property</code>.</strong> You cannot transition a custom property containing a colour unless it&#x27;s registered:</p>
+<pre class="code lang-css" data-lang="css"><code><span class="t-kw">@property</span> --btn-bg {
+  <span class="t-prop">syntax</span>: &<span class="t-comment">#x27;&lt;color&gt;&#x27;;</span>
+  <span class="t-prop">inherits</span>: false;
+  <span class="t-prop">initial-value</span>: <span class="t-color"><i class="chip" style="background:#0077B6"></i>#0077B6</span>;
+}
+.btn { transition: --btn-bg <span class="t-number">160ms</span> ease; }
+</code></pre>
+<p><strong>4 · Hue interpolation takes the short way round by default.</strong> Mixing two colours 180° apart can land somewhere you didn&#x27;t intend. Force it when it matters: <code>in oklch longer hue</code>.</p>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/00659B/00659B.png" alt="Section divider bar in dark cyan" /></p>
+<h2>🧯 Fallbacks</h2>
+<p><code>color-mix()</code> is Baseline across Chrome, Edge, Safari and Firefox, so for most audiences you can just use it. If you support long-tail browsers, the cascade already does the work — declare the static value first:</p>
+<pre class="code lang-css" data-lang="css"><code>.btn {
+  <span class="t-prop">background</span>: <span class="t-color"><i class="chip" style="background:#005F92"></i>#005F92</span>;                                    <span class="t-comment">/* old browsers stop here */</span>
+  <span class="t-prop">background</span>: color-mix(in oklch, var(--brand), black <span class="t-number">15</span>%);
+}
+</code></pre>
+<p>Or gate a whole block:</p>
+<pre class="code lang-css" data-lang="css"><code><span class="t-kw">@supports</span> (color: color-mix(in oklch, red, blue)) {
+  :root { --brand-hover: color-mix(in oklch, var(--brand), black <span class="t-number">15</span>%); }
+}
+</code></pre>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/005F92/005F92.png" alt="Section divider bar in deep cyan" /></p>
+<h2>🧾 The checklist</h2>
+<ol><li>Keep <strong>one</strong> brand token per colour. Everything else is derived.</li><li>Mix <code>in oklch</code> unless you&#x27;re matching a legacy hex exactly.</li><li>For tints, mix the <strong>page colour</strong> with a little brand — not the brand with a lot of white.</li><li>Use <code>transparent</code> as the second colour for borders, rings and overlays.</li><li>Re-measure contrast after deriving; the maths doesn&#x27;t know about WCAG.</li><li>Register custom properties with <code>@property</code> before animating them.</li></ol>
+<p>If you need a base worth deriving from, a palette library like <a href="https://colorfiind.com" target="_blank" rel="noopener">ColorFiind</a> gives you four colours that already work together — pick one as <code>--brand</code> and let <code>color-mix()</code> generate the other eleven.</p>
+<p class='spacer'>&nbsp;</p>
+<a class='cta' href='https://colorfiind.com' target='_blank' rel='noopener'>Find a base colour to build on</a>
+<p class='spacer'>&nbsp;</p>
+<p><em>Which variant do you still hand-pick? Post the CSS and I&#x27;ll show you the mix that replaces it.</em> 👇</p></div>
+    </article>
+    <p class="note">Static local preview — Liquid tags are simulated, DEV renders them natively.
+    Colour swatches load from placehold.co, so they need internet access.</p>
+  </div>
+</div>
+</body>
+</html>

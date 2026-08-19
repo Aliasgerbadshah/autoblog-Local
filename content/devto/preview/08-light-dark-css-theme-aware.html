@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>light-dark() in CSS: One Line Instead of Two Theme Blocks — DEV preview</title>
+<style>
+:root{--bg:#0B0F1A;--panel:#111827;--panel2:#0F172A;--line:#1F2A44;--ink:#E7E9EE;
+--muted:#94A3B8;--primary:#00F5D4;--accent:#F15BB5;--support:#9B5DE5;--radius:14px}
+html[data-theme=light]{--bg:#F5F7F9;--panel:#fff;--panel2:#EFF2F6;--line:#DDE3EC;
+--ink:#1B2333;--muted:#5B6478;--primary:#0E7C86;--accent:#B4276F;--support:#6D3FBF}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+font:16px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+a{color:var(--primary)}
+header.top{position:sticky;top:0;z-index:20;display:flex;gap:14px;align-items:center;padding:12px 18px;
+background:var(--bg);border-bottom:1px solid var(--line)}
+.brand{font-weight:800}.brand span{color:var(--primary)}
+.rule{display:flex;height:6px;width:150px;border-radius:99px;overflow:hidden}.rule i{flex:1}
+.spacer{flex:1}
+.btn{font:inherit;cursor:pointer;border:1px solid var(--line);background:var(--panel);color:var(--ink);
+border-radius:99px;padding:6px 14px;text-decoration:none}
+.btn:hover{border-color:var(--primary)}
+.btn-dl{background:var(--primary);color:#08121A;border-color:var(--primary);font-weight:700}
+.layout{display:grid;grid-template-columns:290px minmax(0,1fr);gap:26px;padding:22px;align-items:start}
+@media(max-width:900px){.layout{grid-template-columns:1fr}}
+nav.files{position:sticky;top:70px;background:var(--panel);border:1px solid var(--line);
+border-radius:var(--radius);padding:12px;display:flex;flex-direction:column;gap:6px}
+nav.files h2{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin:6px 8px 8px}
+nav.files a{display:block;padding:9px 11px;border-radius:10px;text-decoration:none;color:var(--ink);
+font-size:14px;border:1px solid transparent}
+nav.files a:hover{background:var(--panel2)}
+nav.files a.active{background:var(--panel2);border-color:var(--primary);color:var(--primary)}
+nav.files small{display:block;color:var(--muted);font-size:11.5px}
+article{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+padding-bottom:48px;max-width:840px;width:100%;overflow:hidden}
+.cover{width:100%;display:block;border-bottom:1px solid var(--line)}
+.meta{padding:22px clamp(18px,4vw,44px) 0}
+.meta h1{font-size:clamp(26px,4vw,40px);line-height:1.18;margin:.2em 0 .3em}
+.tags{display:flex;flex-wrap:wrap;gap:8px}
+.tag{font-size:12.5px;color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:2px 8px}
+.desc{color:var(--muted);font-size:15px}
+.fm{font-size:12px;color:var(--muted);border-top:1px dashed var(--line);
+border-bottom:1px dashed var(--line);padding:8px 0;margin-bottom:6px}
+.post{padding:0 clamp(18px,4vw,44px)}
+.post img{max-width:100%;display:block;margin:.4em 0}
+.post td img{margin:0 auto}
+
+.post h2{margin-top:1.9em;font-size:26px;border-bottom:1px solid var(--line);padding-bottom:.25em}
+.post h3{margin-top:1.5em;font-size:20px}
+.post blockquote{margin:1.4em 0;padding:.9em 1.1em;background:var(--panel2);
+border-left:4px solid var(--accent);border-radius:0 10px 10px 0}
+.post blockquote p{margin:0}
+.tw{overflow-x:auto;margin:1.3em 0}
+.post table{border-collapse:collapse;width:100%;font-size:14.5px}
+.post th,.post td{border:1px solid var(--line);padding:8px 11px;text-align:left;vertical-align:middle}
+.post th{background:var(--panel2)}
+.post td img{vertical-align:middle}
+.post :not(pre)>code{background:var(--panel2);padding:.15em .4em;border-radius:6px;font-size:.9em;
+font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+pre.code{background:#0d1117;border:1px solid var(--line);border-radius:12px;padding:18px;
+overflow-x:auto;position:relative;margin:1.3em 0}
+pre.code code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13.5px;
+line-height:1.62;color:#C9D1D9;white-space:pre}
+pre.code::before{content:attr(data-lang);position:absolute;top:0;right:0;font-size:10.5px;
+letter-spacing:.12em;text-transform:uppercase;color:#0B0F1A;background:var(--primary);
+padding:2px 10px;border-radius:0 11px 0 10px;font-family:ui-monospace,monospace}
+pre.lang-diff{border-color:#F15BB5}
+pre.lang-console,pre.lang-bash{background:#05070d;border-color:#00F5D4}
+.t-comment{color:#6E7A8A;font-style:italic}
+.t-string{color:#A5D6FF}.t-number{color:#F0A868}.t-kw{color:#FF7B9C}
+.t-prop{color:#9B5DE5;font-weight:600}.t-tag{color:#7EE787}
+.t-color{color:#FFD479}
+.chip{display:inline-block;width:.78em;height:.78em;margin-right:.35em;border-radius:3px;
+border:1px solid rgba(255,255,255,.35);vertical-align:-1px}
+.d-add{color:#7EE787;display:block;background:rgba(46,160,67,.15)}
+.d-del{color:#FF9492;display:block;background:rgba(248,81,73,.14)}
+.d-hunk{color:#79C0FF;display:block}
+.sh-prompt{color:#F15BB5;font-weight:700}.sh-cmd{color:#E7E9EE}
+.sh-ok{color:#7EE787;display:block}.sh-out{color:#9DF7E4;display:block}
+details.liquid{background:var(--panel2);border:1px solid var(--line);border-radius:12px;
+padding:10px 16px;margin:1.4em 0}
+details.liquid summary{cursor:pointer;font-weight:650}
+.cta{display:block;text-align:center;margin:1.8em 0;padding:14px 20px;border-radius:12px;
+background:linear-gradient(90deg,var(--primary),var(--support));color:#08121A;font-weight:750;
+text-decoration:none}
+.katex{background:var(--panel2);border:1px dashed var(--line);border-radius:10px;padding:12px 16px;
+font-family:ui-monospace,monospace;color:var(--primary);margin:1.2em 0}
+.embed{color:var(--muted);font-family:ui-monospace,monospace;font-size:13px}
+.note{max-width:840px;color:var(--muted);font-size:13px;margin-top:14px}
+.post hr{border:0;border-top:1px solid var(--line);margin:2em 0}
+.post p:empty,.post p.spacer{margin:1.1em 0;min-height:1.1em}
+.post h2{margin-top:1.2em}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand">Swatch<span>Deck</span> · DEV.to preview</div>
+  <div class="rule"><i style="background:#0F172A"></i><i style="background:#00F5D4"></i>
+    <i style="background:#F15BB5"></i><i style="background:#9B5DE5"></i></div>
+  <div class="spacer"></div>
+  <a class="btn" href="/downloads">⬇ Downloads</a>
+  <a class="btn btn-dl" href="/download/08-light-dark-css-theme-aware.md">⬇ This post (.md)</a>
+  <a class="btn" href="../08-light-dark-css-theme-aware.md" target="_blank">View raw</a>
+  <button class="btn" onclick="var d=document.documentElement;
+    d.dataset.theme=d.dataset.theme==='dark'?'light':'dark'">🌗 Theme</button>
+</header>
+<div class="layout">
+  <nav class="files"><h2>Articles</h2><a href="00-swatch-deck-theme-kit.html" class="">swatch deck theme kit<small>Reusable theme kit</small></a><a href="01-choose-a-color-palette.html" class="">choose a color palette<small>Choosing a palette</small></a><a href="02-hex-to-design-tokens.html" class="">hex to design tokens<small>Tokens pipeline</small></a><a href="03-seasonal-palettes-ui-themes.html" class="">seasonal palettes ui themes<small>Seasonal themes</small></a><a href="04-neon-dark-mode-glow-ui.html" class="">neon dark mode glow ui<small>Neon dark mode</small></a><a href="05-automate-palette-workflow.html" class="">automate palette workflow<small>Automation</small></a><a href="06-css-color-mix-dynamic-variations.html" class="">css color mix dynamic variations<small>color-mix()</small></a><a href="07-css-relative-color-syntax.html" class="">css relative color syntax<small>Relative colour</small></a><a href="08-light-dark-css-theme-aware.html" class="active">light dark css theme aware<small>light-dark()</small></a><a href="09-hwb-color-explained.html" class="">hwb color explained<small>HWB</small></a><a href="10-display-p3-vs-srgb-wide-gamut.html" class="">display p3 vs srgb wide gamut<small>Display-P3</small></a></nav>
+  <div>
+    <article>
+      
+      <div class="meta">
+        <div class="tags"><span class="tag">#css</span><span class="tag">#webdev</span><span class="tag">#darkmode</span><span class="tag">#design</span></div>
+        <h1>light-dark() in CSS: One Line Instead of Two Theme Blocks</h1>
+        <p class="desc">light-dark() puts both theme values in a single declaration. Here&#x27;s how to convert an existing dark mode to it, wire a three-way toggle, and avoid the color-scheme trap.</p>
+        <div class="fm">published: <b>false</b> · tags: 4/4 · cover_image: none</div>
+      </div>
+      <div class="post"><div class='tw'><table><thead><tr><th><code>#0D1C1A</code></th><th><code>#162C46</code></th><th><code>#BC22BF</code></th><th><code>#B2F1B1</code></th></tr></thead><tbody><tr><td><img src="https://placehold.co/120x56/0D1C1A/0D1C1A.png" alt="near-black swatch #0D1C1A" /></td><td><img src="https://placehold.co/120x56/162C46/162C46.png" alt="navy swatch #162C46" /></td><td><img src="https://placehold.co/120x56/BC22BF/BC22BF.png" alt="magenta swatch #BC22BF" /></td><td><img src="https://placehold.co/120x56/B2F1B1/B2F1B1.png" alt="light green swatch #B2F1B1" /></td></tr></tbody></table></div>
+<blockquote><p>🎨 <strong>Palette in play</strong> — <a href="https://colorfiind.com/palette/aurora-whisper-moment" target="_blank" rel="noopener">Aurora Whisper Moment</a> · <code>#0D1C1A</code> <code>#162C46</code> <code>#BC22BF</code> <code>#B2F1B1</code></p></blockquote>
+<p>Every dark mode implementation has the same shape: a block of tokens, then a media query that redefines most of them. The two blocks drift. Somebody adds <code>--border-subtle</code> to the light block on Tuesday and nobody adds it to the dark block until a user files a bug about an invisible divider.</p>
+<p class='spacer'>&nbsp;</p>
+<p><code>light-dark()</code> collapses the pair into one declaration, so the two values live on the same line and can&#x27;t get separated.</p>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/162C46/162C46.png" alt="Section divider bar in navy" /></p>
+<h2>✍️ Before and after</h2>
+<pre class="code lang-diff" data-lang="diff"><code>  :root {
+<span class="d-del">-   --page:    #FFFFFF;</span>
+<span class="d-del">-   --ink:     #0D1C1A;</span>
+<span class="d-del">-   --accent:  #BC22BF;</span>
+<span class="d-del">-   --border:  #E4E7EC;</span>
+<span class="d-add">+   color-scheme: light dark;</span>
+<span class="d-add">+   --page:    light-dark(#FFFFFF, #0D1C1A);</span>
+<span class="d-add">+   --ink:     light-dark(#0D1C1A, #EAF2EF);</span>
+<span class="d-add">+   --accent:  light-dark(#8E1A91, #BC22BF);</span>
+<span class="d-add">+   --border:  light-dark(#E4E7EC, #22384F);</span>
+  }
+<span class="d-del">-</span>
+<span class="d-del">- @media (prefers-color-scheme: dark) {</span>
+<span class="d-del">-   :root {</span>
+<span class="d-del">-     --page:   #0D1C1A;</span>
+<span class="d-del">-     --ink:    #EAF2EF;</span>
+<span class="d-del">-     --accent: #BC22BF;</span>
+<span class="d-del">-     --border: #22384F;</span>
+<span class="d-del">-   }</span>
+<span class="d-del">- }</span>
+</code></pre>
+<p>Twenty-one lines become five, and adding a new token means writing both of its values in the same breath.</p>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/BC22BF/BC22BF.png" alt="Section divider bar in dark purple" /></p>
+<h2>⚠️ The one thing everybody misses</h2>
+<p><strong><code>light-dark()</code> does nothing without <code>color-scheme</code>.</strong> The function doesn&#x27;t read the OS preference directly — it reads the <em>used</em> colour scheme of the element, which <code>color-scheme</code> establishes.</p>
+<pre class="code lang-css" data-lang="css"><code>:root {
+  <span class="t-prop">color-scheme</span>: light dark;   <span class="t-comment">/* ← without this, light-dark() always returns the light value */</span>
+}
+</code></pre>
+<p>Declaring <code>color-scheme: light dark</code> also tells the browser to restyle form controls, scrollbars, spellcheck underlines and the address bar to match. That is a genuine bonus: it fixes the classic &quot;beautiful dark theme, blinding white <code>&lt;select&gt;</code>&quot; bug that no amount of custom CSS ever quite solved.</p>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/B2F1B1/B2F1B1.png" alt="Section divider bar in light green" /></p>
+<h2>🎚️ A three-way toggle, in twelve lines of CSS</h2>
+<p>The real payoff is the user override. Because <code>color-scheme</code> cascades, forcing a theme is a single property on one element:</p>
+<pre class="code lang-css" data-lang="css"><code>:root            { color-scheme: light dark; }   <span class="t-comment">/* follow the OS */</span>
+:root[data-theme=&<span class="t-comment">#x27;light&#x27;] { color-scheme: light; }</span>
+:root[data-theme=&<span class="t-comment">#x27;dark&#x27;]  { color-scheme: dark; }</span>
+
+body {
+  <span class="t-prop">background</span>: light-dark(<span class="t-color"><i class="chip" style="background:#F7FAF9"></i>#F7FAF9</span>, <span class="t-color"><i class="chip" style="background:#0D1C1A"></i>#0D1C1A</span>);
+  <span class="t-prop">color</span>:      light-dark(<span class="t-color"><i class="chip" style="background:#0D1C1A"></i>#0D1C1A</span>, <span class="t-color"><i class="chip" style="background:#EAF2EF"></i>#EAF2EF</span>);
+}
+
+.card {
+  <span class="t-prop">background</span>: light-dark(<span class="t-color"><i class="chip" style="background:#FFFFFF"></i>#FFFFFF</span>, <span class="t-color"><i class="chip" style="background:#162C46"></i>#162C46</span>);
+  <span class="t-prop">border</span>: <span class="t-number">1px</span> solid light-dark(<span class="t-color"><i class="chip" style="background:#E4E7EC"></i>#E4E7EC</span>, <span class="t-color"><i class="chip" style="background:#22384F"></i>#22384F</span>);
+  <span class="t-prop">box-shadow</span>: light-dark(<span class="t-number">0</span> <span class="t-number">1px</span> <span class="t-number">3px</span> rgb(<span class="t-number">0</span> <span class="t-number">0</span> <span class="t-number">0</span> / <span class="t-number">0.10</span>), <span class="t-number">0</span> <span class="t-number">1px</span> <span class="t-number">3px</span> rgb(<span class="t-number">0</span> <span class="t-number">0</span> <span class="t-number">0</span> / <span class="t-number">0.55</span>));
+}
+
+.badge {
+  <span class="t-prop">background</span>: light-dark(<span class="t-color"><i class="chip" style="background:#B2F1B1"></i>#B2F1B1</span>, <span class="t-color"><i class="chip" style="background:#143C2A"></i>#143C2A</span>);
+  <span class="t-prop">color</span>:      light-dark(<span class="t-color"><i class="chip" style="background:#0D3B24"></i>#0D3B24</span>, <span class="t-color"><i class="chip" style="background:#B2F1B1"></i>#B2F1B1</span>);
+}
+</code></pre>
+<pre class="code lang-js" data-lang="js"><code><span <span class="t-kw">class</span>="t-comment">// theme-toggle.js — three states, no <span class="t-kw">class</span> juggling</span>
+<span class="t-kw">const</span> root = document.documentElement;
+<span class="t-kw">const</span> saved = localStorage.getItem(&<span <span class="t-kw">class</span>="t-comment">#x27;theme&#x27;);          // &#x27;light&#x27; | &#x27;dark&#x27; | <span class="t-kw">null</span></span>
+<span class="t-kw">if</span> (saved) root.dataset.theme = saved;
+
+document.querySelector(&<span <span class="t-kw">class</span>="t-comment">#x27;#theme&#x27;).addEventListener(&#x27;change&#x27;, (e) =&gt; {</span>
+  <span class="t-kw">const</span> value = e.target.value;                        <span <span class="t-kw">class</span>="t-comment">// &#x27;system&#x27; | &#x27;light&#x27; | &#x27;dark&#x27;</span>
+  <span class="t-kw">if</span> (value === &<span <span class="t-kw">class</span>="t-comment">#x27;system&#x27;) {</span>
+    delete root.dataset.theme;
+    localStorage.removeItem(&<span <span class="t-kw">class</span>="t-comment">#x27;theme&#x27;);</span>
+  } <span class="t-kw">else</span> {
+    root.dataset.theme = value;
+    localStorage.setItem(&<span <span class="t-kw">class</span>="t-comment">#x27;theme&#x27;, value);</span>
+  }
+});
+</code></pre>
+<p>Notice what&#x27;s missing: no <code>classList.toggle(&#x27;dark&#x27;)</code> on every component, no second stylesheet, no <code>prefers-color-scheme</code> listener. The <code>color-scheme</code> property is the switch, and every <code>light-dark()</code> in the document follows it.</p>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/8E1A91/8E1A91.png" alt="Section divider bar in dark purple" /></p>
+<h2>🧮 Which values actually change?</h2>
+<p>Converting a theme is a good moment to audit. Not every token needs two values:</p>
+<div class='tw'><table><thead><tr><th>Token</th><th>Light</th><th>Dark</th><th>Two values needed?</th></tr></thead><tbody><tr><td><code>--page</code></td><td><code>#F7FAF9</code> <img src="https://placehold.co/50x20/F7FAF9/F7FAF9.png" alt="off-white swatch #F7FAF9" /></td><td><code>#0D1C1A</code> <img src="https://placehold.co/50x20/0D1C1A/0D1C1A.png" alt="near-black swatch #0D1C1A" /></td><td>✅</td></tr><tr><td><code>--ink</code></td><td><code>#0D1C1A</code> <img src="https://placehold.co/50x20/0D1C1A/0D1C1A.png" alt="near-black swatch #0D1C1A" /></td><td><code>#EAF2EF</code> <img src="https://placehold.co/50x20/EAF2EF/EAF2EF.png" alt="off-white swatch #EAF2EF" /></td><td>✅</td></tr><tr><td><code>--accent</code></td><td><code>#8E1A91</code> <img src="https://placehold.co/50x20/8E1A91/8E1A91.png" alt="deep magenta swatch #8E1A91" /></td><td><code>#BC22BF</code> <img src="https://placehold.co/50x20/BC22BF/BC22BF.png" alt="magenta swatch #BC22BF" /></td><td>✅ contrast flips</td></tr><tr><td><code>--success</code></td><td><code>#0D3B24</code> <img src="https://placehold.co/50x20/0D3B24/0D3B24.png" alt="deep green swatch #0D3B24" /></td><td><code>#B2F1B1</code> <img src="https://placehold.co/50x20/B2F1B1/B2F1B1.png" alt="light green swatch #B2F1B1" /></td><td>✅</td></tr><tr><td><code>--radius</code>, <code>--space</code></td><td><code>12px</code></td><td><code>12px</code></td><td>🚫 not a colour</td></tr></tbody></table></div>
+<p>The accent row is the important one. <code>#BC22BF</code> on the dark page is <strong>3.44:1</strong> — fine for large text and icons. The same magenta on white is <strong>5.10:1</strong>, but its <em>darker</em> sibling <code>#8E1A91</code> reaches <strong>7.76:1</strong>, which is what you actually want for body-sized links in light mode. <strong>One brand colour, two shipped values.</strong></p>
+<blockquote><p>🚧 <strong>Trap</strong> — <code>light-dark()</code> only takes <code>&lt;color&gt;</code> values. You cannot swap an image, a shadow spec, a gradient or a border-width with it. Shadows work only because a shadow&#x27;s <em>colour</em> can be a <code>light-dark()</code> — the full <code>box-shadow</code> value above swaps because both variants are written out in full.</p></blockquote>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/162C46/162C46.png" alt="Section divider bar in navy" /></p>
+<h2>🤝 It composes with the other Level 5 functions</h2>
+<p>This is where modern CSS colour stops feeling like separate features:</p>
+<pre class="code lang-css" data-lang="css"><code>:root {
+  <span class="t-prop">color-scheme</span>: light dark;
+  <span class="t-prop">--brand</span>: light-dark(<span class="t-color"><i class="chip" style="background:#8E1A91"></i>#8E1A91</span>, <span class="t-color"><i class="chip" style="background:#BC22BF"></i>#BC22BF</span>);
+
+  <span class="t-comment">/* derived once, correct in both themes */</span>
+  <span class="t-prop">--brand-hover</span>:   oklch(from var(--brand) calc(l - <span class="t-number">0.08</span>) c h);
+  <span class="t-prop">--brand-surface</span>: color-mix(in oklch, Canvas, var(--brand) <span class="t-number">8</span>%);
+  <span class="t-prop">--brand-border</span>:  color-mix(in oklch, var(--brand) <span class="t-number">35</span>%, transparent);
+}
+</code></pre>
+<p><code>--brand</code> picks the right base for the current scheme; relative colour syntax derives the hover state from whichever one won; <code>color-mix()</code> tints the <em>current</em> canvas. Three functions, one source of truth, both themes.</p>
+<p class='spacer'>&nbsp;</p>
+<details class='liquid' open><summary>🧯 Fallback for browsers without light-dark()</summary>
+<pre class="code lang-css" data-lang="css"><code>:root {
+  <span class="t-prop">color-scheme</span>: light dark;
+
+  <span class="t-comment">/* fallback: the old two-block approach */</span>
+  <span class="t-prop">--page</span>: <span class="t-color"><i class="chip" style="background:#FFFFFF"></i>#FFFFFF</span>;
+  <span class="t-prop">--ink</span>:  <span class="t-color"><i class="chip" style="background:#0D1C1A"></i>#0D1C1A</span>;
+}
+
+<span class="t-kw">@media</span> (prefers-color-scheme: dark) {
+  :root { --page: <span class="t-color"><i class="chip" style="background:#0D1C1A"></i>#0D1C1A</span>; --ink: <span class="t-color"><i class="chip" style="background:#EAF2EF"></i>#EAF2EF</span>; }
+}
+
+<span class="t-comment">/* progressive enhancement: overrides the above where supported */</span>
+<span class="t-kw">@supports</span> (color: light-dark(<span class="t-color"><i class="chip" style="background:#fff"></i>#fff</span>, <span class="t-color"><i class="chip" style="background:#000"></i>#000</span>)) {
+  :root {
+    <span class="t-prop">--page</span>: light-dark(<span class="t-color"><i class="chip" style="background:#FFFFFF"></i>#FFFFFF</span>, <span class="t-color"><i class="chip" style="background:#0D1C1A"></i>#0D1C1A</span>);
+    <span class="t-prop">--ink</span>:  light-dark(<span class="t-color"><i class="chip" style="background:#0D1C1A"></i>#0D1C1A</span>, <span class="t-color"><i class="chip" style="background:#EAF2EF"></i>#EAF2EF</span>);
+  }
+}
+</code></pre>
+<p>Slightly more code than either approach alone, but it degrades cleanly and you delete the fallback block later without touching components.</p>
+<p class='spacer'>&nbsp;</p>
+</details>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/BC22BF/BC22BF.png" alt="Section divider bar in dark purple" /></p>
+<h2>🧪 How to test it properly</h2>
+<pre class="code lang-console" data-lang="console"><code><span class="sh-prompt">$</span><span class="sh-cmd"> # 1. DevTools → Rendering → Emulate prefers-color-scheme</span>
+<span class="sh-prompt">$</span><span class="sh-cmd"> # 2. Then flip the OS setting too — they can disagree</span>
+<span class="sh-prompt">$</span><span class="sh-cmd"> # 3. Force the override and confirm color-scheme actually changed:</span>
+<span class="sh-out">document.documentElement.dataset.theme = &#x27;dark&#x27;;</span>
+<span class="sh-out">getComputedStyle(document.documentElement).colorScheme;   // &quot;dark&quot;</span>
+<span class="sh-prompt">$</span><span class="sh-cmd"> # 4. Check a native control, not just your own components:</span>
+<span class="sh-prompt">$</span><span class="sh-cmd"> #    &lt;select&gt;, &lt;input type=&quot;date&quot;&gt;, the scrollbar, a checkbox</span>
+<span class="sh-out"></span></code></pre>
+<p>Step 4 catches the most bugs. Custom components almost always get themed; native controls only follow if <code>color-scheme</code> is set correctly.</p>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/B2F1B1/B2F1B1.png" alt="Section divider bar in light green" /></p>
+<h2>🧾 The checklist</h2>
+<ol><li>Set <code>color-scheme: light dark</code> on <code>:root</code> first — <code>light-dark()</code> is inert without it.</li><li>Convert token by token; delete the <code>prefers-color-scheme</code> block only when it&#x27;s empty.</li><li>Override with <code>color-scheme</code> on a data attribute, not by toggling classes on components.</li><li>Re-check contrast in <strong>both</strong> values — a brand colour rarely works unchanged in both themes.</li><li>Remember it&#x27;s colours only. Shadows swap because their colour does.</li><li>Test native form controls and scrollbars, not only your own CSS.</li></ol>
+<p>Building a two-theme palette from scratch is the slow part. Browsing paired light and dark sets — like the <a href="https://colorfiind.com/category/dark" target="_blank" rel="noopener">dark</a> and <a href="https://colorfiind.com/category/light" target="_blank" rel="noopener">light</a> categories on <a href="https://colorfiind.com" target="_blank" rel="noopener">ColorFiind</a> — gives you both halves of each <code>light-dark()</code> pair in one go.</p>
+<p class='spacer'>&nbsp;</p>
+<a class='cta' href='https://colorfiind.com/category/dark' target='_blank' rel='noopener'>Find a dark palette to pair</a>
+<p class='spacer'>&nbsp;</p>
+<p><em>How many tokens does your dark mode redefine? If it&#x27;s more than fifteen, <code>light-dark()</code> will pay for itself this afternoon.</em> 👇</p></div>
+    </article>
+    <p class="note">Static local preview — Liquid tags are simulated, DEV renders them natively.
+    Colour swatches load from placehold.co, so they need internet access.</p>
+  </div>
+</div>
+</body>
+</html>

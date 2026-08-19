@@ -1,0 +1,117 @@
+{
+  "_source": "Real palettes pulled from https://colorfiind.com (palette, category and season pages).",
+  "palettes": [
+    {
+      "slug": "mango-garden-moment",
+      "name": "Mango Garden Moment",
+      "colors": ["#3C0D4F", "#F22C33", "#C6EEA0", "#1681DF"],
+      "group": "featured",
+      "mood": "Nostalgic, balanced contrast, heritage design"
+    },
+    {
+      "slug": "cobalt-vista-fountain",
+      "name": "Cobalt Vista Fountain",
+      "colors": ["#C8F5C2", "#E7F8F5", "#CDBDEF", "#F1DCDA"],
+      "group": "pastel",
+      "mood": "Soft, friendly, wellness / stationery"
+    },
+    {
+      "slug": "summer-gallery",
+      "name": "Summer Gallery",
+      "colors": ["#BDE0FE", "#CDB4DB", "#FFC8DD", "#A8DADC"],
+      "group": "pastel",
+      "mood": "Airy pastel, illustration and onboarding screens"
+    },
+    {
+      "slug": "soft-summer-atelier",
+      "name": "Soft Summer Atelier",
+      "colors": ["#D8C7D8", "#8FA1B3", "#E6DDE3", "#9B8FA3"],
+      "group": "season-soft-summer",
+      "mood": "Muted, low contrast, editorial calm"
+    },
+    {
+      "slug": "deep-winter-journal",
+      "name": "Deep Winter Journal",
+      "colors": ["#6D0F2B", "#004D40", "#0B3D91", "#2A1458"],
+      "group": "season-deep-winter",
+      "mood": "Cool, high contrast, jewel tones"
+    },
+    {
+      "slug": "cool-winter-harmony",
+      "name": "Cool Winter Harmony",
+      "colors": ["#003566", "#0077B6", "#D0006F", "#C1121F"],
+      "group": "season-cool-winter",
+      "mood": "Icy blues with a loud accent"
+    },
+    {
+      "slug": "neon-diner-harmony",
+      "name": "Neon Diner Harmony",
+      "colors": ["#0F172A", "#00F5D4", "#F15BB5", "#9B5DE5"],
+      "group": "neon",
+      "mood": "Dark base, electric mint, hot pink, violet"
+    },
+    {
+      "slug": "clay-flare-spectrum",
+      "name": "Clay Flare Spectrum",
+      "colors": ["#10002B", "#240046", "#FF006E", "#00F5D4"],
+      "group": "neon",
+      "mood": "Deep violet night with laser accents"
+    },
+    {
+      "slug": "maple-drift",
+      "name": "Maple Drift",
+      "colors": ["#09090B", "#FF007F", "#00E5FF", "#B8F500"],
+      "group": "neon",
+      "mood": "Near-black terminal with three sirens"
+    },
+    {
+      "slug": "pine-field-gallery",
+      "name": "Pine Field Gallery",
+      "colors": ["#03071E", "#DC2F02", "#F48C06", "#FFBA08"],
+      "group": "neon",
+      "mood": "Midnight navy with an ember gradient"
+    },
+    {
+      "slug": "lagoon-warm-autumn-edition",
+      "name": "Lagoon Warm Autumn Edition",
+      "colors": ["#FFEAB6", "#FFEEBA", "#FFD489", "#F9BA5D"],
+      "group": "season-warm-autumn",
+      "mood": "Honey monochrome, warm and quiet"
+    },
+    {
+      "slug": "winter-beach-wave-colorway",
+      "name": "Winter Beach Wave Colorway",
+      "colors": ["#232E43", "#49627F", "#7F95B1", "#E8E9E5"],
+      "group": "season-winter",
+      "mood": "Four-step neutral ramp, dashboard friendly"
+    },
+    {
+      "slug": "quartz-drift-palette",
+      "name": "Quartz Drift Palette",
+      "colors": ["#F5F7F9", "#E3DFF1", "#E0AED7", "#994129"],
+      "group": "light",
+      "mood": "Light UI with one grounded brown"
+    },
+    {
+      "slug": "aurora-whisper-moment",
+      "name": "Aurora Whisper Moment",
+      "colors": ["#0D1C1A", "#162C46", "#BC22BF", "#B2F1B1"],
+      "group": "dark",
+      "mood": "Dark teal night, magenta and mint signals"
+    },
+    {
+      "slug": "spring-beach-wave-colorway",
+      "name": "Spring Beach Wave Colorway",
+      "colors": ["#FFFF79", "#FFD2DC", "#56D5CC", "#FF8D08"],
+      "group": "season-spring",
+      "mood": "High energy, playful, marketing pages"
+    },
+    {
+      "slug": "mint-garden-tone",
+      "name": "Mint Garden Tone",
+      "colors": ["#FAF2E0", "#EDB9A1", "#85CDD6", "#BAD7AD"],
+      "group": "pastel",
+      "mood": "Cream base, coral, sky, sage"
+    }
+  ]
+}

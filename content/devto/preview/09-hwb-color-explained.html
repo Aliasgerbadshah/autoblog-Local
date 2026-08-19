@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>HWB Color Explained: The Notation That Thinks in Tints and Shades — DEV preview</title>
+<style>
+:root{--bg:#0B0F1A;--panel:#111827;--panel2:#0F172A;--line:#1F2A44;--ink:#E7E9EE;
+--muted:#94A3B8;--primary:#00F5D4;--accent:#F15BB5;--support:#9B5DE5;--radius:14px}
+html[data-theme=light]{--bg:#F5F7F9;--panel:#fff;--panel2:#EFF2F6;--line:#DDE3EC;
+--ink:#1B2333;--muted:#5B6478;--primary:#0E7C86;--accent:#B4276F;--support:#6D3FBF}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+font:16px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+a{color:var(--primary)}
+header.top{position:sticky;top:0;z-index:20;display:flex;gap:14px;align-items:center;padding:12px 18px;
+background:var(--bg);border-bottom:1px solid var(--line)}
+.brand{font-weight:800}.brand span{color:var(--primary)}
+.rule{display:flex;height:6px;width:150px;border-radius:99px;overflow:hidden}.rule i{flex:1}
+.spacer{flex:1}
+.btn{font:inherit;cursor:pointer;border:1px solid var(--line);background:var(--panel);color:var(--ink);
+border-radius:99px;padding:6px 14px;text-decoration:none}
+.btn:hover{border-color:var(--primary)}
+.btn-dl{background:var(--primary);color:#08121A;border-color:var(--primary);font-weight:700}
+.layout{display:grid;grid-template-columns:290px minmax(0,1fr);gap:26px;padding:22px;align-items:start}
+@media(max-width:900px){.layout{grid-template-columns:1fr}}
+nav.files{position:sticky;top:70px;background:var(--panel);border:1px solid var(--line);
+border-radius:var(--radius);padding:12px;display:flex;flex-direction:column;gap:6px}
+nav.files h2{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin:6px 8px 8px}
+nav.files a{display:block;padding:9px 11px;border-radius:10px;text-decoration:none;color:var(--ink);
+font-size:14px;border:1px solid transparent}
+nav.files a:hover{background:var(--panel2)}
+nav.files a.active{background:var(--panel2);border-color:var(--primary);color:var(--primary)}
+nav.files small{display:block;color:var(--muted);font-size:11.5px}
+article{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+padding-bottom:48px;max-width:840px;width:100%;overflow:hidden}
+.cover{width:100%;display:block;border-bottom:1px solid var(--line)}
+.meta{padding:22px clamp(18px,4vw,44px) 0}
+.meta h1{font-size:clamp(26px,4vw,40px);line-height:1.18;margin:.2em 0 .3em}
+.tags{display:flex;flex-wrap:wrap;gap:8px}
+.tag{font-size:12.5px;color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:2px 8px}
+.desc{color:var(--muted);font-size:15px}
+.fm{font-size:12px;color:var(--muted);border-top:1px dashed var(--line);
+border-bottom:1px dashed var(--line);padding:8px 0;margin-bottom:6px}
+.post{padding:0 clamp(18px,4vw,44px)}
+.post img{max-width:100%;display:block;margin:.4em 0}
+.post td img{margin:0 auto}
+
+.post h2{margin-top:1.9em;font-size:26px;border-bottom:1px solid var(--line);padding-bottom:.25em}
+.post h3{margin-top:1.5em;font-size:20px}
+.post blockquote{margin:1.4em 0;padding:.9em 1.1em;background:var(--panel2);
+border-left:4px solid var(--accent);border-radius:0 10px 10px 0}
+.post blockquote p{margin:0}
+.tw{overflow-x:auto;margin:1.3em 0}
+.post table{border-collapse:collapse;width:100%;font-size:14.5px}
+.post th,.post td{border:1px solid var(--line);padding:8px 11px;text-align:left;vertical-align:middle}
+.post th{background:var(--panel2)}
+.post td img{vertical-align:middle}
+.post :not(pre)>code{background:var(--panel2);padding:.15em .4em;border-radius:6px;font-size:.9em;
+font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+pre.code{background:#0d1117;border:1px solid var(--line);border-radius:12px;padding:18px;
+overflow-x:auto;position:relative;margin:1.3em 0}
+pre.code code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13.5px;
+line-height:1.62;color:#C9D1D9;white-space:pre}
+pre.code::before{content:attr(data-lang);position:absolute;top:0;right:0;font-size:10.5px;
+letter-spacing:.12em;text-transform:uppercase;color:#0B0F1A;background:var(--primary);
+padding:2px 10px;border-radius:0 11px 0 10px;font-family:ui-monospace,monospace}
+pre.lang-diff{border-color:#F15BB5}
+pre.lang-console,pre.lang-bash{background:#05070d;border-color:#00F5D4}
+.t-comment{color:#6E7A8A;font-style:italic}
+.t-string{color:#A5D6FF}.t-number{color:#F0A868}.t-kw{color:#FF7B9C}
+.t-prop{color:#9B5DE5;font-weight:600}.t-tag{color:#7EE787}
+.t-color{color:#FFD479}
+.chip{display:inline-block;width:.78em;height:.78em;margin-right:.35em;border-radius:3px;
+border:1px solid rgba(255,255,255,.35);vertical-align:-1px}
+.d-add{color:#7EE787;display:block;background:rgba(46,160,67,.15)}
+.d-del{color:#FF9492;display:block;background:rgba(248,81,73,.14)}
+.d-hunk{color:#79C0FF;display:block}
+.sh-prompt{color:#F15BB5;font-weight:700}.sh-cmd{color:#E7E9EE}
+.sh-ok{color:#7EE787;display:block}.sh-out{color:#9DF7E4;display:block}
+details.liquid{background:var(--panel2);border:1px solid var(--line);border-radius:12px;
+padding:10px 16px;margin:1.4em 0}
+details.liquid summary{cursor:pointer;font-weight:650}
+.cta{display:block;text-align:center;margin:1.8em 0;padding:14px 20px;border-radius:12px;
+background:linear-gradient(90deg,var(--primary),var(--support));color:#08121A;font-weight:750;
+text-decoration:none}
+.katex{background:var(--panel2);border:1px dashed var(--line);border-radius:10px;padding:12px 16px;
+font-family:ui-monospace,monospace;color:var(--primary);margin:1.2em 0}
+.embed{color:var(--muted);font-family:ui-monospace,monospace;font-size:13px}
+.note{max-width:840px;color:var(--muted);font-size:13px;margin-top:14px}
+.post hr{border:0;border-top:1px solid var(--line);margin:2em 0}
+.post p:empty,.post p.spacer{margin:1.1em 0;min-height:1.1em}
+.post h2{margin-top:1.2em}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand">Swatch<span>Deck</span> · DEV.to preview</div>
+  <div class="rule"><i style="background:#0F172A"></i><i style="background:#00F5D4"></i>
+    <i style="background:#F15BB5"></i><i style="background:#9B5DE5"></i></div>
+  <div class="spacer"></div>
+  <a class="btn" href="/downloads">⬇ Downloads</a>
+  <a class="btn btn-dl" href="/download/09-hwb-color-explained.md">⬇ This post (.md)</a>
+  <a class="btn" href="../09-hwb-color-explained.md" target="_blank">View raw</a>
+  <button class="btn" onclick="var d=document.documentElement;
+    d.dataset.theme=d.dataset.theme==='dark'?'light':'dark'">🌗 Theme</button>
+</header>
+<div class="layout">
+  <nav class="files"><h2>Articles</h2><a href="00-swatch-deck-theme-kit.html" class="">swatch deck theme kit<small>Reusable theme kit</small></a><a href="01-choose-a-color-palette.html" class="">choose a color palette<small>Choosing a palette</small></a><a href="02-hex-to-design-tokens.html" class="">hex to design tokens<small>Tokens pipeline</small></a><a href="03-seasonal-palettes-ui-themes.html" class="">seasonal palettes ui themes<small>Seasonal themes</small></a><a href="04-neon-dark-mode-glow-ui.html" class="">neon dark mode glow ui<small>Neon dark mode</small></a><a href="05-automate-palette-workflow.html" class="">automate palette workflow<small>Automation</small></a><a href="06-css-color-mix-dynamic-variations.html" class="">css color mix dynamic variations<small>color-mix()</small></a><a href="07-css-relative-color-syntax.html" class="">css relative color syntax<small>Relative colour</small></a><a href="08-light-dark-css-theme-aware.html" class="">light dark css theme aware<small>light-dark()</small></a><a href="09-hwb-color-explained.html" class="active">hwb color explained<small>HWB</small></a><a href="10-display-p3-vs-srgb-wide-gamut.html" class="">display p3 vs srgb wide gamut<small>Display-P3</small></a></nav>
+  <div>
+    <article>
+      
+      <div class="meta">
+        <div class="tags"><span class="tag">#css</span><span class="tag">#design</span><span class="tag">#designsystems</span><span class="tag">#frontend</span></div>
+        <h1>HWB Color Explained: The Notation That Thinks in Tints and Shades</h1>
+        <p class="desc">HWB describes a colour as a pure hue plus how much white and black you added. That maps to how designers actually build tint and shade ramps — here&#x27;s when to use it.</p>
+        <div class="fm">published: <b>false</b> · tags: 4/4 · cover_image: none</div>
+      </div>
+      <div class="post"><div class='tw'><table><thead><tr><th><code>#FAF2E0</code></th><th><code>#EDB9A1</code></th><th><code>#85CDD6</code></th><th><code>#BAD7AD</code></th></tr></thead><tbody><tr><td><img src="https://placehold.co/120x56/FAF2E0/FAF2E0.png" alt="pale orange swatch #FAF2E0" /></td><td><img src="https://placehold.co/120x56/EDB9A1/EDB9A1.png" alt="light red swatch #EDB9A1" /></td><td><img src="https://placehold.co/120x56/85CDD6/85CDD6.png" alt="light cyan swatch #85CDD6" /></td><td><img src="https://placehold.co/120x56/BAD7AD/BAD7AD.png" alt="light green swatch #BAD7AD" /></td></tr></tbody></table></div>
+<blockquote><p>🎨 <strong>Palette in play</strong> — <a href="https://colorfiind.com/palette/mint-garden-tone" target="_blank" rel="noopener">Mint Garden Tone</a> · <code>#FAF2E0</code> <code>#EDB9A1</code> <code>#85CDD6</code> <code>#BAD7AD</code></p></blockquote>
+<p>Ask a painter how they made a colour and they won&#x27;t say &quot;hue 187, saturation 50%, lightness 68%&quot;. They&#x27;ll say: <em>&quot;that teal, with a bit of white in it.&quot;</em></p>
+<p class='spacer'>&nbsp;</p>
+<p>That sentence is HWB. It has been in CSS since 2022, it is supported everywhere, and almost nobody uses it — mostly because nobody explains what it&#x27;s <em>for</em>.</p>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/EDB9A1/EDB9A1.png" alt="Section divider bar in light orange" /></p>
+<h2>🧪 The notation</h2>
+<pre class="code lang-css" data-lang="css"><code>hwb(<span class="t-number">187</span> <span class="t-number">52</span>% <span class="t-number">16</span>%)
+<span class="t-comment">/*  ^hue  ^whiteness  ^blackness   [/ alpha] */</span>
+</code></pre>
+<ul><li><strong>Hue</strong> — the same 0–360 wheel as HSL. 0 red, 120 green, 240 blue.</li><li><strong>Whiteness</strong> — how much white is mixed into the pure hue.</li><li><strong>Blackness</strong> — how much black is mixed in.</li></ul>
+<p><code>hwb(187 0% 0%)</code> is the pure, undiluted hue. Add whiteness and you get a <strong>tint</strong>. Add blackness and you get a <strong>shade</strong>. Add both and you get a <strong>tone</strong>. That&#x27;s the entire vocabulary of traditional colour mixing, expressed in three numbers.</p>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/85CDD6/85CDD6.png" alt="Section divider bar in teal" /></p>
+<h2>🪜 Ramps you can read at a glance</h2>
+<p>Take the teal from that palette — <code>#85CDD6</code> is <code>hwb(187 52% 16%)</code>. Here is its family, and notice that you can predict every swatch from its numbers:</p>
+<p class='spacer'>&nbsp;</p>
+<p><strong>Tints — add white</strong></p>
+<div class='tw'><table><thead><tr><th>CSS</th><th>Result</th><th>Swatch</th></tr></thead><tbody><tr><td><code>hwb(187 0% 0%)</code></td><td><code>#00E1FF</code></td><td><img src="https://placehold.co/120x34/00E1FF/00E1FF.png" alt="vivid cyan swatch #00E1FF" /></td></tr><tr><td><code>hwb(187 20% 0%)</code></td><td><code>#33E7FF</code></td><td><img src="https://placehold.co/120x34/33E7FF/33E7FF.png" alt="light cyan swatch #33E7FF" /></td></tr><tr><td><code>hwb(187 40% 0%)</code></td><td><code>#66EDFF</code></td><td><img src="https://placehold.co/120x34/66EDFF/66EDFF.png" alt="light cyan swatch #66EDFF" /></td></tr><tr><td><code>hwb(187 60% 0%)</code></td><td><code>#99F3FF</code></td><td><img src="https://placehold.co/120x34/99F3FF/99F3FF.png" alt="light cyan swatch #99F3FF" /></td></tr></tbody></table></div>
+<p><strong>Shades — add black</strong></p>
+<div class='tw'><table><thead><tr><th>CSS</th><th>Result</th><th>Swatch</th></tr></thead><tbody><tr><td><code>hwb(187 0% 20%)</code></td><td><code>#00B4CC</code></td><td><img src="https://placehold.co/120x34/00B4CC/00B4CC.png" alt="cyan swatch #00B4CC" /></td></tr><tr><td><code>hwb(187 0% 40%)</code></td><td><code>#008799</code></td><td><img src="https://placehold.co/120x34/008799/008799.png" alt="dark cyan swatch #008799" /></td></tr><tr><td><code>hwb(187 0% 60%)</code></td><td><code>#005A66</code></td><td><img src="https://placehold.co/120x34/005A66/005A66.png" alt="deep cyan swatch #005A66" /></td></tr></tbody></table></div>
+<p><strong>Tones — add both</strong></p>
+<div class='tw'><table><thead><tr><th>CSS</th><th>Result</th><th>Swatch</th></tr></thead><tbody><tr><td><code>hwb(187 20% 20%)</code></td><td><code>#33BACC</code></td><td><img src="https://placehold.co/120x34/33BACC/33BACC.png" alt="cyan swatch #33BACC" /></td></tr><tr><td><code>hwb(187 30% 30%)</code></td><td><code>#4CA7B2</code></td><td><img src="https://placehold.co/120x34/4CA7B2/4CA7B2.png" alt="muted cyan swatch #4CA7B2" /></td></tr><tr><td><code>hwb(187 45% 45%)</code></td><td><code>#73898C</code></td><td><img src="https://placehold.co/120x34/73898C/73898C.png" alt="mid grey swatch #73898C" /></td></tr></tbody></table></div>
+<p>Three columns of numbers, and every one of them is guessable without opening a colour picker. Try that with hex.</p>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/00E1FF/00E1FF.png" alt="Section divider bar in vivid teal" /></p>
+<h2>🧮 The rule nobody tells you</h2>
+<p>When whiteness and blackness sum to 100% or more, the hue is irrelevant and CSS returns grey — specifically <code>w / (w + b)</code> grey:</p>
+<pre class="code lang-css" data-lang="css"><code>hwb(<span class="t-number">187</span> <span class="t-number">70</span>% <span class="t-number">70</span>%)   <span class="t-comment">/* → #808080, a plain 50% grey */</span>
+hwb(<span class="t-number">20</span>  <span class="t-number">60</span>% <span class="t-number">60</span>%)   <span class="t-comment">/* → #808080, exactly the same grey */</span>
+</code></pre>
+<p>This is a feature, not a bug: it means a tone ramp degrades gracefully into neutrals instead of producing nonsense. It also gives you a neat trick — <strong>a greyscale scale that keeps a hue &quot;in reserve&quot;</strong>:</p>
+<pre class="code lang-css" data-lang="css"><code>:root {
+  --neutral-<span class="t-number">100</span>: hwb(<span class="t-number">187</span> <span class="t-number">92</span>%  <span class="t-number">4</span>%);
+  --neutral-<span class="t-number">300</span>: hwb(<span class="t-number">187</span> <span class="t-number">70</span>% <span class="t-number">18</span>%);
+  --neutral-<span class="t-number">500</span>: hwb(<span class="t-number">187</span> <span class="t-number">45</span>% <span class="t-number">45</span>%);   <span class="t-comment">/* the greying point */</span>
+  --neutral-<span class="t-number">700</span>: hwb(<span class="t-number">187</span> <span class="t-number">20</span>% <span class="t-number">62</span>%);
+  --neutral-<span class="t-number">900</span>: hwb(<span class="t-number">187</span>  <span class="t-number">6</span>% <span class="t-number">82</span>%);
+}
+</code></pre>
+<p>Those neutrals carry a faint teal cast that ties them to the brand — the thing greys made from pure <code>#808080</code> never do.</p>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/33E7FF/33E7FF.png" alt="Section divider bar in vivid teal" /></p>
+<h2>🆚 Where HSL misleads you</h2>
+<p>HSL&#x27;s <code>l</code> is not perceived lightness, it&#x27;s a geometric midpoint. That produces the classic trap:</p>
+<div class='tw'><table><thead><tr><th>Colour</th><th>HSL</th><th>Perceived lightness (OKLCH L)</th><th>Relative luminance</th></tr></thead><tbody><tr><td><img src="https://placehold.co/60x24/0000FF/0000FF.png" alt="vivid blue swatch #0000FF" /> <code>#0000FF</code></td><td><code>hsl(240 100% 50%)</code></td><td><strong>0.45</strong></td><td>0.072</td></tr><tr><td><img src="https://placehold.co/60x24/FFFF00/FFFF00.png" alt="vivid yellow swatch #FFFF00" /> <code>#FFFF00</code></td><td><code>hsl(60 100% 50%)</code></td><td><strong>0.97</strong></td><td>0.928</td></tr></tbody></table></div>
+<p>Same &quot;lightness&quot; in HSL. One is nearly black to the eye, the other nearly white — a 12.9× difference in luminance.</p>
+<p class='spacer'>&nbsp;</p>
+<p>HWB doesn&#x27;t fix that (it&#x27;s the same underlying model), but it never <em>claims</em> to. <code>hwb(240 0% 0%)</code> says &quot;pure blue, nothing added&quot;, which is honest. <code>hsl(240 100% 50%)</code> says &quot;50% lightness&quot;, which is a lie that leads people to build ramps by nudging <code>l</code>.</p>
+<p class='spacer'>&nbsp;</p>
+<p><strong>The distinction that matters:</strong></p>
+<div class='tw'><table><thead><tr><th>Question</th><th>Notation</th></tr></thead><tbody><tr><td>&quot;How much white/black did I add?&quot;</td><td><strong>HWB</strong> — describes the recipe</td></tr><tr><td>&quot;How light does this look?&quot;</td><td><strong>OKLCH</strong> — describes the perception</td></tr><tr><td>&quot;What do the screen&#x27;s channels do?&quot;</td><td>RGB / hex — describes the hardware</td></tr></tbody></table></div>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/66EDFF/66EDFF.png" alt="Section divider bar in vivid teal" /></p>
+<h2>🎯 Where HWB earns its place</h2>
+<p><strong>1 · Author-facing tokens in a design system.</strong> When designers read the CSS, <code>hwb(19 63% 7%)</code> tells them &quot;that peach is mostly white&quot; at a glance. <code>#EDB9A1</code> tells them nothing.</p>
+<p class='spacer'>&nbsp;</p>
+<p><strong>2 · Deriving a family from one hue.</strong> Lock the hue, vary two numbers:</p>
+<pre class="code lang-css" data-lang="css"><code>:root {
+  <span class="t-prop">--hue-brand</span>: <span class="t-number">187</span>;
+  <span class="t-prop">--brand</span>:         hwb(var(--hue-brand)  <span class="t-number">0</span>%  <span class="t-number">0</span>%);
+  <span class="t-prop">--brand-tint</span>:    hwb(var(--hue-brand) <span class="t-number">45</span>%  <span class="t-number">0</span>%);
+  <span class="t-prop">--brand-shade</span>:   hwb(var(--hue-brand)  <span class="t-number">0</span>% <span class="t-number">35</span>%);
+  <span class="t-prop">--brand-tone</span>:    hwb(var(--hue-brand) <span class="t-number">25</span>% <span class="t-number">25</span>%);
+}
+</code></pre>
+<p>Change <code>--hue-brand</code> to <code>19</code> and the whole family becomes peach, holding its internal relationships exactly.</p>
+<p class='spacer'>&nbsp;</p>
+<p><strong>3 · Relative colour syntax with HWB channels.</strong> <code>from</code> works here too:</p>
+<pre class="code lang-css" data-lang="css"><code><span class="t-prop">--softer</span>: hwb(from var(--brand) h calc(w + <span class="t-number">25</span>%) b);   <span class="t-comment">/* 25% more white */</span>
+<span class="t-prop">--deeper</span>: hwb(from var(--brand) h w calc(b + <span class="t-number">20</span>%));   <span class="t-comment">/* 20% more black */</span>
+</code></pre>
+<p><strong>4 · Explaining colour to non-designers.</strong> &quot;Add 20% white&quot; survives a stakeholder meeting. &quot;Reduce chroma to 0.08&quot; does not.</p>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/99F3FF/99F3FF.png" alt="Section divider bar in light teal" /></p>
+<h2>🚫 Where it doesn&#x27;t belong</h2>
+<ul><li><strong>Perceptually even ramps.</strong> Equal whiteness steps are not equal <em>perceived</em> steps. Use OKLCH for a 9-step scale where each stop must feel one notch apart.</li><li><strong>Wide-gamut colour.</strong> HWB is an sRGB notation. It cannot express anything outside it — that&#x27;s <code>oklch()</code> or <code>color(display-p3 …)</code> territory.</li><li><strong>Contrast targeting.</strong> Nothing in <code>w</code> or <code>b</code> tells you the WCAG ratio. Always measure the pairs you ship:</li></ul>
+<pre class="code lang-console" data-lang="console"><code><span class="sh-prompt">$</span><span class="sh-cmd"> contrast &quot;#005A66&quot; &quot;#FFFFFF&quot;     7.91:1   AAA ✓  body text</span>
+<span class="sh-prompt">$</span><span class="sh-cmd"> contrast &quot;#00B4CC&quot; &quot;#FFFFFF&quot;     2.50:1   fail   surfaces only</span>
+<span class="sh-prompt">$</span><span class="sh-cmd"> contrast &quot;#99F3FF&quot; &quot;#0D1C1A&quot;    13.87:1   AAA ✓  dark-mode text</span>
+<span class="sh-out"></span></code></pre>
+<p>Two of those come from the same hue with only the blackness changed. The notation is intuitive; the accessibility maths still isn&#x27;t.</p>
+<p class='spacer'>&nbsp;</p>
+<details class='liquid' open><summary>🧰 Converting hex to HWB in twelve lines</summary>
+<pre class="code lang-js" data-lang="js"><code><span class="t-kw">export</span> <span class="t-kw">function</span> hexToHwb(hex) {
+  <span class="t-kw">const</span> [r, g, b] = hex.replace(&<span <span class="t-kw">class</span>="t-comment">#x27;#&#x27;, &#x27;&#x27;).match(/../g).map((h) =&gt; parseInt(h, 16) / 255);</span>
+  <span class="t-kw">const</span> max = Math.max(r, g, b), min = Math.min(r, g, b), d = max - min;
+  <span class="t-kw">let</span> h = <span <span class="t-kw">class</span>="t-number">0</span>;
+  <span class="t-kw">if</span> (d) {
+    <span class="t-kw">if</span> (max === r) h = ((g - b) / d) % <span <span class="t-kw">class</span>="t-number">6</span>;
+    <span class="t-kw">else</span> <span class="t-kw">if</span> (max === g) h = (b - r) / d + <span <span class="t-kw">class</span>="t-number">2</span>;
+    <span class="t-kw">else</span> h = (r - g) / d + <span <span class="t-kw">class</span>="t-number">4</span>;
+  }
+  <span class="t-kw">return</span> {
+    h: Math.round((h * <span <span class="t-kw">class</span>="t-number">60</span> + <span <span class="t-kw">class</span>="t-number">360</span>) % <span <span class="t-kw">class</span>="t-number">360</span>),
+    w: Math.round(min * <span <span class="t-kw">class</span>="t-number">100</span>),
+    b: Math.round((<span <span class="t-kw">class</span>="t-number">1</span> - max) * <span <span class="t-kw">class</span>="t-number">100</span>),
+  };
+}
+
+hexToHwb(&<span <span class="t-kw">class</span>="t-comment">#x27;#85CDD6&#x27;);   // { h: 187, w: 52, b: 16 }</span>
+hexToHwb(&<span <span class="t-kw">class</span>="t-comment">#x27;#FAF2E0&#x27;);   // { h: 42,  w: 88, b: 2  }</span>
+</code></pre>
+<p>Whiteness is just the minimum channel; blackness is one minus the maximum. That&#x27;s why the model is so easy to reason about.</p>
+<p class='spacer'>&nbsp;</p>
+</details>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/00B4CC/00B4CC.png" alt="Section divider bar in dark teal" /></p>
+<h2>🧾 The checklist</h2>
+<ol><li>Read HWB as a recipe: <strong>pure hue + this much white + this much black</strong>.</li><li>Use it for author-facing tokens and hue-locked families.</li><li>Remember <code>w + b ≥ 100%</code> collapses to grey — useful for tinted neutrals.</li><li>Don&#x27;t build perceptually even scales with it; that&#x27;s OKLCH&#x27;s job.</li><li>It&#x27;s sRGB-only, so it can&#x27;t describe wide-gamut colour.</li><li>Measure contrast separately, always.</li></ol>
+<p>Starting from a palette whose hues already work together makes hue-locked families much easier — <a href="https://colorfiind.com" target="_blank" rel="noopener">ColorFiind</a> publishes each palette&#x27;s HEX codes, and converting them to HWB takes the twelve lines above.</p>
+<p class='spacer'>&nbsp;</p>
+<a class='cta' href='https://colorfiind.com' target='_blank' rel='noopener'>Browse palettes to build families from</a>
+<p class='spacer'>&nbsp;</p>
+<p><em>Have you shipped HWB in production, or is it still the notation you scroll past in MDN?</em> 👇</p></div>
+    </article>
+    <p class="note">Static local preview — Liquid tags are simulated, DEV renders them natively.
+    Colour swatches load from placehold.co, so they need internet access.</p>
+  </div>
+</div>
+</body>
+</html>

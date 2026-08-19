@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>CSS Relative Color Syntax: Build a Whole Scale From One Base Colour — DEV preview</title>
+<style>
+:root{--bg:#0B0F1A;--panel:#111827;--panel2:#0F172A;--line:#1F2A44;--ink:#E7E9EE;
+--muted:#94A3B8;--primary:#00F5D4;--accent:#F15BB5;--support:#9B5DE5;--radius:14px}
+html[data-theme=light]{--bg:#F5F7F9;--panel:#fff;--panel2:#EFF2F6;--line:#DDE3EC;
+--ink:#1B2333;--muted:#5B6478;--primary:#0E7C86;--accent:#B4276F;--support:#6D3FBF}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+font:16px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+a{color:var(--primary)}
+header.top{position:sticky;top:0;z-index:20;display:flex;gap:14px;align-items:center;padding:12px 18px;
+background:var(--bg);border-bottom:1px solid var(--line)}
+.brand{font-weight:800}.brand span{color:var(--primary)}
+.rule{display:flex;height:6px;width:150px;border-radius:99px;overflow:hidden}.rule i{flex:1}
+.spacer{flex:1}
+.btn{font:inherit;cursor:pointer;border:1px solid var(--line);background:var(--panel);color:var(--ink);
+border-radius:99px;padding:6px 14px;text-decoration:none}
+.btn:hover{border-color:var(--primary)}
+.btn-dl{background:var(--primary);color:#08121A;border-color:var(--primary);font-weight:700}
+.layout{display:grid;grid-template-columns:290px minmax(0,1fr);gap:26px;padding:22px;align-items:start}
+@media(max-width:900px){.layout{grid-template-columns:1fr}}
+nav.files{position:sticky;top:70px;background:var(--panel);border:1px solid var(--line);
+border-radius:var(--radius);padding:12px;display:flex;flex-direction:column;gap:6px}
+nav.files h2{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin:6px 8px 8px}
+nav.files a{display:block;padding:9px 11px;border-radius:10px;text-decoration:none;color:var(--ink);
+font-size:14px;border:1px solid transparent}
+nav.files a:hover{background:var(--panel2)}
+nav.files a.active{background:var(--panel2);border-color:var(--primary);color:var(--primary)}
+nav.files small{display:block;color:var(--muted);font-size:11.5px}
+article{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+padding-bottom:48px;max-width:840px;width:100%;overflow:hidden}
+.cover{width:100%;display:block;border-bottom:1px solid var(--line)}
+.meta{padding:22px clamp(18px,4vw,44px) 0}
+.meta h1{font-size:clamp(26px,4vw,40px);line-height:1.18;margin:.2em 0 .3em}
+.tags{display:flex;flex-wrap:wrap;gap:8px}
+.tag{font-size:12.5px;color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:2px 8px}
+.desc{color:var(--muted);font-size:15px}
+.fm{font-size:12px;color:var(--muted);border-top:1px dashed var(--line);
+border-bottom:1px dashed var(--line);padding:8px 0;margin-bottom:6px}
+.post{padding:0 clamp(18px,4vw,44px)}
+.post img{max-width:100%;display:block;margin:.4em 0}
+.post td img{margin:0 auto}
+
+.post h2{margin-top:1.9em;font-size:26px;border-bottom:1px solid var(--line);padding-bottom:.25em}
+.post h3{margin-top:1.5em;font-size:20px}
+.post blockquote{margin:1.4em 0;padding:.9em 1.1em;background:var(--panel2);
+border-left:4px solid var(--accent);border-radius:0 10px 10px 0}
+.post blockquote p{margin:0}
+.tw{overflow-x:auto;margin:1.3em 0}
+.post table{border-collapse:collapse;width:100%;font-size:14.5px}
+.post th,.post td{border:1px solid var(--line);padding:8px 11px;text-align:left;vertical-align:middle}
+.post th{background:var(--panel2)}
+.post td img{vertical-align:middle}
+.post :not(pre)>code{background:var(--panel2);padding:.15em .4em;border-radius:6px;font-size:.9em;
+font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+pre.code{background:#0d1117;border:1px solid var(--line);border-radius:12px;padding:18px;
+overflow-x:auto;position:relative;margin:1.3em 0}
+pre.code code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13.5px;
+line-height:1.62;color:#C9D1D9;white-space:pre}
+pre.code::before{content:attr(data-lang);position:absolute;top:0;right:0;font-size:10.5px;
+letter-spacing:.12em;text-transform:uppercase;color:#0B0F1A;background:var(--primary);
+padding:2px 10px;border-radius:0 11px 0 10px;font-family:ui-monospace,monospace}
+pre.lang-diff{border-color:#F15BB5}
+pre.lang-console,pre.lang-bash{background:#05070d;border-color:#00F5D4}
+.t-comment{color:#6E7A8A;font-style:italic}
+.t-string{color:#A5D6FF}.t-number{color:#F0A868}.t-kw{color:#FF7B9C}
+.t-prop{color:#9B5DE5;font-weight:600}.t-tag{color:#7EE787}
+.t-color{color:#FFD479}
+.chip{display:inline-block;width:.78em;height:.78em;margin-right:.35em;border-radius:3px;
+border:1px solid rgba(255,255,255,.35);vertical-align:-1px}
+.d-add{color:#7EE787;display:block;background:rgba(46,160,67,.15)}
+.d-del{color:#FF9492;display:block;background:rgba(248,81,73,.14)}
+.d-hunk{color:#79C0FF;display:block}
+.sh-prompt{color:#F15BB5;font-weight:700}.sh-cmd{color:#E7E9EE}
+.sh-ok{color:#7EE787;display:block}.sh-out{color:#9DF7E4;display:block}
+details.liquid{background:var(--panel2);border:1px solid var(--line);border-radius:12px;
+padding:10px 16px;margin:1.4em 0}
+details.liquid summary{cursor:pointer;font-weight:650}
+.cta{display:block;text-align:center;margin:1.8em 0;padding:14px 20px;border-radius:12px;
+background:linear-gradient(90deg,var(--primary),var(--support));color:#08121A;font-weight:750;
+text-decoration:none}
+.katex{background:var(--panel2);border:1px dashed var(--line);border-radius:10px;padding:12px 16px;
+font-family:ui-monospace,monospace;color:var(--primary);margin:1.2em 0}
+.embed{color:var(--muted);font-family:ui-monospace,monospace;font-size:13px}
+.note{max-width:840px;color:var(--muted);font-size:13px;margin-top:14px}
+.post hr{border:0;border-top:1px solid var(--line);margin:2em 0}
+.post p:empty,.post p.spacer{margin:1.1em 0;min-height:1.1em}
+.post h2{margin-top:1.2em}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand">Swatch<span>Deck</span> · DEV.to preview</div>
+  <div class="rule"><i style="background:#0F172A"></i><i style="background:#00F5D4"></i>
+    <i style="background:#F15BB5"></i><i style="background:#9B5DE5"></i></div>
+  <div class="spacer"></div>
+  <a class="btn" href="/downloads">⬇ Downloads</a>
+  <a class="btn btn-dl" href="/download/07-css-relative-color-syntax.md">⬇ This post (.md)</a>
+  <a class="btn" href="../07-css-relative-color-syntax.md" target="_blank">View raw</a>
+  <button class="btn" onclick="var d=document.documentElement;
+    d.dataset.theme=d.dataset.theme==='dark'?'light':'dark'">🌗 Theme</button>
+</header>
+<div class="layout">
+  <nav class="files"><h2>Articles</h2><a href="00-swatch-deck-theme-kit.html" class="">swatch deck theme kit<small>Reusable theme kit</small></a><a href="01-choose-a-color-palette.html" class="">choose a color palette<small>Choosing a palette</small></a><a href="02-hex-to-design-tokens.html" class="">hex to design tokens<small>Tokens pipeline</small></a><a href="03-seasonal-palettes-ui-themes.html" class="">seasonal palettes ui themes<small>Seasonal themes</small></a><a href="04-neon-dark-mode-glow-ui.html" class="">neon dark mode glow ui<small>Neon dark mode</small></a><a href="05-automate-palette-workflow.html" class="">automate palette workflow<small>Automation</small></a><a href="06-css-color-mix-dynamic-variations.html" class="">css color mix dynamic variations<small>color-mix()</small></a><a href="07-css-relative-color-syntax.html" class="active">css relative color syntax<small>Relative colour</small></a><a href="08-light-dark-css-theme-aware.html" class="">light dark css theme aware<small>light-dark()</small></a><a href="09-hwb-color-explained.html" class="">hwb color explained<small>HWB</small></a><a href="10-display-p3-vs-srgb-wide-gamut.html" class="">display p3 vs srgb wide gamut<small>Display-P3</small></a></nav>
+  <div>
+    <article>
+      
+      <div class="meta">
+        <div class="tags"><span class="tag">#css</span><span class="tag">#webdev</span><span class="tag">#ux</span><span class="tag">#frontend</span></div>
+        <h1>CSS Relative Color Syntax: Build a Whole Scale From One Base Colour</h1>
+        <p class="desc">The from keyword lets CSS take a colour apart, change one channel and put it back together. Here&#x27;s how to generate ramps, states and complements from a single token.</p>
+        <div class="fm">published: <b>false</b> · tags: 4/4 · cover_image: none</div>
+      </div>
+      <div class="post"><div class='tw'><table><thead><tr><th><code>#F5F7F9</code></th><th><code>#E3DFF1</code></th><th><code>#E0AED7</code></th><th><code>#994129</code></th></tr></thead><tbody><tr><td><img src="https://placehold.co/120x56/F5F7F9/F5F7F9.png" alt="off-white swatch #F5F7F9" /></td><td><img src="https://placehold.co/120x56/E3DFF1/E3DFF1.png" alt="pale indigo swatch #E3DFF1" /></td><td><img src="https://placehold.co/120x56/E0AED7/E0AED7.png" alt="light magenta swatch #E0AED7" /></td><td><img src="https://placehold.co/120x56/994129/994129.png" alt="dark red swatch #994129" /></td></tr></tbody></table></div>
+<blockquote><p>🎨 <strong>Palette in play</strong> — <a href="https://colorfiind.com/palette/quartz-drift-palette" target="_blank" rel="noopener">Quartz Drift</a> · <code>#F5F7F9</code> <code>#E3DFF1</code> <code>#E0AED7</code> <code>#994129</code></p></blockquote>
+<p>For years, generating a colour ramp meant reaching for Sass, a JavaScript colour library, or a designer&#x27;s patience. Relative colour syntax does it in the stylesheet, at runtime, with no build step — and unlike <code>color-mix()</code>, it lets you touch <strong>one channel at a time</strong>.</p>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/E0AED7/E0AED7.png" alt="Section divider bar in light magenta" /></p>
+<h2>🔑 The <code>from</code> keyword</h2>
+<pre class="code lang-css" data-lang="css"><code>oklch(from var(--brand) calc(l + <span class="t-number">0.15</span>) c h)
+<span class="t-comment">/*    ^origin colour     ^new L         ^keep C  ^keep H */</span>
+</code></pre>
+<p>Any colour function accepts an origin colour after <code>from</code>. Inside, the origin&#x27;s channels are available as single-letter variables. You either pass a channel straight through, or replace it with a calculation.</p>
+<div class='tw'><table><thead><tr><th>Function</th><th>Channels you can reference</th></tr></thead><tbody><tr><td><code>rgb(from …)</code></td><td><code>r</code> <code>g</code> <code>b</code> <code>alpha</code></td></tr><tr><td><code>hsl(from …)</code></td><td><code>h</code> <code>s</code> <code>l</code> <code>alpha</code></td></tr><tr><td><code>hwb(from …)</code></td><td><code>h</code> <code>w</code> <code>b</code> <code>alpha</code></td></tr><tr><td><code>lab(from …)</code></td><td><code>l</code> <code>a</code> <code>b</code> <code>alpha</code></td></tr><tr><td><code>lch(from …)</code></td><td><code>l</code> <code>c</code> <code>h</code> <code>alpha</code></td></tr><tr><td><code>oklab(from …)</code></td><td><code>l</code> <code>a</code> <code>b</code> <code>alpha</code></td></tr><tr><td><code>oklch(from …)</code></td><td><code>l</code> <code>c</code> <code>h</code> <code>alpha</code></td></tr></tbody></table></div>
+<p>The origin gets converted into the function&#x27;s space first, so you can read a hex and write OKLCH — which is exactly what makes this useful.</p>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/994129/994129.png" alt="Section divider bar in dark red" /></p>
+<h2>🪜 A nine-step ramp from one colour</h2>
+<p>Take the anchor of that palette, <code>#994129</code>. In OKLCH it is <code>oklch(0.4883 0.124 36.16)</code> — lightness 49%, modest chroma, a warm orange-red hue.</p>
+<p class='spacer'>&nbsp;</p>
+<p>Shift only lightness and the hue stays honest:</p>
+<p class='spacer'>&nbsp;</p>
+<p><strong><code>ramp.css</code></strong> ⌁ <em>one token, nine steps</em></p>
+<pre class="code lang-css" data-lang="css"><code>:root {
+  <span class="t-prop">--clay</span>: <span class="t-color"><i class="chip" style="background:#994129"></i>#994129</span>;
+
+  --clay-<span class="t-number">100</span>: oklch(from var(--clay) calc(l + <span class="t-number">0.40</span>) calc(c * <span class="t-number">0.35</span>) h);
+  --clay-<span class="t-number">200</span>: oklch(from var(--clay) calc(l + <span class="t-number">0.30</span>) calc(c * <span class="t-number">0.55</span>) h);
+  --clay-<span class="t-number">300</span>: oklch(from var(--clay) calc(l + <span class="t-number">0.20</span>) calc(c * <span class="t-number">0.80</span>) h);
+  --clay-<span class="t-number">400</span>: oklch(from var(--clay) calc(l + <span class="t-number">0.10</span>) c h);
+  --clay-<span class="t-number">500</span>: var(--clay);
+  --clay-<span class="t-number">600</span>: oklch(from var(--clay) calc(l - <span class="t-number">0.08</span>) c h);
+  --clay-<span class="t-number">700</span>: oklch(from var(--clay) calc(l - <span class="t-number">0.14</span>) calc(c * <span class="t-number">0.9</span>) h);
+  --clay-<span class="t-number">800</span>: oklch(from var(--clay) calc(l - <span class="t-number">0.20</span>) calc(c * <span class="t-number">0.8</span>) h);
+  --clay-<span class="t-number">900</span>: oklch(from var(--clay) calc(l - <span class="t-number">0.26</span>) calc(c * <span class="t-number">0.7</span>) h);
+}
+</code></pre>
+<p>What the browser resolves those to:</p>
+<div class='tw'><table><thead><tr><th>Step</th><th>Result</th><th>Swatch</th><th>Good for</th></tr></thead><tbody><tr><td>200</td><td><code>#DC7D63</code></td><td><img src="https://placehold.co/90x30/DC7D63/DC7D63.png" alt="light red swatch #DC7D63" /></td><td>hover on light surfaces</td></tr><tr><td>300</td><td><code>#BA5F46</code></td><td><img src="https://placehold.co/90x30/BA5F46/BA5F46.png" alt="red swatch #BA5F46" /></td><td>badges, chart fills</td></tr><tr><td>500</td><td><code>#994129</code></td><td><img src="https://placehold.co/90x30/994129/994129.png" alt="dark red swatch #994129" /></td><td>the brand itself</td></tr><tr><td>600</td><td><code>#7F2910</code></td><td><img src="https://placehold.co/90x30/7F2910/7F2910.png" alt="burgundy swatch #7F2910" /></td><td>hover, pressed states</td></tr></tbody></table></div>
+<p>Compare that to a ramp built by nudging HSL lightness, where the mid-tones slide toward grey and the dark end turns muddy. Because OKLCH lightness is perceptually uniform, <strong>equal steps look equal</strong>.</p>
+<blockquote><p>🧪 <strong>Lab note</strong> — reduce chroma as you approach both ends. Very light and very dark colours can&#x27;t hold much saturation, and if you don&#x27;t taper it the browser gamut-clips for you — usually less gracefully than you would.</p></blockquote>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/DC7D63/DC7D63.png" alt="Section divider bar in red" /></p>
+<h2>🎯 The patterns worth memorising</h2>
+<p><strong><code>patterns.css</code></strong> ⌁ <em>every one of these is a one-liner</em></p>
+<pre class="code lang-css" data-lang="css"><code><span class="t-comment">/* transparency without rgba() gymnastics */</span>
+<span class="t-prop">--overlay</span>:     rgb(from var(--brand) r g b / <span class="t-number">55</span>%);
+
+<span class="t-comment">/* hover: a touch darker, same personality */</span>
+<span class="t-prop">--hover</span>:       oklch(from var(--brand) calc(l - <span class="t-number">0.08</span>) c h);
+
+<span class="t-comment">/* muted text: same hue, most of the chroma removed */</span>
+<span class="t-prop">--muted</span>:       oklch(from var(--brand) l calc(c * <span class="t-number">0.3</span>) h);   <span class="t-comment">/* → #735951 */</span>
+
+<span class="t-comment">/* complement: rotate the hue half a turn */</span>
+<span class="t-prop">--complement</span>:  oklch(from var(--brand) l c calc(h + <span class="t-number">180</span>));   <span class="t-comment">/* → #006F8C */</span>
+
+<span class="t-comment">/* focus ring: brighter, punchier, semi-transparent */</span>
+<span class="t-prop">--ring</span>:        oklch(from var(--brand) <span class="t-number">0.72</span> calc(c * <span class="t-number">1.2</span>) h / <span class="t-number">0.5</span>);
+
+<span class="t-comment">/* a guaranteed-readable ink for text sitting ON the brand */</span>
+<span class="t-prop">--ink</span>:         oklch(from var(--brand) clamp(<span class="t-number">0</span>, calc((<span class="t-number">0.62</span> - l) * <span class="t-number">1000</span>), <span class="t-number">1</span>) <span class="t-number">0</span> h);
+</code></pre>
+<p>That last one is the party trick: it snaps to black or white depending on whether the origin is lighter or darker than 62% lightness, entirely in CSS.</p>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/BA5F46/BA5F46.png" alt="Section divider bar in red" /></p>
+<h2>🧩 Relative colour vs <code>color-mix()</code></h2>
+<p>They overlap, but they answer different questions.</p>
+<div class='tw'><table><thead><tr><th>Use</th><th>Reach for</th></tr></thead><tbody><tr><td>&quot;10% darker, same hue&quot;</td><td><strong>relative colour</strong> — you&#x27;re editing one channel</td></tr><tr><td>&quot;somewhere between these two brand colours&quot;</td><td><strong><code>color-mix()</code></strong> — you&#x27;re blending two inputs</td></tr><tr><td>&quot;same colour at 40% alpha&quot;</td><td>either; <code>rgb(from … / 40%)</code> reads clearer</td></tr><tr><td>&quot;tint the page background with the brand&quot;</td><td><strong><code>color-mix()</code></strong> — two real colours involved</td></tr><tr><td>&quot;rotate the hue for a complement&quot;</td><td><strong>relative colour</strong> — mixing can&#x27;t rotate hue</td></tr><tr><td>&quot;desaturate to grey&quot;</td><td><strong>relative colour</strong> — <code>calc(c * 0)</code> is exact</td></tr></tbody></table></div>
+<p>In practice, a design system uses both: relative colour to generate each family&#x27;s ramp, <code>color-mix()</code> to blend a family into a surface.</p>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/7F2910/7F2910.png" alt="Section divider bar in burgundy" /></p>
+<h2>🎨 Runtime theming, for real</h2>
+<p>Because the origin can be a custom property, one attribute swaps an entire theme:</p>
+<pre class="code lang-css" data-lang="css"><code>[data-brand=&<span class="t-comment">#x27;clay&#x27;]  { --brand: #994129; }</span>
+[data-brand=&<span class="t-comment">#x27;orchid&#x27;]{ --brand: #E0AED7; }</span>
+[data-brand=&<span class="t-comment">#x27;indigo&#x27;]{ --brand: #E3DFF1; }</span>
+
+.card {
+  <span class="t-prop">background</span>: oklch(from var(--brand) calc(l + <span class="t-number">0.38</span>) calc(c * <span class="t-number">0.25</span>) h);
+  <span class="t-prop">border</span>: <span class="t-number">1px</span> solid oklch(from var(--brand) calc(l + <span class="t-number">0.18</span>) calc(c * <span class="t-number">0.6</span>) h);
+  <span class="t-prop">color</span>: oklch(from var(--brand) calc(l - <span class="t-number">0.28</span>) c h);
+}
+</code></pre>
+<pre class="code lang-js" data-lang="js"><code><span <span class="t-kw">class</span>="t-comment">// white-label switching <span class="t-kw">in</span> one line</span>
+document.documentElement.dataset.brand = tenant.brand;   <span <span class="t-kw">class</span>="t-comment">// &#x27;clay&#x27; | &#x27;orchid&#x27; | &#x27;indigo&#x27;</span>
+</code></pre>
+<p>No rebuild, no extra stylesheet per tenant, no 400-line token file. The card derives everything from whatever <code>--brand</code> currently is.</p>
+<p class='spacer'>&nbsp;</p>
+<details class='liquid' open><summary>🧰 The same ramp as a Sass mixin, for comparison</summary>
+<pre class="code lang-scss" data-lang="scss"><code><span class="t-comment">// the old way — build-time only, no runtime theming</span>
+<span class="t-kw">@use</span> &<span class="t-comment">#x27;sass:color&#x27;;</span>
+
+<span class="t-kw">@function</span> ramp(<span class="t-kw">$base</span>, <span class="t-kw">$step</span>) {
+  <span class="t-kw">@return</span> color.adjust(<span class="t-kw">$base</span>, <span class="t-kw">$lightness</span>: <span class="t-kw">$step</span> * <span class="t-number">6</span>%);
+}
+
+:root {
+  --clay-<span class="t-number">300</span>: <span class="t-comment">#{ramp(#994129, 2)};</span>
+  --clay-<span class="t-number">700</span>: <span class="t-comment">#{ramp(#994129, -2)};</span>
+}
+</code></pre>
+<p>It works, but the values are frozen at build time and <code>color.adjust()</code> operates in HSL, so the steps are perceptually uneven.</p>
+<p class='spacer'>&nbsp;</p>
+</details>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/E0AED7/E0AED7.png" alt="Section divider bar in light magenta" /></p>
+<h2>🚧 Gotchas</h2>
+<p><strong>Channels are unitless numbers in <code>calc()</code>.</strong> In <code>oklch()</code>, <code>l</code> is 0–1 and <code>h</code> is degrees. Write <code>calc(l + 0.1)</code>, not <code>calc(l + 10%)</code>. In <code>hsl()</code>, <code>s</code> and <code>l</code> carry percentages, so there you <em>do</em> write <code>calc(s - 20%)</code>.</p>
+<p class='spacer'>&nbsp;</p>
+<p><strong>Out-of-gamut results get clipped.</strong> <code>oklch(from #994129 calc(l - 0.16) c h)</code> wants a chroma sRGB can&#x27;t reach and lands on <code>#660E00</code>. Taper chroma at the extremes, or accept the browser&#x27;s mapping.</p>
+<p class='spacer'>&nbsp;</p>
+<p><strong><code>none</code> propagates.</strong> If the origin has a missing component — common after conversions — it stays missing in the output. Be explicit when it matters.</p>
+<p class='spacer'>&nbsp;</p>
+<p><strong>Don&#x27;t nest ten deep.</strong> Each derivation is cheap, but a chain of six relative colours referencing each other is unreadable at 3am. One hop from the base, two at most.</p>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/994129/994129.png" alt="Section divider bar in dark red" /></p>
+<h2>🧾 The checklist</h2>
+<ol><li>One base token per colour family; derive the rest.</li><li>Work in <code>oklch()</code> so lightness steps look even to the eye.</li><li>Taper chroma toward both ends of a ramp to avoid gamut clipping.</li><li>Relative colour edits <strong>one channel</strong>; <code>color-mix()</code> blends <strong>two colours</strong>. Use both.</li><li>Remember the units rule: unitless in OKLCH, percentages in HSL.</li><li>Theme by swapping the base custom property, not by shipping a second stylesheet.</li></ol>
+<p>A ramp is only as good as the colour it starts from. If you need a base with a defensible hue, <a href="https://colorfiind.com" target="_blank" rel="noopener">ColorFiind</a> lists palettes with the HEX codes and CSS variables already written — grab one and let relative colour syntax do the rest.</p>
+<p class='spacer'>&nbsp;</p>
+<a class='cta' href='https://colorfiind.com' target='_blank' rel='noopener'>Pick a base colour for your ramp</a>
+<p class='spacer'>&nbsp;</p>
+<p><em>Still generating ramps in JavaScript? Show me the function and I&#x27;ll write the CSS that replaces it.</em> 👇</p></div>
+    </article>
+    <p class="note">Static local preview — Liquid tags are simulated, DEV renders them natively.
+    Colour swatches load from placehold.co, so they need internet access.</p>
+  </div>
+</div>
+</body>
+</html>
