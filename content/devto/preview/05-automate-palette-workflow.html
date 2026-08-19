@@ -43,8 +43,9 @@ padding-bottom:48px;max-width:840px;width:100%;overflow:hidden}
 .fm{font-size:12px;color:var(--muted);border-top:1px dashed var(--line);
 border-bottom:1px dashed var(--line);padding:8px 0;margin-bottom:6px}
 .post{padding:0 clamp(18px,4vw,44px)}
-.post img{max-width:100%;vertical-align:top}
-.post p.band{line-height:0;margin:1.2em 0}
+.post img{max-width:100%;display:block;margin:.4em 0}
+.post td img{margin:0 auto}
+
 .post h2{margin-top:1.9em;font-size:26px;border-bottom:1px solid var(--line);padding-bottom:.25em}
 .post h3{margin-top:1.5em;font-size:20px}
 .post blockquote{margin:1.4em 0;padding:.9em 1.1em;background:var(--panel2);
@@ -113,12 +114,12 @@ font-family:ui-monospace,monospace;color:var(--primary);margin:1.2em 0}
         <p class="desc">One script turns four hex codes into CSS variables, Tailwind config, design tokens, a contrast report and README swatches. Python, Node and PHP versions.</p>
         <div class="fm">published: <b>false</b> · tags: 4/4 · cover_image: none</div>
       </div>
-      <div class="post"><p class='band'><img src="https://placehold.co/250x110/10002B/10002B.png" alt="deep indigo swatch #10002B in a divider rule" /><img src="https://placehold.co/250x110/240046/240046.png" alt="deep indigo swatch #240046 in a divider rule" /><img src="https://placehold.co/250x110/FF006E/FF006E.png" alt="vivid pink swatch #FF006E in a divider rule" /><img src="https://placehold.co/250x110/00F5D4/00F5D4.png" alt="vivid teal swatch #00F5D4 in a divider rule" /></p>
+      <div class="post"><div class='tw'><table><thead><tr><th><code>#10002B</code></th><th><code>#240046</code></th><th><code>#FF006E</code></th><th><code>#00F5D4</code></th></tr></thead><tbody><tr><td><img src="https://placehold.co/120x56/10002B/10002B.png" alt="deep indigo swatch #10002B" /></td><td><img src="https://placehold.co/120x56/240046/240046.png" alt="deep indigo swatch #240046" /></td><td><img src="https://placehold.co/120x56/FF006E/FF006E.png" alt="vivid pink swatch #FF006E" /></td><td><img src="https://placehold.co/120x56/00F5D4/00F5D4.png" alt="vivid teal swatch #00F5D4" /></td></tr></tbody></table></div>
 <blockquote><p>🎨 <strong>Palette in play</strong> — <strong>Clay Flare Spectrum</strong> · <code>#10002B</code> <code>#240046</code> <code>#FF006E</code> <code>#00F5D4</code></p></blockquote>
 <p>Here is a thing I did by hand far too many times: open a palette, copy four hexes, paste them into a CSS file, retype them into <code>tailwind.config.js</code>, retype them <em>again</em> into a tokens file, then paste each one into a contrast checker, then build a swatch table for the README.</p>
 <p>Twelve minutes. Per palette. With at least one typo.</p>
 <p>So I wrote the script. This post is the script, in three languages, plus the CI job that keeps it honest.</p>
-<p class='band'><img src="https://placehold.co/250x12/10002B/10002B.png" alt="deep indigo swatch #10002B in a divider rule" /><img src="https://placehold.co/250x12/240046/240046.png" alt="deep indigo swatch #240046 in a divider rule" /><img src="https://placehold.co/250x12/FF006E/FF006E.png" alt="vivid pink swatch #FF006E in a divider rule" /><img src="https://placehold.co/250x12/00F5D4/00F5D4.png" alt="vivid teal swatch #00F5D4 in a divider rule" /></p>
+<p><img src="https://placehold.co/1000x10/10002B/10002B.png" alt="Section divider bar in deep indigo" /></p>
 <h2>🎯 What &quot;done&quot; looks like</h2>
 <pre class="code lang-console" data-lang="console"><code><span class="sh-prompt">$</span><span class="sh-cmd"> palette-kit all --name &quot;Clay Flare Spectrum&quot; \</span>
 <span class="sh-out">    --slug clay-flare-spectrum \</span>
@@ -224,7 +225,7 @@ font-family:ui-monospace,monospace;color:var(--primary);margin:1.2em 0}
     <span class="t-kw">return</span> &quot;\n&quot;.join(rows)
 </code></pre>
 <p>Passing the same hex as background <strong>and</strong> text color hides placehold.co&#x27;s default size label, leaving a clean block. The <code>alt()</code> helper matters more than it looks: DEV&#x27;s editor runs an accessibility check and will nag you for every <code>![]()</code> with empty square brackets, so generate the description instead of typing it 40 times. Output:</p>
-<p class='band'><img src="https://placehold.co/210x110/10002B/10002B.png" alt="deep indigo swatch #10002B" /><img src="https://placehold.co/210x110/240046/240046.png" alt="deep indigo swatch #240046" /><img src="https://placehold.co/210x110/FF006E/FF006E.png" alt="vivid pink swatch #FF006E" /><img src="https://placehold.co/210x110/00F5D4/00F5D4.png" alt="vivid teal swatch #00F5D4" /></p>
+<div class='tw'><table><thead><tr><th><code>#10002B</code></th><th><code>#240046</code></th><th><code>#FF006E</code></th><th><code>#00F5D4</code></th></tr></thead><tbody><tr><td><img src="https://placehold.co/120x56/10002B/10002B.png" alt="deep indigo swatch #10002B" /></td><td><img src="https://placehold.co/120x56/240046/240046.png" alt="deep indigo swatch #240046" /></td><td><img src="https://placehold.co/120x56/FF006E/FF006E.png" alt="vivid pink swatch #FF006E" /></td><td><img src="https://placehold.co/120x56/00F5D4/00F5D4.png" alt="vivid teal swatch #00F5D4" /></td></tr></tbody></table></div>
 <div class='tw'><table><thead><tr><th>Swatch</th><th>HEX</th><th>Contrast vs white</th><th>Grade</th></tr></thead><tbody><tr><td><img src="https://placehold.co/110x44/10002B/10002B.png" alt="deep indigo swatch #10002B" /></td><td><code>#10002B</code></td><td>19.87:1</td><td>AAA</td></tr><tr><td><img src="https://placehold.co/110x44/240046/240046.png" alt="deep indigo swatch #240046" /></td><td><code>#240046</code></td><td>18.05:1</td><td>AAA</td></tr><tr><td><img src="https://placehold.co/110x44/FF006E/FF006E.png" alt="vivid pink swatch #FF006E" /></td><td><code>#FF006E</code></td><td>3.83:1</td><td>AA Large</td></tr><tr><td><img src="https://placehold.co/110x44/00F5D4/00F5D4.png" alt="vivid teal swatch #00F5D4" /></td><td><code>#00F5D4</code></td><td>1.40:1</td><td>fail</td></tr></tbody></table></div>
 <details class='liquid' open><summary>🏷️ Prefer shields.io badges? Here&#x27;s that variant</summary>
 <pre class="code lang-python" data-lang="python"><code>BADGE = &quot;https:<span <span class="t-kw">class</span>="t-comment">//img.shields.io/badge/{label}-{hex}?style=<span class="t-kw">for</span>-the-badge&amp;labelColor={hex}&quot;</span>
@@ -237,7 +238,7 @@ font-family:ui-monospace,monospace;color:var(--primary);margin:1.2em 0}
 </code></pre>
 <p>Badges give you the hex printed on the chip; <code>placehold.co</code> gives you a clean block. Use badges in READMEs, blocks in articles.</p>
 </details>
-<p class='band'><img src="https://placehold.co/250x12/10002B/10002B.png" alt="deep indigo swatch #10002B in a divider rule" /><img src="https://placehold.co/250x12/240046/240046.png" alt="deep indigo swatch #240046 in a divider rule" /><img src="https://placehold.co/250x12/FF006E/FF006E.png" alt="vivid pink swatch #FF006E in a divider rule" /><img src="https://placehold.co/250x12/00F5D4/00F5D4.png" alt="vivid teal swatch #00F5D4 in a divider rule" /></p>
+<p><img src="https://placehold.co/1000x10/10002B/10002B.png" alt="Section divider bar in deep indigo" /></p>
 <h2>🟨 4 · The Node version</h2>
 <p>Same idea, drop it in any JS project as <code>scripts/palette.mjs</code>:</p>
 <pre class="code lang-js" data-lang="js"><code><span <span class="t-kw">class</span>="t-comment">#!/usr/bin/env node</span>

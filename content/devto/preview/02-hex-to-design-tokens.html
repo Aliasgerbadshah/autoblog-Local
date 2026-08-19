@@ -43,8 +43,9 @@ padding-bottom:48px;max-width:840px;width:100%;overflow:hidden}
 .fm{font-size:12px;color:var(--muted);border-top:1px dashed var(--line);
 border-bottom:1px dashed var(--line);padding:8px 0;margin-bottom:6px}
 .post{padding:0 clamp(18px,4vw,44px)}
-.post img{max-width:100%;vertical-align:top}
-.post p.band{line-height:0;margin:1.2em 0}
+.post img{max-width:100%;display:block;margin:.4em 0}
+.post td img{margin:0 auto}
+
 .post h2{margin-top:1.9em;font-size:26px;border-bottom:1px solid var(--line);padding-bottom:.25em}
 .post h3{margin-top:1.5em;font-size:20px}
 .post blockquote{margin:1.4em 0;padding:.9em 1.1em;background:var(--panel2);
@@ -113,11 +114,11 @@ font-family:ui-monospace,monospace;color:var(--primary);margin:1.2em 0}
         <p class="desc">Turn four hex codes into CSS custom properties, a semantic layer, Tailwind config, SCSS, JSON design tokens and a working dark mode — without retyping a colour.</p>
         <div class="fm">published: <b>false</b> · tags: 4/4 · cover_image: none</div>
       </div>
-      <div class="post"><p class='band'><img src="https://placehold.co/250x110/0F172A/0F172A.png" alt="navy swatch #0F172A in a divider rule" /><img src="https://placehold.co/250x110/00F5D4/00F5D4.png" alt="vivid teal swatch #00F5D4 in a divider rule" /><img src="https://placehold.co/250x110/F15BB5/F15BB5.png" alt="vivid magenta swatch #F15BB5 in a divider rule" /><img src="https://placehold.co/250x110/9B5DE5/9B5DE5.png" alt="indigo swatch #9B5DE5 in a divider rule" /></p>
+      <div class="post"><div class='tw'><table><thead><tr><th><code>#0F172A</code></th><th><code>#00F5D4</code></th><th><code>#F15BB5</code></th><th><code>#9B5DE5</code></th></tr></thead><tbody><tr><td><img src="https://placehold.co/120x56/0F172A/0F172A.png" alt="navy swatch #0F172A" /></td><td><img src="https://placehold.co/120x56/00F5D4/00F5D4.png" alt="vivid teal swatch #00F5D4" /></td><td><img src="https://placehold.co/120x56/F15BB5/F15BB5.png" alt="vivid magenta swatch #F15BB5" /></td><td><img src="https://placehold.co/120x56/9B5DE5/9B5DE5.png" alt="indigo swatch #9B5DE5" /></td></tr></tbody></table></div>
 <blockquote><p>🎨 <strong>Palette in play</strong> — midnight, mint, magenta, violet · <code>#0F172A</code> <code>#00F5D4</code> <code>#F15BB5</code> <code>#9B5DE5</code></p></blockquote>
 <p>Four hex codes is not a theme. A theme is four hex codes that survived a rename, a framework, a dark mode toggle and a designer asking &quot;can we make the accent 10% lighter everywhere?&quot;</p>
 <p>This post is the pipeline I run every time I pull a palette from anywhere. Same four colors, six formats, and the important part — <strong>the naming step in the middle that makes all the rest boring</strong>.</p>
-<p class='band'><img src="https://placehold.co/250x12/0F172A/0F172A.png" alt="navy swatch #0F172A in a divider rule" /><img src="https://placehold.co/250x12/00F5D4/00F5D4.png" alt="vivid teal swatch #00F5D4 in a divider rule" /><img src="https://placehold.co/250x12/F15BB5/F15BB5.png" alt="vivid magenta swatch #F15BB5 in a divider rule" /><img src="https://placehold.co/250x12/9B5DE5/9B5DE5.png" alt="indigo swatch #9B5DE5 in a divider rule" /></p>
+<p><img src="https://placehold.co/1000x10/00F5D4/00F5D4.png" alt="Section divider bar in vivid teal" /></p>
 <h2>📐 The pipeline</h2>
 <pre class="code lang-console" data-lang="console"><code><span class="sh-prompt">$</span><span class="sh-cmd"> palette → raw vars → semantic names → framework config → tokens.json → dark mode</span>
 <span class="sh-out">   1 min     10 sec      2 min           1 min             30 sec       auto</span>
@@ -205,7 +206,7 @@ font-family:ui-monospace,monospace;color:var(--primary);margin:1.2em 0}
   }
 </code></pre>
 <p>Two wins in four lines: the palette became swappable, <strong>and</strong> the white-on-pink text (3.04:1 — a fail for body copy) became near-black on pink at <strong>6.27:1</strong>.</p>
-<p class='band'><img src="https://placehold.co/250x12/0F172A/0F172A.png" alt="navy swatch #0F172A in a divider rule" /><img src="https://placehold.co/250x12/00F5D4/00F5D4.png" alt="vivid teal swatch #00F5D4 in a divider rule" /><img src="https://placehold.co/250x12/F15BB5/F15BB5.png" alt="vivid magenta swatch #F15BB5 in a divider rule" /><img src="https://placehold.co/250x12/9B5DE5/9B5DE5.png" alt="indigo swatch #9B5DE5 in a divider rule" /></p>
+<p><img src="https://placehold.co/1000x10/00F5D4/00F5D4.png" alt="Section divider bar in vivid teal" /></p>
 <h2>4️⃣ Tailwind, SCSS, and everything else</h2>
 <p>Same four colors, wearing different clothes.</p>
 <p><strong><code>tailwind.config.js</code></strong> ⌁ <em>semantic names all the way down</em></p>
@@ -286,7 +287,7 @@ module.exports = {
 <span class="sh-out"></span></code></pre>
 <h2>6️⃣ Light mode for free</h2>
 <p>Because components never touch hexes, an entire second theme is one media query. Swap the neon palette for a light one — here a soft quartz set — and keep every semantic name identical.</p>
-<p class='band'><img src="https://placehold.co/250x64/F5F7F9/F5F7F9.png" alt="off-white swatch #F5F7F9" /><img src="https://placehold.co/250x64/E3DFF1/E3DFF1.png" alt="pale indigo swatch #E3DFF1" /><img src="https://placehold.co/250x64/E0AED7/E0AED7.png" alt="light magenta swatch #E0AED7" /><img src="https://placehold.co/250x64/994129/994129.png" alt="dark red swatch #994129" /></p>
+<div class='tw'><table><thead><tr><th><code>#F5F7F9</code></th><th><code>#E3DFF1</code></th><th><code>#E0AED7</code></th><th><code>#994129</code></th></tr></thead><tbody><tr><td><img src="https://placehold.co/120x56/F5F7F9/F5F7F9.png" alt="off-white swatch #F5F7F9" /></td><td><img src="https://placehold.co/120x56/E3DFF1/E3DFF1.png" alt="pale indigo swatch #E3DFF1" /></td><td><img src="https://placehold.co/120x56/E0AED7/E0AED7.png" alt="light magenta swatch #E0AED7" /></td><td><img src="https://placehold.co/120x56/994129/994129.png" alt="dark red swatch #994129" /></td></tr></tbody></table></div>
 <pre class="code lang-css" data-lang="css"><code>:root {
   <span class="t-prop">color-scheme</span>: dark light;
 }
@@ -319,7 +320,7 @@ document.querySelector(&<span <span class="t-kw">class</span>="t-comment">#x27;#
 });
 </code></pre>
 <blockquote><p>🚧 <strong>Trap</strong> — do not reuse the same accent across both modes without re-checking it. <code>#00F5D4</code> is <strong>12.76:1</strong> on the dark surface and <strong>1.4:1</strong> on white. Same color, opposite verdict. Each mode needs its own contrast pass.</p></blockquote>
-<p class='band'><img src="https://placehold.co/250x12/0F172A/0F172A.png" alt="navy swatch #0F172A in a divider rule" /><img src="https://placehold.co/250x12/00F5D4/00F5D4.png" alt="vivid teal swatch #00F5D4 in a divider rule" /><img src="https://placehold.co/250x12/F15BB5/F15BB5.png" alt="vivid magenta swatch #F15BB5 in a divider rule" /><img src="https://placehold.co/250x12/9B5DE5/9B5DE5.png" alt="indigo swatch #9B5DE5 in a divider rule" /></p>
+<p><img src="https://placehold.co/1000x10/00F5D4/00F5D4.png" alt="Section divider bar in vivid teal" /></p>
 <h2>🤖 Automate the boring 90%</h2>
 <p>Everything above is deterministic, so it can be a script. Feed it a palette, get every format out:</p>
 <pre class="code lang-js" data-lang="js"><code><span <span class="t-kw">class</span>="t-comment">#!/usr/bin/env node</span>

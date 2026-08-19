@@ -9,7 +9,9 @@ tags: css, tailwindcss, webdev, frontend
      then paste the URL it returns into a new `cover_image:` line above.
      A ready-made generation prompt for this post is in COVER-PROMPTS.md. -->
 
-![navy swatch #0F172A in a divider rule](https://placehold.co/250x110/0F172A/0F172A.png)![vivid teal swatch #00F5D4 in a divider rule](https://placehold.co/250x110/00F5D4/00F5D4.png)![vivid magenta swatch #F15BB5 in a divider rule](https://placehold.co/250x110/F15BB5/F15BB5.png)![indigo swatch #9B5DE5 in a divider rule](https://placehold.co/250x110/9B5DE5/9B5DE5.png)
+| `#0F172A` | `#00F5D4` | `#F15BB5` | `#9B5DE5` |
+| :--: | :--: | :--: | :--: |
+| ![navy swatch #0F172A](https://placehold.co/120x56/0F172A/0F172A.png) | ![vivid teal swatch #00F5D4](https://placehold.co/120x56/00F5D4/00F5D4.png) | ![vivid magenta swatch #F15BB5](https://placehold.co/120x56/F15BB5/F15BB5.png) | ![indigo swatch #9B5DE5](https://placehold.co/120x56/9B5DE5/9B5DE5.png) |
 
 > 🎨 **Palette in play** — midnight, mint, magenta, violet · `#0F172A` `#00F5D4` `#F15BB5` `#9B5DE5`
 
@@ -17,7 +19,7 @@ Four hex codes is not a theme. A theme is four hex codes that survived a rename,
 
 This post is the pipeline I run every time I pull a palette from anywhere. Same four colors, six formats, and the important part — **the naming step in the middle that makes all the rest boring**.
 
-![navy swatch #0F172A in a divider rule](https://placehold.co/250x12/0F172A/0F172A.png)![vivid teal swatch #00F5D4 in a divider rule](https://placehold.co/250x12/00F5D4/00F5D4.png)![vivid magenta swatch #F15BB5 in a divider rule](https://placehold.co/250x12/F15BB5/F15BB5.png)![indigo swatch #9B5DE5 in a divider rule](https://placehold.co/250x12/9B5DE5/9B5DE5.png)
+![Section divider bar in vivid teal](https://placehold.co/1000x10/00F5D4/00F5D4.png)
 
 ## 📐 The pipeline
 
@@ -135,7 +137,7 @@ Here is the refactor that usually happens at this point, in the format that make
 
 Two wins in four lines: the palette became swappable, **and** the white-on-pink text (3.04:1 — a fail for body copy) became near-black on pink at **6.27:1**.
 
-![navy swatch #0F172A in a divider rule](https://placehold.co/250x12/0F172A/0F172A.png)![vivid teal swatch #00F5D4 in a divider rule](https://placehold.co/250x12/00F5D4/00F5D4.png)![vivid magenta swatch #F15BB5 in a divider rule](https://placehold.co/250x12/F15BB5/F15BB5.png)![indigo swatch #9B5DE5 in a divider rule](https://placehold.co/250x12/9B5DE5/9B5DE5.png)
+![Section divider bar in vivid teal](https://placehold.co/1000x10/00F5D4/00F5D4.png)
 
 ## 4️⃣ Tailwind, SCSS, and everything else
 
@@ -239,7 +241,9 @@ android
 
 Because components never touch hexes, an entire second theme is one media query. Swap the neon palette for a light one — here a soft quartz set — and keep every semantic name identical.
 
-![off-white swatch #F5F7F9](https://placehold.co/250x64/F5F7F9/F5F7F9.png)![pale indigo swatch #E3DFF1](https://placehold.co/250x64/E3DFF1/E3DFF1.png)![light magenta swatch #E0AED7](https://placehold.co/250x64/E0AED7/E0AED7.png)![dark red swatch #994129](https://placehold.co/250x64/994129/994129.png)
+| `#F5F7F9` | `#E3DFF1` | `#E0AED7` | `#994129` |
+| :--: | :--: | :--: | :--: |
+| ![off-white swatch #F5F7F9](https://placehold.co/120x56/F5F7F9/F5F7F9.png) | ![pale indigo swatch #E3DFF1](https://placehold.co/120x56/E3DFF1/E3DFF1.png) | ![light magenta swatch #E0AED7](https://placehold.co/120x56/E0AED7/E0AED7.png) | ![dark red swatch #994129](https://placehold.co/120x56/994129/994129.png) |
 
 ```css
 :root {
@@ -278,7 +282,7 @@ document.querySelector('#toggle').addEventListener('click', () => {
 
 > 🚧 **Trap** — do not reuse the same accent across both modes without re-checking it. `#00F5D4` is **12.76:1** on the dark surface and **1.4:1** on white. Same color, opposite verdict. Each mode needs its own contrast pass.
 
-![navy swatch #0F172A in a divider rule](https://placehold.co/250x12/0F172A/0F172A.png)![vivid teal swatch #00F5D4 in a divider rule](https://placehold.co/250x12/00F5D4/00F5D4.png)![vivid magenta swatch #F15BB5 in a divider rule](https://placehold.co/250x12/F15BB5/F15BB5.png)![indigo swatch #9B5DE5 in a divider rule](https://placehold.co/250x12/9B5DE5/9B5DE5.png)
+![Section divider bar in vivid teal](https://placehold.co/1000x10/00F5D4/00F5D4.png)
 
 ## 🤖 Automate the boring 90%
 

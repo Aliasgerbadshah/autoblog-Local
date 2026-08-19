@@ -163,12 +163,27 @@ def slugify(name: str) -> str:
 # ---------------------------------------------------------------- generators
 
 
-def band(colors: list[str], w: int = 210, h: int = 110, alt: str = "") -> str:
-    """One markdown line of touching swatch images = a palette band on DEV."""
-    return "".join(
-        f"![{alt or norm(c)}]({PLACEHOLDER.format(w=w, h=h, hex=norm(c))})"
-        for c in colors
-    )
+def band(colors: list[str], w: int = 120, h: int = 56, alt: str = "") -> str:
+    """A palette band that survives DEV.to.
+
+    DEV renders article images as block elements, so images on one line stack
+    vertically. A one-row table forces them side by side and gives you the hex
+    codes as a header for free.
+    """
+    hexes = [norm(c) for c in colors]
+    head = "| " + " | ".join(f"`#{c}`" for c in hexes) + " |"
+    sep = "| " + " | ".join([":--:"] * len(hexes)) + " |"
+    body = "| " + " | ".join(
+        f"![{alt_text(c)}]({PLACEHOLDER.format(w=w, h=h, hex=c)})" for c in hexes
+    ) + " |"
+    return f"{head}\n{sep}\n{body}"
+
+
+def divider(colors: list[str], w: int = 1000, h: int = 10) -> str:
+    """Full-width coloured rule — one image, never several."""
+    best = max((norm(c) for c in colors), key=lambda c: hsl(c)[1])
+    return (f"![Section divider bar in {color_name(best)}]"
+            f"({PLACEHOLDER.format(w=w, h=h, hex=best)})")
 
 
 ROLES = ["Base / background", "Primary", "Accent", "Support"]
@@ -185,7 +200,7 @@ def swatch_table(colors: list[str]) -> str:
         hh, ss, ll = hsl(h)
         ratio = contrast(h, "FFFFFF")
         rows.append(
-            f"| ![{h}]({PLACEHOLDER.format(w=110, h=44, hex=h)}) | `#{h}` | "
+            f"| ![{alt_text(h)}]({PLACEHOLDER.format(w=110, h=44, hex=h)}) | `#{h}` | "
             f"`{r}, {g}, {b}` | `{hh}° {ss}% {ll}%` | **{ratio}:1** "
             f"({wcag_grade(ratio)}) | {ROLES[i] if i < len(ROLES) else 'Extra'} |"
         )
@@ -320,13 +335,12 @@ def cover_png(name: str, slug: str, colors: list[str], out: Path,
 
 
 def render_markdown(name: str, slug: str, colors: list[str]) -> str:
-    url = f"https://colorfiind.com/palette/{slug}"
     parts = [
         f"### {name}",
         "",
-        band(colors, alt=f"{name} swatch"),
+        band(colors),
         "",
-        f"> **[{name} on ColorFiind]({url})**",
+        divider(colors),
         "",
         swatch_table(colors),
         "",

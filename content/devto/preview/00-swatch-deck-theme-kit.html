@@ -43,8 +43,9 @@ padding-bottom:48px;max-width:840px;width:100%;overflow:hidden}
 .fm{font-size:12px;color:var(--muted);border-top:1px dashed var(--line);
 border-bottom:1px dashed var(--line);padding:8px 0;margin-bottom:6px}
 .post{padding:0 clamp(18px,4vw,44px)}
-.post img{max-width:100%;vertical-align:top}
-.post p.band{line-height:0;margin:1.2em 0}
+.post img{max-width:100%;display:block;margin:.4em 0}
+.post td img{margin:0 auto}
+
 .post h2{margin-top:1.9em;font-size:26px;border-bottom:1px solid var(--line);padding-bottom:.25em}
 .post h3{margin-top:1.5em;font-size:20px}
 .post blockquote{margin:1.4em 0;padding:.9em 1.1em;background:var(--panel2);
@@ -113,22 +114,29 @@ font-family:ui-monospace,monospace;color:var(--primary);margin:1.2em 0}
         <p class="desc">Copy-paste building blocks for colour-heavy DEV.to articles: swatches that actually render, tabbed code blocks, collapsibles and contrast tables.</p>
         <div class="fm">published: <b>false</b> · tags: 4/4 · cover_image: none</div>
       </div>
-      <div class="post"><p class='band'><img src="https://placehold.co/250x14/0F172A/0F172A.png" alt="navy swatch #0F172A in a divider rule" /><img src="https://placehold.co/250x14/00F5D4/00F5D4.png" alt="vivid teal swatch #00F5D4 in a divider rule" /><img src="https://placehold.co/250x14/F15BB5/F15BB5.png" alt="vivid magenta swatch #F15BB5 in a divider rule" /><img src="https://placehold.co/250x14/9B5DE5/9B5DE5.png" alt="indigo swatch #9B5DE5 in a divider rule" /></p>
-<p>DEV.to strips <code>&lt;style&gt;</code> tags and inline <code>style=&quot;&quot;</code> attributes, so you cannot paint a div pink and call it a day. What you <em>can</em> do is let <strong>images carry the color</strong> and let <strong>fenced code blocks carry the texture</strong>. That is the whole trick behind this theme.</p>
+      <div class="post"><p><img src="https://placehold.co/1000x10/00F5D4/00F5D4.png" alt="Section divider bar in vivid teal" /></p>
+<p>DEV.to strips <code>&lt;style&gt;</code> tags and inline <code>style=&quot;&quot;</code> attributes, so you cannot paint a div pink and call it a day. What you <em>can</em> do is let <strong>images carry the color</strong> and let <strong>fenced code blocks carry the texture</strong>. Two rules make it work: images are <strong>block-level on DEV</strong>, so anything that must sit side by side goes in a <strong>table row</strong>; and a divider is a <strong>single wide bar</strong>, not four small ones.</p>
 <h2>🧱 The eight blocks</h2>
-<div class='tw'><table><thead><tr><th>#</th><th>Block</th><th>What it does</th><th>Renders on DEV?</th></tr></thead><tbody><tr><td>1</td><td>Cover band</td><td>1000×420 PNG, palette + title</td><td>✅</td></tr><tr><td>2</td><td>Palette band</td><td>4 touching swatch images = one bar</td><td>✅</td></tr><tr><td>3</td><td>Color rule</td><td>thin band instead of <code>---</code></td><td>✅</td></tr><tr><td>4</td><td>Swatch table</td><td>color + HEX + RGB + HSL + contrast</td><td>✅</td></tr><tr><td>5</td><td>Code tab</td><td>filename line above a fenced block</td><td>✅</td></tr><tr><td>6</td><td>Diff block</td><td>red/green &quot;before → after&quot;</td><td>✅</td></tr><tr><td>7</td><td>Terminal block</td><td>a <code>console</code> fence for a shell look</td><td>✅</td></tr><tr><td>8</td><td>Collapsible</td><td>the <em>details</em> liquid tag for long code</td><td>✅</td></tr><tr><td>—</td><td><code>&lt;style&gt;</code>, inline style attributes, <code>&lt;script&gt;</code></td><td>sanitized away</td><td>🚫</td></tr></tbody></table></div>
-<p class='band'><img src="https://placehold.co/250x8/0F172A/0F172A.png" alt="navy swatch #0F172A in a divider rule" /><img src="https://placehold.co/250x8/00F5D4/00F5D4.png" alt="vivid teal swatch #00F5D4 in a divider rule" /><img src="https://placehold.co/250x8/F15BB5/F15BB5.png" alt="vivid magenta swatch #F15BB5 in a divider rule" /><img src="https://placehold.co/250x8/9B5DE5/9B5DE5.png" alt="indigo swatch #9B5DE5 in a divider rule" /></p>
-<h2>1 · Palette band</h2>
-<p>Four images on <strong>one line with no spaces between them</strong> butt up against each other and read as a single bar:</p>
-<pre class="code lang-markdown" data-lang="markdown"><code>![navy swatch <span class="t-color"><i class="chip" style="background:#0F172A"></i>#0F172A</span>](https:<span class="t-comment">//placehold.co/210x110/0F172A/0F172A.png)![vivid teal swatch #00F5D4](https://placehold.co/210x110/00F5D4/00F5D4.png)![vivid magenta swatch #F15BB5](https://placehold.co/210x110/F15BB5/F15BB5.png)![indigo swatch #9B5DE5](https://placehold.co/210x110/9B5DE5/9B5DE5.png)</span>
+<div class='tw'><table><thead><tr><th>#</th><th>Block</th><th>What it does</th><th>Renders on DEV?</th></tr></thead><tbody><tr><td>1</td><td>Cover band</td><td>1000×420 PNG, palette + title</td><td>✅</td></tr><tr><td>2</td><td>Palette band</td><td>one-row table, one colour per cell</td><td>✅</td></tr><tr><td>3</td><td>Color rule</td><td>one wide 1000×10 bar instead of <code>---</code></td><td>✅</td></tr><tr><td>4</td><td>Swatch table</td><td>color + HEX + RGB + HSL + contrast</td><td>✅</td></tr><tr><td>5</td><td>Code tab</td><td>filename line above a fenced block</td><td>✅</td></tr><tr><td>6</td><td>Diff block</td><td>red/green &quot;before → after&quot;</td><td>✅</td></tr><tr><td>7</td><td>Terminal block</td><td>a <code>console</code> fence for a shell look</td><td>✅</td></tr><tr><td>8</td><td>Collapsible</td><td>the <em>details</em> liquid tag for long code</td><td>✅</td></tr><tr><td>—</td><td><code>&lt;style&gt;</code>, inline style attributes, <code>&lt;script&gt;</code></td><td>sanitized away</td><td>🚫</td></tr></tbody></table></div>
+<p><img src="https://placehold.co/1000x10/00F5D4/00F5D4.png" alt="Section divider bar in vivid teal" /></p>
+<h2>1 · Palette band — use a table row, not a line of images</h2>
+<p>This is the mistake worth learning from. <strong>DEV renders every article image as a block element</strong>, so four images on one line do <em>not</em> butt together into a bar — they stack vertically down the page.</p>
+<pre class="code lang-diff" data-lang="diff"><code><span class="d-del">- ![a](url)![b](url)![c](url)![d](url)      ← stacks vertically on DEV</span>
+<span class="d-add">+ | `#0F172A` | `#00F5D4` | `#F15BB5` | `#9B5DE5` |</span>
+<span class="d-add">+ | :--: | :--: | :--: | :--: |</span>
+<span class="d-add">+ | ![a](url) | ![b](url) | ![c](url) | ![d](url) |</span>
 </code></pre>
-<p>Result:</p>
-<p class='band'><img src="https://placehold.co/210x110/0F172A/0F172A.png" alt="navy swatch #0F172A" /><img src="https://placehold.co/210x110/00F5D4/00F5D4.png" alt="vivid teal swatch #00F5D4" /><img src="https://placehold.co/210x110/F15BB5/F15BB5.png" alt="vivid magenta swatch #F15BB5" /><img src="https://placehold.co/210x110/9B5DE5/9B5DE5.png" alt="indigo swatch #9B5DE5" /></p>
-<p>The URL shape is <code>placehold.co/{W}x{H}/{background}/{textColor}.png</code>. Passing the <strong>same hex twice</strong> hides the auto-generated size label, so you get a clean solid block. <code>dummyimage.com/210x110/0f172a/0f172a.png</code> is a drop-in fallback if placehold.co is ever down.</p>
-<h2>2 · Color rule</h2>
-<p>A 10–14px band replaces the boring <code>---</code> divider and keeps the article&#x27;s palette in the reader&#x27;s eye:</p>
-<pre class="code lang-markdown" data-lang="markdown"><code>![navy swatch <span class="t-color"><i class="chip" style="background:#0F172A"></i>#0F172A</span> in a divider rule](https:<span class="t-comment">//placehold.co/250x12/0F172A/0F172A.png)![vivid teal swatch #00F5D4 in a divider rule](https://placehold.co/250x12/00F5D4/00F5D4.png)![vivid magenta swatch #F15BB5 in a divider rule](https://placehold.co/250x12/F15BB5/F15BB5.png)![indigo swatch #9B5DE5 in a divider rule](https://placehold.co/250x12/9B5DE5/9B5DE5.png)</span>
+<p>Table cells are the reliable way to force horizontal layout, and you get the hex codes as a header row for free:</p>
+<div class='tw'><table><thead><tr><th><code>#0F172A</code></th><th><code>#00F5D4</code></th><th><code>#F15BB5</code></th><th><code>#9B5DE5</code></th></tr></thead><tbody><tr><td><img src="https://placehold.co/120x56/0F172A/0F172A.png" alt="navy swatch #0F172A" /></td><td><img src="https://placehold.co/120x56/00F5D4/00F5D4.png" alt="vivid teal swatch #00F5D4" /></td><td><img src="https://placehold.co/120x56/F15BB5/F15BB5.png" alt="vivid magenta swatch #F15BB5" /></td><td><img src="https://placehold.co/120x56/9B5DE5/9B5DE5.png" alt="indigo swatch #9B5DE5" /></td></tr></tbody></table></div>
+<p>The URL shape is <code>placehold.co/{W}x{H}/{background}/{textColor}.png</code>. Passing the <strong>same hex twice</strong> hides the auto-generated size label, so you get a clean solid block. <code>dummyimage.com/120x56/0f172a/0f172a.png</code> is a drop-in fallback if placehold.co is ever down.</p>
+<p>Keep swatches at <strong>120×56 or smaller</strong> inside tables — four columns of 210px overflow the article width on mobile.</p>
+<blockquote><p>🚧 <strong>Trap</strong> — the same rule applies <em>inside</em> a cell. Four images in one cell stack too. One colour per cell, always.</p></blockquote>
+<h2>2 · Color rule — one wide bar</h2>
+<p>A divider wants to be a single image, for exactly the same reason:</p>
+<pre class="code lang-markdown" data-lang="markdown"><code>![Section divider bar in vivid teal](https:<span class="t-comment">//placehold.co/1000x10/00F5D4/00F5D4.png)</span>
 </code></pre>
+<p><img src="https://placehold.co/1000x10/00F5D4/00F5D4.png" alt="Section divider bar in vivid teal" /></p>
+<p>It scales down to any screen width, and it beats a grey <code>---</code> for keeping the article&#x27;s palette present.</p>
 <h2>3 · Swatch table</h2>
 <div class='tw'><table><thead><tr><th>Swatch</th><th>HEX</th><th>RGB</th><th>HSL</th><th>On <code>#0F172A</code></th><th>Role</th></tr></thead><tbody><tr><td><img src="https://placehold.co/110x44/0F172A/0F172A.png" alt="navy swatch #0F172A" /></td><td><code>#0F172A</code></td><td><code>15, 23, 42</code></td><td><code>222° 47% 11%</code></td><td>—</td><td>Base</td></tr><tr><td><img src="https://placehold.co/110x44/00F5D4/00F5D4.png" alt="vivid teal swatch #00F5D4" /></td><td><code>#00F5D4</code></td><td><code>0, 245, 212</code></td><td><code>172° 100% 48%</code></td><td><strong>12.76:1</strong> ✅</td><td>Primary</td></tr><tr><td><img src="https://placehold.co/110x44/F15BB5/F15BB5.png" alt="vivid magenta swatch #F15BB5" /></td><td><code>#F15BB5</code></td><td><code>241, 91, 181</code></td><td><code>324° 84% 65%</code></td><td><strong>5.87:1</strong> ✅</td><td>Accent</td></tr><tr><td><img src="https://placehold.co/110x44/9B5DE5/9B5DE5.png" alt="indigo swatch #9B5DE5" /></td><td><code>#9B5DE5</code></td><td><code>155, 93, 229</code></td><td><code>267° 72% 63%</code></td><td><strong>4.33:1</strong> 🟡</td><td>Support</td></tr></tbody></table></div>
 <h2>4 · Code tabs — five looks for five jobs</h2>
@@ -185,7 +193,7 @@ font-family:ui-monospace,monospace;color:var(--primary);margin:1.2em 0}
 ---
 </code></pre>
 <blockquote><p>🧪 <strong>Lab note</strong> — <code>tags</code> is a <strong>maximum of four</strong>, comma separated, no <code>#</code>. <code>cover_image</code> looks best at exactly <strong>1000×420</strong>. Keep <code>published: false</code> until the preview looks right, then flip it.</p></blockquote>
-<p class='band'><img src="https://placehold.co/250x12/0F172A/0F172A.png" alt="navy swatch #0F172A in a divider rule" /><img src="https://placehold.co/250x12/00F5D4/00F5D4.png" alt="vivid teal swatch #00F5D4 in a divider rule" /><img src="https://placehold.co/250x12/F15BB5/F15BB5.png" alt="vivid magenta swatch #F15BB5 in a divider rule" /><img src="https://placehold.co/250x12/9B5DE5/9B5DE5.png" alt="indigo swatch #9B5DE5 in a divider rule" /></p>
+<p><img src="https://placehold.co/1000x10/00F5D4/00F5D4.png" alt="Section divider bar in vivid teal" /></p>
 <h2>7 · Generate all of it</h2>
 <p>Every band, table and token block in this series came out of one script:</p>
 <pre class="code lang-console" data-lang="console"><code><span class="sh-prompt">$</span><span class="sh-cmd"> python3 tools/palette_kit.py swatches \</span>

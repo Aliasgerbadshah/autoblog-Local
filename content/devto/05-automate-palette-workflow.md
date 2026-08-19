@@ -9,7 +9,9 @@ tags: python, css, productivity, webdev
      then paste the URL it returns into a new `cover_image:` line above.
      A ready-made generation prompt for this post is in COVER-PROMPTS.md. -->
 
-![deep indigo swatch #10002B in a divider rule](https://placehold.co/250x110/10002B/10002B.png)![deep indigo swatch #240046 in a divider rule](https://placehold.co/250x110/240046/240046.png)![vivid pink swatch #FF006E in a divider rule](https://placehold.co/250x110/FF006E/FF006E.png)![vivid teal swatch #00F5D4 in a divider rule](https://placehold.co/250x110/00F5D4/00F5D4.png)
+| `#10002B` | `#240046` | `#FF006E` | `#00F5D4` |
+| :--: | :--: | :--: | :--: |
+| ![deep indigo swatch #10002B](https://placehold.co/120x56/10002B/10002B.png) | ![deep indigo swatch #240046](https://placehold.co/120x56/240046/240046.png) | ![vivid pink swatch #FF006E](https://placehold.co/120x56/FF006E/FF006E.png) | ![vivid teal swatch #00F5D4](https://placehold.co/120x56/00F5D4/00F5D4.png) |
 
 > 🎨 **Palette in play** — **Clay Flare Spectrum** · `#10002B` `#240046` `#FF006E` `#00F5D4`
 
@@ -19,7 +21,7 @@ Twelve minutes. Per palette. With at least one typo.
 
 So I wrote the script. This post is the script, in three languages, plus the CI job that keeps it honest.
 
-![deep indigo swatch #10002B in a divider rule](https://placehold.co/250x12/10002B/10002B.png)![deep indigo swatch #240046 in a divider rule](https://placehold.co/250x12/240046/240046.png)![vivid pink swatch #FF006E in a divider rule](https://placehold.co/250x12/FF006E/FF006E.png)![vivid teal swatch #00F5D4 in a divider rule](https://placehold.co/250x12/00F5D4/00F5D4.png)
+![Section divider bar in deep indigo](https://placehold.co/1000x10/10002B/10002B.png)
 
 ## 🎯 What "done" looks like
 
@@ -153,7 +155,9 @@ def table(colors):
 
 Passing the same hex as background **and** text color hides placehold.co's default size label, leaving a clean block. The `alt()` helper matters more than it looks: DEV's editor runs an accessibility check and will nag you for every `![]()` with empty square brackets, so generate the description instead of typing it 40 times. Output:
 
-![deep indigo swatch #10002B](https://placehold.co/210x110/10002B/10002B.png)![deep indigo swatch #240046](https://placehold.co/210x110/240046/240046.png)![vivid pink swatch #FF006E](https://placehold.co/210x110/FF006E/FF006E.png)![vivid teal swatch #00F5D4](https://placehold.co/210x110/00F5D4/00F5D4.png)
+| `#10002B` | `#240046` | `#FF006E` | `#00F5D4` |
+| :--: | :--: | :--: | :--: |
+| ![deep indigo swatch #10002B](https://placehold.co/120x56/10002B/10002B.png) | ![deep indigo swatch #240046](https://placehold.co/120x56/240046/240046.png) | ![vivid pink swatch #FF006E](https://placehold.co/120x56/FF006E/FF006E.png) | ![vivid teal swatch #00F5D4](https://placehold.co/120x56/00F5D4/00F5D4.png) |
 
 | Swatch | HEX | Contrast vs white | Grade |
 | :----: | :-- | :---------------- | :---- |
@@ -178,7 +182,7 @@ Badges give you the hex printed on the chip; `placehold.co` gives you a clean bl
 
 {% enddetails %}
 
-![deep indigo swatch #10002B in a divider rule](https://placehold.co/250x12/10002B/10002B.png)![deep indigo swatch #240046 in a divider rule](https://placehold.co/250x12/240046/240046.png)![vivid pink swatch #FF006E in a divider rule](https://placehold.co/250x12/FF006E/FF006E.png)![vivid teal swatch #00F5D4 in a divider rule](https://placehold.co/250x12/00F5D4/00F5D4.png)
+![Section divider bar in deep indigo](https://placehold.co/1000x10/10002B/10002B.png)
 
 ## 🟨 4 · The Node version
 

@@ -9,7 +9,9 @@ tags: css, webdev, design, beginners
      then paste the URL it returns into a new `cover_image:` line above.
      A ready-made generation prompt for this post is in COVER-PROMPTS.md. -->
 
-![deep purple swatch #3C0D4F](https://placehold.co/250x110/3C0D4F/3C0D4F.png)![vivid red swatch #F22C33](https://placehold.co/250x110/F22C33/F22C33.png)![light lime swatch #C6EEA0](https://placehold.co/250x110/C6EEA0/C6EEA0.png)![cyan swatch #1681DF](https://placehold.co/250x110/1681DF/1681DF.png)
+| `#3C0D4F` | `#F22C33` | `#C6EEA0` | `#1681DF` |
+| :--: | :--: | :--: | :--: |
+| ![deep purple swatch #3C0D4F](https://placehold.co/120x56/3C0D4F/3C0D4F.png) | ![vivid red swatch #F22C33](https://placehold.co/120x56/F22C33/F22C33.png) | ![light lime swatch #C6EEA0](https://placehold.co/120x56/C6EEA0/C6EEA0.png) | ![cyan swatch #1681DF](https://placehold.co/120x56/1681DF/1681DF.png) |
 
 > 🎨 **Palette in play** — `#3C0D4F` `#F22C33` `#C6EEA0` `#1681DF`
 
@@ -19,18 +21,18 @@ The problem is not taste. It is that **a palette is chosen as a picture and used
 
 Here is the process I use to go from "ooh, that one" to a theme that survives code review.
 
-![deep purple swatch #3C0D4F in a divider rule](https://placehold.co/250x12/3C0D4F/3C0D4F.png)![vivid red swatch #F22C33 in a divider rule](https://placehold.co/250x12/F22C33/F22C33.png)![light lime swatch #C6EEA0 in a divider rule](https://placehold.co/250x12/C6EEA0/C6EEA0.png)![cyan swatch #1681DF in a divider rule](https://placehold.co/250x12/1681DF/1681DF.png)
+![Section divider bar in vivid red](https://placehold.co/1000x10/F22C33/F22C33.png)
 
 ## 🧩 1 · Read the structure before the colors
 
 Ignore whether you like it for a second and ask: *what shape is this palette?* Almost every four-color set falls into one of four structures, and the structure tells you what it can be used for.
 
-| Structure | Looks like | Ships well as | Watch out for |
-| :-- | :-- | :-- | :-- |
-| **Ramp** — one hue, four lightnesses | ![navy swatch #232E43](https://placehold.co/62x26/232E43/232E43.png)![dark blue swatch #49627F](https://placehold.co/62x26/49627F/49627F.png)![muted blue swatch #7F95B1](https://placehold.co/62x26/7F95B1/7F95B1.png)![light grey swatch #E8E9E5](https://placehold.co/62x26/E8E9E5/E8E9E5.png) | a whole dashboard: bg, borders, muted text, text | no accent — you must add one |
-| **Base + signals** — one dark, three brights | ![navy swatch #0F172A](https://placehold.co/62x26/0F172A/0F172A.png)![vivid teal swatch #00F5D4](https://placehold.co/62x26/00F5D4/00F5D4.png)![vivid magenta swatch #F15BB5](https://placehold.co/62x26/F15BB5/F15BB5.png)![indigo swatch #9B5DE5](https://placehold.co/62x26/9B5DE5/9B5DE5.png) | dark mode with status colors | brights are unreadable on white |
-| **Lights + anchor** — three pales, one deep | ![off-white swatch #F5F7F9](https://placehold.co/62x26/F5F7F9/F5F7F9.png)![pale indigo swatch #E3DFF1](https://placehold.co/62x26/E3DFF1/E3DFF1.png)![light magenta swatch #E0AED7](https://placehold.co/62x26/E0AED7/E0AED7.png)![dark red swatch #994129](https://placehold.co/62x26/994129/994129.png) | light UI with one strong CTA | only one usable text color |
-| **Near-monochrome** — four neighbours | ![light orange swatch #FFEAB6](https://placehold.co/62x26/FFEAB6/FFEAB6.png)![light yellow swatch #FFEEBA](https://placehold.co/62x26/FFEEBA/FFEEBA.png)![light orange swatch #FFD489](https://placehold.co/62x26/FFD489/FFD489.png)![vivid orange swatch #F9BA5D](https://placehold.co/62x26/F9BA5D/F9BA5D.png) | backgrounds, illustration, packaging | **no text can live here** |
+| Structure | | | | | Ships well as | Watch out for |
+| :-- | :--: | :--: | :--: | :--: | :-- | :-- |
+| **Ramp** — one hue, four lightnesses | ![navy swatch #232E43](https://placehold.co/76x34/232E43/232E43.png) | ![dark blue swatch #49627F](https://placehold.co/76x34/49627F/49627F.png) | ![muted blue swatch #7F95B1](https://placehold.co/76x34/7F95B1/7F95B1.png) | ![light grey swatch #E8E9E5](https://placehold.co/76x34/E8E9E5/E8E9E5.png) | a whole dashboard: bg, borders, muted text, text | no accent — you must add one |
+| **Base + signals** — one dark, three brights | ![navy swatch #0F172A](https://placehold.co/76x34/0F172A/0F172A.png) | ![vivid teal swatch #00F5D4](https://placehold.co/76x34/00F5D4/00F5D4.png) | ![vivid magenta swatch #F15BB5](https://placehold.co/76x34/F15BB5/F15BB5.png) | ![indigo swatch #9B5DE5](https://placehold.co/76x34/9B5DE5/9B5DE5.png) | dark mode with status colours | brights are unreadable on white |
+| **Lights + anchor** — three pales, one deep | ![off-white swatch #F5F7F9](https://placehold.co/76x34/F5F7F9/F5F7F9.png) | ![pale indigo swatch #E3DFF1](https://placehold.co/76x34/E3DFF1/E3DFF1.png) | ![light magenta swatch #E0AED7](https://placehold.co/76x34/E0AED7/E0AED7.png) | ![dark red swatch #994129](https://placehold.co/76x34/994129/994129.png) | light UI with one strong CTA | only one usable text colour |
+| **Near-monochrome** — four neighbours | ![light orange swatch #FFEAB6](https://placehold.co/76x34/FFEAB6/FFEAB6.png) | ![light yellow swatch #FFEEBA](https://placehold.co/76x34/FFEEBA/FFEEBA.png) | ![light orange swatch #FFD489](https://placehold.co/76x34/FFD489/FFD489.png) | ![vivid orange swatch #F9BA5D](https://placehold.co/76x34/F9BA5D/F9BA5D.png) | backgrounds, illustration, packaging | **no text can live here** |
 
 That last row is the classic trap. The lightest and darkest of those four honeys are **1.45:1** apart. It is gorgeous, and it is a set of *surfaces* — bring your own ink or nobody can read your app.
 
@@ -84,7 +86,7 @@ Run this on the example palette and it grades itself:
 
 Nothing here is "bad". The table just tells you which color is allowed to be a paragraph and which one is allowed to be a background — a decision you would otherwise make by accident.
 
-![deep purple swatch #3C0D4F in a divider rule](https://placehold.co/250x12/3C0D4F/3C0D4F.png)![vivid red swatch #F22C33 in a divider rule](https://placehold.co/250x12/F22C33/F22C33.png)![light lime swatch #C6EEA0 in a divider rule](https://placehold.co/250x12/C6EEA0/C6EEA0.png)![cyan swatch #1681DF in a divider rule](https://placehold.co/250x12/1681DF/1681DF.png)
+![Section divider bar in vivid red](https://placehold.co/1000x10/F22C33/F22C33.png)
 
 ## 🏷️ 3 · Name the colors after their job
 

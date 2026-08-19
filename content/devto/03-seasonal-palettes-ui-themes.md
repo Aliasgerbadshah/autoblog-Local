@@ -9,7 +9,9 @@ tags: css, design, ux, webdev
      then paste the URL it returns into a new `cover_image:` line above.
      A ready-made generation prompt for this post is in COVER-PROMPTS.md. -->
 
-![light magenta swatch #D8C7D8](https://placehold.co/125x110/D8C7D8/D8C7D8.png)![muted blue swatch #8FA1B3](https://placehold.co/125x110/8FA1B3/8FA1B3.png)![light magenta swatch #E6DDE3](https://placehold.co/125x110/E6DDE3/E6DDE3.png)![mid grey swatch #9B8FA3](https://placehold.co/125x110/9B8FA3/9B8FA3.png)![burgundy swatch #6D0F2B](https://placehold.co/125x110/6D0F2B/6D0F2B.png)![deep teal swatch #004D40](https://placehold.co/125x110/004D40/004D40.png)![dark blue swatch #0B3D91](https://placehold.co/125x110/0B3D91/0B3D91.png)![deep indigo swatch #2A1458](https://placehold.co/125x110/2A1458/2A1458.png)
+| `#D8C7D8` | `#8FA1B3` | `#E6DDE3` | `#9B8FA3` | `#6D0F2B` | `#004D40` | `#0B3D91` | `#2A1458` |
+| :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--: |
+| ![light magenta swatch #D8C7D8](https://placehold.co/120x56/D8C7D8/D8C7D8.png) | ![muted blue swatch #8FA1B3](https://placehold.co/120x56/8FA1B3/8FA1B3.png) | ![light magenta swatch #E6DDE3](https://placehold.co/120x56/E6DDE3/E6DDE3.png) | ![mid grey swatch #9B8FA3](https://placehold.co/120x56/9B8FA3/9B8FA3.png) | ![burgundy swatch #6D0F2B](https://placehold.co/120x56/6D0F2B/6D0F2B.png) | ![deep teal swatch #004D40](https://placehold.co/120x56/004D40/004D40.png) | ![dark blue swatch #0B3D91](https://placehold.co/120x56/0B3D91/0B3D91.png) | ![deep indigo swatch #2A1458](https://placehold.co/120x56/2A1458/2A1458.png) |
 
 > 🎨 **Palettes in play** — **Soft Summer Atelier** *(left)* vs **Deep Winter Journal** *(right)*
 
@@ -20,7 +22,7 @@ Seasonal color analysis sounds like something that belongs in a fashion magazine
 
 Once you sort palettes along those two axes, "pick a theme" becomes "pick a quadrant" — and that is a decision you can make in ten seconds.
 
-![light magenta swatch #D8C7D8 in a divider rule](https://placehold.co/166x12/D8C7D8/D8C7D8.png)![muted blue swatch #8FA1B3 in a divider rule](https://placehold.co/167x12/8FA1B3/8FA1B3.png)![burgundy swatch #6D0F2B in a divider rule](https://placehold.co/167x12/6D0F2B/6D0F2B.png)![dark blue swatch #0B3D91 in a divider rule](https://placehold.co/250x12/0B3D91/0B3D91.png)![deep indigo swatch #2A1458 in a divider rule](https://placehold.co/250x12/2A1458/2A1458.png)
+![Section divider bar in dark blue](https://placehold.co/1000x10/0B3D91/0B3D91.png)
 
 ## 🧭 1 · The map
 
@@ -44,7 +46,9 @@ season
 
 ## 🌫️ 2 · Soft Summer — the low-contrast reading UI
 
-![light magenta swatch #D8C7D8](https://placehold.co/250x96/D8C7D8/D8C7D8.png)![muted blue swatch #8FA1B3](https://placehold.co/250x96/8FA1B3/8FA1B3.png)![light magenta swatch #E6DDE3](https://placehold.co/250x96/E6DDE3/E6DDE3.png)![mid grey swatch #9B8FA3](https://placehold.co/250x96/9B8FA3/9B8FA3.png)
+| `#D8C7D8` | `#8FA1B3` | `#E6DDE3` | `#9B8FA3` |
+| :--: | :--: | :--: | :--: |
+| ![light magenta swatch #D8C7D8](https://placehold.co/120x56/D8C7D8/D8C7D8.png) | ![muted blue swatch #8FA1B3](https://placehold.co/120x56/8FA1B3/8FA1B3.png) | ![light magenta swatch #E6DDE3](https://placehold.co/120x56/E6DDE3/E6DDE3.png) | ![mid grey swatch #9B8FA3](https://placehold.co/120x56/9B8FA3/9B8FA3.png) |
 
 Soft summer is cool, greyed-down and deliberately low contrast — dusty mauve, slate blue, fog. It is the palette equivalent of a quiet room. Ideal for long-form reading, journaling apps, meditation timers, documentation, anything where the interface should get out of the way.
 
@@ -95,7 +99,9 @@ hr    { border: 0; border-top: 1px solid var(--color-line); }
 
 ## ❄️ 3 · Deep Winter — the dark mode that isn't grey soup
 
-![burgundy swatch #6D0F2B](https://placehold.co/250x96/6D0F2B/6D0F2B.png)![deep teal swatch #004D40](https://placehold.co/250x96/004D40/004D40.png)![dark blue swatch #0B3D91](https://placehold.co/250x96/0B3D91/0B3D91.png)![deep indigo swatch #2A1458](https://placehold.co/250x96/2A1458/2A1458.png)
+| `#6D0F2B` | `#004D40` | `#0B3D91` | `#2A1458` |
+| :--: | :--: | :--: | :--: |
+| ![burgundy swatch #6D0F2B](https://placehold.co/120x56/6D0F2B/6D0F2B.png) | ![deep teal swatch #004D40](https://placehold.co/120x56/004D40/004D40.png) | ![dark blue swatch #0B3D91](https://placehold.co/120x56/0B3D91/0B3D91.png) | ![deep indigo swatch #2A1458](https://placehold.co/120x56/2A1458/2A1458.png) |
 
 Deep winter is cool, saturated and high contrast: burgundy, emerald, royal blue, deep purple, black, icy white. Those are **jewel tones**, and jewel tones are the reason a dark theme can look expensive instead of looking like `#333`.
 
@@ -156,19 +162,31 @@ Compare that to the default dark theme most projects ship:
 
 Same semantics, completely different product personality — and the accessibility numbers went *up*.
 
-![burgundy swatch #6D0F2B in a divider rule](https://placehold.co/250x12/6D0F2B/6D0F2B.png)![deep teal swatch #004D40 in a divider rule](https://placehold.co/250x12/004D40/004D40.png)![dark blue swatch #0B3D91 in a divider rule](https://placehold.co/250x12/0B3D91/0B3D91.png)![deep indigo swatch #2A1458 in a divider rule](https://placehold.co/250x12/2A1458/2A1458.png)
+![Section divider bar in deep teal](https://placehold.co/1000x10/004D40/004D40.png)
 
 ## 🍂 4 · The other two quadrants, briefly
 
-**Warm Autumn** — ![light orange swatch #FFEAB6](https://placehold.co/90x30/FFEAB6/FFEAB6.png)![light yellow swatch #FFEEBA](https://placehold.co/90x30/FFEEBA/FFEEBA.png)![light orange swatch #FFD489](https://placehold.co/90x30/FFD489/FFD489.png)![vivid orange swatch #F9BA5D](https://placehold.co/90x30/F9BA5D/F9BA5D.png) **Lagoon Warm Autumn**
+**Warm Autumn** —  **Lagoon Warm Autumn**
+
+| `#FFEAB6` | `#FFEEBA` | `#FFD489` | `#F9BA5D` |
+| :--: | :--: | :--: | :--: |
+| ![light orange swatch #FFEAB6](https://placehold.co/120x56/FFEAB6/FFEAB6.png) | ![light yellow swatch #FFEEBA](https://placehold.co/120x56/FFEEBA/FFEEBA.png) | ![light orange swatch #FFD489](https://placehold.co/120x56/FFD489/FFD489.png) | ![vivid orange swatch #F9BA5D](https://placehold.co/120x56/F9BA5D/F9BA5D.png) |
 
 Honey, amber, clay. Near-monochrome warmth for food, artisan commerce and editorial. Total internal contrast: **1.45:1** — surfaces only, again. Pair with `#3A2A12`.
 
-**Bright Spring** — ![light yellow swatch #FFFF79](https://placehold.co/90x30/FFFF79/FFFF79.png)![pale red swatch #FFD2DC](https://placehold.co/90x30/FFD2DC/FFD2DC.png)![teal swatch #56D5CC](https://placehold.co/90x30/56D5CC/56D5CC.png)![vivid orange swatch #FF8D08](https://placehold.co/90x30/FF8D08/FF8D08.png) **Spring Beach Wave**
+**Bright Spring** —  **Spring Beach Wave**
+
+| `#FFFF79` | `#FFD2DC` | `#56D5CC` | `#FF8D08` |
+| :--: | :--: | :--: | :--: |
+| ![light yellow swatch #FFFF79](https://placehold.co/120x56/FFFF79/FFFF79.png) | ![pale red swatch #FFD2DC](https://placehold.co/120x56/FFD2DC/FFD2DC.png) | ![teal swatch #56D5CC](https://placehold.co/120x56/56D5CC/56D5CC.png) | ![vivid orange swatch #FF8D08](https://placehold.co/120x56/FF8D08/FF8D08.png) |
 
 Maximum energy. Great for a launch page, exhausting for a workspace. Use one as the hero background and keep the rest for illustration.
 
-**Cool Winter** — ![deep cyan swatch #003566](https://placehold.co/90x30/003566/003566.png)![dark cyan swatch #0077B6](https://placehold.co/90x30/0077B6/0077B6.png)![dark magenta swatch #D0006F](https://placehold.co/90x30/D0006F/D0006F.png)![dark red swatch #C1121F](https://placehold.co/90x30/C1121F/C1121F.png) **Cool Winter Harmony**
+**Cool Winter** —  **Cool Winter Harmony**
+
+| `#003566` | `#0077B6` | `#D0006F` | `#C1121F` |
+| :--: | :--: | :--: | :--: |
+| ![deep cyan swatch #003566](https://placehold.co/120x56/003566/003566.png) | ![dark cyan swatch #0077B6](https://placehold.co/120x56/0077B6/0077B6.png) | ![dark magenta swatch #D0006F](https://placehold.co/120x56/D0006F/D0006F.png) | ![dark red swatch #C1121F](https://placehold.co/120x56/C1121F/C1121F.png) |
 
 Icy blue structure with a shout. This is the fintech dashboard palette: navy chrome, blue data, magenta for the one number that matters.
 

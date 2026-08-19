@@ -18,17 +18,17 @@ tags: writing, markdown, css, design
   This file is a reference sheet, not a post you have to publish.
 -->
 
-![navy swatch #0F172A in a divider rule](https://placehold.co/250x14/0F172A/0F172A.png)![vivid teal swatch #00F5D4 in a divider rule](https://placehold.co/250x14/00F5D4/00F5D4.png)![vivid magenta swatch #F15BB5 in a divider rule](https://placehold.co/250x14/F15BB5/F15BB5.png)![indigo swatch #9B5DE5 in a divider rule](https://placehold.co/250x14/9B5DE5/9B5DE5.png)
+![Section divider bar in vivid teal](https://placehold.co/1000x10/00F5D4/00F5D4.png)
 
-DEV.to strips `<style>` tags and inline `style=""` attributes, so you cannot paint a div pink and call it a day. What you *can* do is let **images carry the color** and let **fenced code blocks carry the texture**. That is the whole trick behind this theme.
+DEV.to strips `<style>` tags and inline `style=""` attributes, so you cannot paint a div pink and call it a day. What you *can* do is let **images carry the color** and let **fenced code blocks carry the texture**. Two rules make it work: images are **block-level on DEV**, so anything that must sit side by side goes in a **table row**; and a divider is a **single wide bar**, not four small ones.
 
 ## 🧱 The eight blocks
 
 | # | Block | What it does | Renders on DEV? |
 | :-: | :-- | :-- | :-: |
 | 1 | Cover band | 1000×420 PNG, palette + title | ✅ |
-| 2 | Palette band | 4 touching swatch images = one bar | ✅ |
-| 3 | Color rule | thin band instead of `---` | ✅ |
+| 2 | Palette band | one-row table, one colour per cell | ✅ |
+| 3 | Color rule | one wide 1000×10 bar instead of `---` | ✅ |
 | 4 | Swatch table | color + HEX + RGB + HSL + contrast | ✅ |
 | 5 | Code tab | filename line above a fenced block | ✅ |
 | 6 | Diff block | red/green "before → after" | ✅ |
@@ -36,29 +36,48 @@ DEV.to strips `<style>` tags and inline `style=""` attributes, so you cannot pai
 | 8 | Collapsible | the *details* liquid tag for long code | ✅ |
 | — | `<style>`, inline style attributes, `<script>` | sanitized away | 🚫 |
 
-![navy swatch #0F172A in a divider rule](https://placehold.co/250x8/0F172A/0F172A.png)![vivid teal swatch #00F5D4 in a divider rule](https://placehold.co/250x8/00F5D4/00F5D4.png)![vivid magenta swatch #F15BB5 in a divider rule](https://placehold.co/250x8/F15BB5/F15BB5.png)![indigo swatch #9B5DE5 in a divider rule](https://placehold.co/250x8/9B5DE5/9B5DE5.png)
+![Section divider bar in vivid teal](https://placehold.co/1000x10/00F5D4/00F5D4.png)
 
-## 1 · Palette band
+## 1 · Palette band — use a table row, not a line of images
 
-Four images on **one line with no spaces between them** butt up against each other and read as a single bar:
+This is the mistake worth learning from. **DEV renders every article image as a block element**, so four
+images on one line do *not* butt together into a bar — they stack vertically down the page.
 
-```markdown
-![navy swatch #0F172A](https://placehold.co/210x110/0F172A/0F172A.png)![vivid teal swatch #00F5D4](https://placehold.co/210x110/00F5D4/00F5D4.png)![vivid magenta swatch #F15BB5](https://placehold.co/210x110/F15BB5/F15BB5.png)![indigo swatch #9B5DE5](https://placehold.co/210x110/9B5DE5/9B5DE5.png)
+```diff
+- ![a](url)![b](url)![c](url)![d](url)      ← stacks vertically on DEV
++ | `#0F172A` | `#00F5D4` | `#F15BB5` | `#9B5DE5` |
++ | :--: | :--: | :--: | :--: |
++ | ![a](url) | ![b](url) | ![c](url) | ![d](url) |
 ```
 
-Result:
+Table cells are the reliable way to force horizontal layout, and you get the hex codes as a header row
+for free:
 
-![navy swatch #0F172A](https://placehold.co/210x110/0F172A/0F172A.png)![vivid teal swatch #00F5D4](https://placehold.co/210x110/00F5D4/00F5D4.png)![vivid magenta swatch #F15BB5](https://placehold.co/210x110/F15BB5/F15BB5.png)![indigo swatch #9B5DE5](https://placehold.co/210x110/9B5DE5/9B5DE5.png)
+| `#0F172A` | `#00F5D4` | `#F15BB5` | `#9B5DE5` |
+| :--: | :--: | :--: | :--: |
+| ![navy swatch #0F172A](https://placehold.co/120x56/0F172A/0F172A.png) | ![vivid teal swatch #00F5D4](https://placehold.co/120x56/00F5D4/00F5D4.png) | ![vivid magenta swatch #F15BB5](https://placehold.co/120x56/F15BB5/F15BB5.png) | ![indigo swatch #9B5DE5](https://placehold.co/120x56/9B5DE5/9B5DE5.png) |
 
-The URL shape is `placehold.co/{W}x{H}/{background}/{textColor}.png`. Passing the **same hex twice** hides the auto-generated size label, so you get a clean solid block. `dummyimage.com/210x110/0f172a/0f172a.png` is a drop-in fallback if placehold.co is ever down.
+The URL shape is `placehold.co/{W}x{H}/{background}/{textColor}.png`. Passing the **same hex twice** hides
+the auto-generated size label, so you get a clean solid block. `dummyimage.com/120x56/0f172a/0f172a.png`
+is a drop-in fallback if placehold.co is ever down.
 
-## 2 · Color rule
+Keep swatches at **120×56 or smaller** inside tables — four columns of 210px overflow the article width
+on mobile.
 
-A 10–14px band replaces the boring `---` divider and keeps the article's palette in the reader's eye:
+> 🚧 **Trap** — the same rule applies *inside* a cell. Four images in one cell stack too. One colour per
+> cell, always.
+
+## 2 · Color rule — one wide bar
+
+A divider wants to be a single image, for exactly the same reason:
 
 ```markdown
-![navy swatch #0F172A in a divider rule](https://placehold.co/250x12/0F172A/0F172A.png)![vivid teal swatch #00F5D4 in a divider rule](https://placehold.co/250x12/00F5D4/00F5D4.png)![vivid magenta swatch #F15BB5 in a divider rule](https://placehold.co/250x12/F15BB5/F15BB5.png)![indigo swatch #9B5DE5 in a divider rule](https://placehold.co/250x12/9B5DE5/9B5DE5.png)
+![Section divider bar in vivid teal](https://placehold.co/1000x10/00F5D4/00F5D4.png)
 ```
+
+![Section divider bar in vivid teal](https://placehold.co/1000x10/00F5D4/00F5D4.png)
+
+It scales down to any screen width, and it beats a grey `---` for keeping the article's palette present.
 
 ## 3 · Swatch table
 
@@ -152,7 +171,7 @@ series: "Color for Developers"
 
 > 🧪 **Lab note** — `tags` is a **maximum of four**, comma separated, no `#`. `cover_image` looks best at exactly **1000×420**. Keep `published: false` until the preview looks right, then flip it.
 
-![navy swatch #0F172A in a divider rule](https://placehold.co/250x12/0F172A/0F172A.png)![vivid teal swatch #00F5D4 in a divider rule](https://placehold.co/250x12/00F5D4/00F5D4.png)![vivid magenta swatch #F15BB5 in a divider rule](https://placehold.co/250x12/F15BB5/F15BB5.png)![indigo swatch #9B5DE5 in a divider rule](https://placehold.co/250x12/9B5DE5/9B5DE5.png)
+![Section divider bar in vivid teal](https://placehold.co/1000x10/00F5D4/00F5D4.png)
 
 ## 7 · Generate all of it
 

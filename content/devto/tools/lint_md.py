@@ -97,6 +97,25 @@ def lint(path: Path, fix: bool) -> list[str]:
         if o != c:
             problems.append(f"unbalanced liquid: {o} {open_tag} vs {c} {close_tag}")
 
+    # 4b — images that will stack vertically on DEV
+    infence = False
+    for n, line in enumerate(text.split("\n"), 1):
+        if line.strip().startswith("```"):
+            infence = not infence
+            continue
+        if infence:
+            continue
+        if line.strip().startswith("|"):
+            for cell in line.strip().strip("|").split("|"):
+                if cell.count("![") > 1:
+                    problems.append(
+                        f"line {n}: {cell.count('![')} images in one table cell — "
+                        f"they stack vertically on DEV, use one colour per cell")
+        elif line.count("![") > 1:
+            problems.append(
+                f"line {n}: {line.count('![')} images on one line — DEV renders images as "
+                f"blocks, so they stack. Use a one-row table (or a single wide bar for rules)")
+
     # 5 — triple backticks inside a table row
     for line in text.split("\n"):
         if line.strip().startswith("|") and "```" in line:

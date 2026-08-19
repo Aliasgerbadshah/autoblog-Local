@@ -9,7 +9,9 @@ tags: css, webdev, darkmode, design
      then paste the URL it returns into a new `cover_image:` line above.
      A ready-made generation prompt for this post is in COVER-PROMPTS.md. -->
 
-![near-black swatch #09090B in a divider rule](https://placehold.co/250x110/09090B/09090B.png)![vivid pink swatch #FF007F in a divider rule](https://placehold.co/250x110/FF007F/FF007F.png)![vivid teal swatch #00E5FF in a divider rule](https://placehold.co/250x110/00E5FF/00E5FF.png)![vivid lime swatch #B8F500 in a divider rule](https://placehold.co/250x110/B8F500/B8F500.png)
+| `#09090B` | `#FF007F` | `#00E5FF` | `#B8F500` |
+| :--: | :--: | :--: | :--: |
+| ![near-black swatch #09090B](https://placehold.co/120x56/09090B/09090B.png) | ![vivid pink swatch #FF007F](https://placehold.co/120x56/FF007F/FF007F.png) | ![vivid teal swatch #00E5FF](https://placehold.co/120x56/00E5FF/00E5FF.png) | ![vivid lime swatch #B8F500](https://placehold.co/120x56/B8F500/B8F500.png) |
 
 > 🎨 **Palette in play** — **Maple Drift** · `#09090B` `#FF007F` `#00E5FF` `#B8F500`
 
@@ -17,7 +19,7 @@ Every neon theme starts the same way. You find a palette like this one, you buil
 
 The colors are not the problem. **The way they are applied is.** a good palette library's neon category is full of palettes with the exact structure you want — one near-black base plus three high-luminance signals — and that structure is a rule waiting to be written down.
 
-![near-black swatch #09090B in a divider rule](https://placehold.co/250x12/09090B/09090B.png)![vivid pink swatch #FF007F in a divider rule](https://placehold.co/250x12/FF007F/FF007F.png)![vivid teal swatch #00E5FF in a divider rule](https://placehold.co/250x12/00E5FF/00E5FF.png)![vivid lime swatch #B8F500 in a divider rule](https://placehold.co/250x12/B8F500/B8F500.png)
+![Section divider bar in vivid pink](https://placehold.co/1000x10/FF007F/FF007F.png)
 
 ## ⚡ 1 · Read the structure, not the vibe
 
@@ -37,11 +39,11 @@ Two things fall out of that table immediately:
 
 Three more neon palettes with the same skeleton:
 
-| Palette | Base | Signals |
-| :-- | :-- | :-- |
-| **Neon Diner Harmony** | ![navy swatch #0F172A](https://placehold.co/54x24/0F172A/0F172A.png) `#0F172A` | ![vivid teal swatch #00F5D4](https://placehold.co/54x24/00F5D4/00F5D4.png)![vivid magenta swatch #F15BB5](https://placehold.co/54x24/F15BB5/F15BB5.png)![indigo swatch #9B5DE5](https://placehold.co/54x24/9B5DE5/9B5DE5.png) |
-| **Clay Flare Spectrum** | ![deep indigo swatch #10002B](https://placehold.co/54x24/10002B/10002B.png) `#10002B` | ![deep indigo swatch #240046](https://placehold.co/54x24/240046/240046.png)![vivid pink swatch #FF006E](https://placehold.co/54x24/FF006E/FF006E.png)![vivid teal swatch #00F5D4](https://placehold.co/54x24/00F5D4/00F5D4.png) |
-| **Pine Field Gallery** | ![near-black swatch #03071E](https://placehold.co/54x24/03071E/03071E.png) `#03071E` | ![dark red swatch #DC2F02](https://placehold.co/54x24/DC2F02/DC2F02.png)![vivid orange swatch #F48C06](https://placehold.co/54x24/F48C06/F48C06.png)![vivid orange swatch #FFBA08](https://placehold.co/54x24/FFBA08/FFBA08.png) |
+| Palette | Base | Signal 1 | Signal 2 | Signal 3 |
+| :-- | :--: | :--: | :--: | :--: |
+| **Neon Diner Harmony** | ![navy swatch #0F172A](https://placehold.co/76x34/0F172A/0F172A.png) | ![vivid teal swatch #00F5D4](https://placehold.co/76x34/00F5D4/00F5D4.png) | ![vivid magenta swatch #F15BB5](https://placehold.co/76x34/F15BB5/F15BB5.png) | ![indigo swatch #9B5DE5](https://placehold.co/76x34/9B5DE5/9B5DE5.png) |
+| **Clay Flare Spectrum** | ![deep indigo swatch #10002B](https://placehold.co/76x34/10002B/10002B.png) | ![deep indigo swatch #240046](https://placehold.co/76x34/240046/240046.png) | ![vivid pink swatch #FF006E](https://placehold.co/76x34/FF006E/FF006E.png) | ![vivid teal swatch #00F5D4](https://placehold.co/76x34/00F5D4/00F5D4.png) |
+| **Pine Field Gallery** | ![near-black swatch #03071E](https://placehold.co/76x34/03071E/03071E.png) | ![dark red swatch #DC2F02](https://placehold.co/76x34/DC2F02/DC2F02.png) | ![vivid orange swatch #F48C06](https://placehold.co/76x34/F48C06/F48C06.png) | ![vivid orange swatch #FFBA08](https://placehold.co/76x34/FFBA08/FFBA08.png) |
 
 ## 🩹 2 · Why it hurts — halation, and the 3 fixes
 
@@ -88,7 +90,7 @@ a         { color: var(--neon-cyan); }
 
 > 🧪 **Lab note** — `color-mix()` is the whole trick. One neon token generates its own tint, border, glow and hover state, so a palette swap is still a one-line change. Supported in every current browser; `rgb(0 229 255 / 6%)` is the fallback.
 
-![near-black swatch #09090B in a divider rule](https://placehold.co/250x12/09090B/09090B.png)![vivid pink swatch #FF007F in a divider rule](https://placehold.co/250x12/FF007F/FF007F.png)![vivid teal swatch #00E5FF in a divider rule](https://placehold.co/250x12/00E5FF/00E5FF.png)![vivid lime swatch #B8F500 in a divider rule](https://placehold.co/250x12/B8F500/B8F500.png)
+![Section divider bar in vivid pink](https://placehold.co/1000x10/FF007F/FF007F.png)
 
 ## 🧱 3 · The full theme
 

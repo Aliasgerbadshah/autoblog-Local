@@ -318,8 +318,9 @@ padding-bottom:48px;max-width:840px;width:100%;overflow:hidden}
 .fm{font-size:12px;color:var(--muted);border-top:1px dashed var(--line);
 border-bottom:1px dashed var(--line);padding:8px 0;margin-bottom:6px}
 .post{padding:0 clamp(18px,4vw,44px)}
-.post img{max-width:100%;vertical-align:top}
-.post p.band{line-height:0;margin:1.2em 0}
+.post img{max-width:100%;display:block;margin:.4em 0}
+.post td img{margin:0 auto}
+
 .post h2{margin-top:1.9em;font-size:26px;border-bottom:1px solid var(--line);padding-bottom:.25em}
 .post h3{margin-top:1.5em;font-size:20px}
 .post blockquote{margin:1.4em 0;padding:.9em 1.1em;background:var(--panel2);
