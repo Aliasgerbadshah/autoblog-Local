@@ -165,7 +165,7 @@ function liquid(md) {
 marked.setOptions({ gfm: true, breaks: false });
 
 async function render(file) {
-  const res = await fetch('../' + file + '?v=' + Date.now());
+  const res = await fetch('./' + file + '?v=' + Date.now());
   const raw = await res.text();
   const { data, body } = parseFrontMatter(raw);
   const html = marked.parse(liquid(body));

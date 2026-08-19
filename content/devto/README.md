@@ -14,7 +14,7 @@ content/devto/
 ├── 05-automate-palette-workflow.md  ← one script → every format (py/node/php)
 ├── assets/                          ← 1000×420 covers + 1200×260 strips (PNG)
 ├── data/palettes.json               ← the 16 real palettes used across the posts
-├── preview/index.html               ← local DEV-like renderer
+├── index.html                       ← local DEV-like preview (open this)
 └── tools/palette_kit.py             ← generator for swatches, tokens, contrast, covers
 ```
 
@@ -24,7 +24,7 @@ content/devto/
 
 ```bash
 python3 -m http.server 8080 --bind 0.0.0.0 --directory content/devto
-# open http://localhost:8080/preview/
+# open http://localhost:8080/
 ```
 
 The preview parses the front matter, simulates DEV's Liquid tags (`details`, `cta`, `katex`, `embed`),
