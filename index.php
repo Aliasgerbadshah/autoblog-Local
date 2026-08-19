@@ -290,6 +290,58 @@ function handleApiRoute($uri) {
         jsonResponse($result, $result['success'] ? 200 : 400);
     }
 
+    // Generate OAuth URL for Blogger — gives user the URL to visit for authorization
+    if ($uri === '/api/vault/blogger-oauth-url' && $method === 'POST') {
+        $clientId = trim($input['client_id'] ?? '');
+        if (!$clientId) {
+            $bloggerVault = SecurityVault::getApiCredentials($userId, 'blogger_api');
+            $clientId = trim($bloggerVault['client_id'] ?? '');
+        }
+        if (!$clientId) {
+            jsonResponse(['success' => false, 'error' => 'Client ID is required. Enter your Google OAuth Client ID first.'], 400);
+        }
+        $redirectUri = $input['redirect_uri'] ?? 'https://developers.google.com/oauthplayground';
+        $authUrl = BloggerOAuthHelper::getOAuthAuthorizationUrl($clientId, $redirectUri);
+        jsonResponse(['success' => true, 'auth_url' => $authUrl, 'instructions' => 'Visit this URL, authorize with your Google account, copy the authorization code from the redirect URL, then use the Exchange Auth Code button or paste it in the OAuth Playground Step 2.']);
+    }
+
+    // Exchange OAuth authorization code for refresh token
+    if ($uri === '/api/vault/blogger-exchange-code' && $method === 'POST') {
+        $clientId = trim($input['client_id'] ?? '');
+        $clientSecret = trim($input['client_secret'] ?? '');
+        $authCode = trim($input['auth_code'] ?? '');
+        $redirectUri = $input['redirect_uri'] ?? 'https://developers.google.com/oauthplayground';
+        
+        if (!$clientId || !$clientSecret) {
+            $bloggerVault = SecurityVault::getApiCredentials($userId, 'blogger_api');
+            $clientId = $clientId ?: trim($bloggerVault['client_id'] ?? '');
+            $clientSecret = $clientSecret ?: trim($bloggerVault['client_secret'] ?? '');
+        }
+        if (!$authCode) jsonResponse(['success' => false, 'error' => 'Authorization code is required. Get it from the OAuth URL redirect.'], 400);
+        if (!$clientId || !$clientSecret) jsonResponse(['success' => false, 'error' => 'Client ID and Client Secret are required.'], 400);
+        
+        $result = BloggerOAuthHelper::exchangeAuthCode($clientId, $clientSecret, $authCode, $redirectUri);
+        if ($result['success']) {
+            // Auto-save the new refresh token to the vault
+            $vault = SecurityVault::getApiCredentials($userId, 'blogger_api');
+            $vault['client_id'] = $clientId;
+            $vault['client_secret'] = $clientSecret;
+            $vault['refresh_token'] = $result['refresh_token'];
+            $vault['access_token'] = $result['access_token'];
+            $alias = $vault['account_alias'] ?? 'Primary Blogger Account';
+            unset($vault['account_alias']);
+            SecurityVault::saveApiCredentials($userId, 'blogger_api', $vault, $alias);
+            
+            jsonResponse([
+                'success' => true, 
+                'refresh_token' => $result['refresh_token'], 
+                'access_token' => substr($result['access_token'], 0, 20) . '...', // Don't expose full access token
+                'message' => '✅ New refresh token obtained and saved to vault! You can now test the Blogger connection.'
+            ]);
+        }
+        jsonResponse(['success' => false, 'error' => 'Auth code exchange failed: ' . ($result['error'] ?? 'Unknown error')], 400);
+    }
+
     // Test Blogger — uses OAuth (refresh token → access token → Bearer header)
     if ($uri === '/api/vault/test-blogger' && $method === 'POST') {
         $blogId = trim($input['blogger_blog_id'] ?? '');
@@ -320,7 +372,8 @@ function handleApiRoute($uri) {
         // Step 1: Refresh the access token using OAuth
         $rfRes = BloggerOAuthHelper::refreshAccessToken($clientId, $clientSecret, $refreshToken);
         if (!$rfRes['success']) {
-            jsonResponse(['success' => false, 'error' => 'OAuth Token Refresh Failed — ' . ($rfRes['error'] ?? 'Check your Client ID, Client Secret, and Refresh Token.')], 400);
+            $errMsg = $rfRes['error'] ?? 'Check your Client ID, Client Secret, and Refresh Token.';
+            jsonResponse(['success' => false, 'error' => 'OAuth Token Refresh Failed — ' . $errMsg, 'error_type' => 'oauth_refresh'], 400);
         }
         $accessToken = $rfRes['access_token'];
         
@@ -329,15 +382,28 @@ function handleApiRoute($uri) {
         $data = $result['json'] ?? [];
         
         if ($result['http_code'] === 200 && !empty($data['name'])) {
-            // Save the fresh access token back to vault for next time
+            // Save ALL OAuth credentials back to vault (including the ones used for test)
             $vault = SecurityVault::getApiCredentials($userId, 'blogger_api');
             if (!empty($vault)) {
+                $vault['blogger_blog_id'] = $blogId;
+                $vault['client_id'] = $clientId;
+                $vault['client_secret'] = $clientSecret;
+                $vault['refresh_token'] = $refreshToken;
                 $vault['access_token'] = $accessToken;
                 $alias = $vault['account_alias'] ?? 'Primary Blogger Account';
                 unset($vault['account_alias']);
                 SecurityVault::saveApiCredentials($userId, 'blogger_api', $vault, $alias);
+            } else {
+                // No existing vault entry — create one
+                SecurityVault::saveApiCredentials($userId, 'blogger_api', [
+                    'blogger_blog_id' => $blogId,
+                    'client_id' => $clientId,
+                    'client_secret' => $clientSecret,
+                    'refresh_token' => $refreshToken,
+                    'access_token' => $accessToken
+                ], 'Primary Blogger Account');
             }
-            jsonResponse(['success' => true, 'blog_name' => $data['name'] ?? '', 'url' => $data['url'] ?? '', 'message' => '✅ OAuth connected! Access token refreshed and saved.']);
+            jsonResponse(['success' => true, 'blog_name' => $data['name'] ?? '', 'url' => $data['url'] ?? '', 'message' => '✅ OAuth connected! All credentials saved to vault.']);
         }
         
         // Error from Blogger API
@@ -345,9 +411,9 @@ function handleApiRoute($uri) {
         $errorReason = $data['error']['errors'][0]['reason'] ?? '';
         if ($errorMsg) {
             $extra = '';
-            if ($result['http_code'] === 401) $extra = ' (Access token may be invalid — try getting a new Refresh Token from OAuth Playground)';
-            if ($result['http_code'] === 403) $extra = ' (Blogger API may not be enabled, or blog ID is wrong)';
-            if ($result['http_code'] === 404) $extra = ' (Blog ID not found — check the Blog ID)';
+            if ($result['http_code'] === 401) $extra = ' (Access token may be invalid or wrong scope — make sure you used scope https://www.googleapis.com/auth/blogger when generating the refresh token, NOT the read-only scope)';
+            if ($result['http_code'] === 403) $extra = ' (Blogger API may not be enabled, or blog ID is wrong, or you used a read-only OAuth scope. Use scope: https://www.googleapis.com/auth/blogger)';
+            if ($result['http_code'] === 404) $extra = ' (Blog ID not found — check the Blog ID. You can find it at https://www.blogger.com/about/ → your blog → settings)';
             jsonResponse(['success' => false, 'error' => "Blogger API Error ({$result['http_code']}): $errorMsg$extra"]);
         }
         jsonResponse(['success' => false, 'error' => "Blogger API returned HTTP {$result['http_code']} with no useful error message."]);
