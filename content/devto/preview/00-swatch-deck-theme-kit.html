@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>The Swatch Deck — a reusable DEV.to theme kit for color posts — DEV preview</title>
+<style>
+:root{--bg:#0B0F1A;--panel:#111827;--panel2:#0F172A;--line:#1F2A44;--ink:#E7E9EE;
+--muted:#94A3B8;--primary:#00F5D4;--accent:#F15BB5;--support:#9B5DE5;--radius:14px}
+html[data-theme=light]{--bg:#F5F7F9;--panel:#fff;--panel2:#EFF2F6;--line:#DDE3EC;
+--ink:#1B2333;--muted:#5B6478;--primary:#0E7C86;--accent:#B4276F;--support:#6D3FBF}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+font:16px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+a{color:var(--primary)}
+header.top{position:sticky;top:0;z-index:20;display:flex;gap:14px;align-items:center;padding:12px 18px;
+background:var(--bg);border-bottom:1px solid var(--line)}
+.brand{font-weight:800}.brand span{color:var(--primary)}
+.rule{display:flex;height:6px;width:150px;border-radius:99px;overflow:hidden}.rule i{flex:1}
+.spacer{flex:1}
+.btn{font:inherit;cursor:pointer;border:1px solid var(--line);background:var(--panel);color:var(--ink);
+border-radius:99px;padding:6px 14px;text-decoration:none}
+.btn:hover{border-color:var(--primary)}
+.layout{display:grid;grid-template-columns:290px minmax(0,1fr);gap:26px;padding:22px;align-items:start}
+@media(max-width:900px){.layout{grid-template-columns:1fr}}
+nav.files{position:sticky;top:70px;background:var(--panel);border:1px solid var(--line);
+border-radius:var(--radius);padding:12px;display:flex;flex-direction:column;gap:6px}
+nav.files h2{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin:6px 8px 8px}
+nav.files a{display:block;padding:9px 11px;border-radius:10px;text-decoration:none;color:var(--ink);
+font-size:14px;border:1px solid transparent}
+nav.files a:hover{background:var(--panel2)}
+nav.files a.active{background:var(--panel2);border-color:var(--primary);color:var(--primary)}
+nav.files small{display:block;color:var(--muted);font-size:11.5px}
+article{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+padding-bottom:48px;max-width:840px;width:100%;overflow:hidden}
+.cover{width:100%;display:block;border-bottom:1px solid var(--line)}
+.meta{padding:22px clamp(18px,4vw,44px) 0}
+.meta h1{font-size:clamp(26px,4vw,40px);line-height:1.18;margin:.2em 0 .3em}
+.tags{display:flex;flex-wrap:wrap;gap:8px}
+.tag{font-size:12.5px;color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:2px 8px}
+.desc{color:var(--muted);font-size:15px}
+.fm{font-size:12px;color:var(--muted);border-top:1px dashed var(--line);
+border-bottom:1px dashed var(--line);padding:8px 0;margin-bottom:6px}
+.post{padding:0 clamp(18px,4vw,44px)}
+.post img{max-width:100%;vertical-align:top}
+.post p.band{line-height:0;margin:1.2em 0}
+.post h2{margin-top:1.9em;font-size:26px;border-bottom:1px solid var(--line);padding-bottom:.25em}
+.post h3{margin-top:1.5em;font-size:20px}
+.post blockquote{margin:1.4em 0;padding:.9em 1.1em;background:var(--panel2);
+border-left:4px solid var(--accent);border-radius:0 10px 10px 0}
+.post blockquote p{margin:0}
+.tw{overflow-x:auto;margin:1.3em 0}
+.post table{border-collapse:collapse;width:100%;font-size:14.5px}
+.post th,.post td{border:1px solid var(--line);padding:8px 11px;text-align:left;vertical-align:middle}
+.post th{background:var(--panel2)}
+.post td img{vertical-align:middle}
+.post :not(pre)>code{background:var(--panel2);padding:.15em .4em;border-radius:6px;font-size:.9em;
+font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+pre.code{background:#0d1117;border:1px solid var(--line);border-radius:12px;padding:18px;
+overflow-x:auto;position:relative;margin:1.3em 0}
+pre.code code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13.5px;
+line-height:1.62;color:#C9D1D9;white-space:pre}
+pre.code::before{content:attr(data-lang);position:absolute;top:0;right:0;font-size:10.5px;
+letter-spacing:.12em;text-transform:uppercase;color:#0B0F1A;background:var(--primary);
+padding:2px 10px;border-radius:0 11px 0 10px;font-family:ui-monospace,monospace}
+pre.lang-diff{border-color:#F15BB5}
+pre.lang-console,pre.lang-bash{background:#05070d;border-color:#00F5D4}
+.t-comment{color:#6E7A8A;font-style:italic}
+.t-string{color:#A5D6FF}.t-number{color:#F0A868}.t-kw{color:#FF7B9C}
+.t-prop{color:#9B5DE5;font-weight:600}.t-tag{color:#7EE787}
+.t-color{color:#FFD479}
+.chip{display:inline-block;width:.78em;height:.78em;margin-right:.35em;border-radius:3px;
+border:1px solid rgba(255,255,255,.35);vertical-align:-1px}
+.d-add{color:#7EE787;display:block;background:rgba(46,160,67,.15)}
+.d-del{color:#FF9492;display:block;background:rgba(248,81,73,.14)}
+.d-hunk{color:#79C0FF;display:block}
+.sh-prompt{color:#F15BB5;font-weight:700}.sh-cmd{color:#E7E9EE}
+.sh-ok{color:#7EE787;display:block}.sh-out{color:#9DF7E4;display:block}
+details.liquid{background:var(--panel2);border:1px solid var(--line);border-radius:12px;
+padding:10px 16px;margin:1.4em 0}
+details.liquid summary{cursor:pointer;font-weight:650}
+.cta{display:block;text-align:center;margin:1.8em 0;padding:14px 20px;border-radius:12px;
+background:linear-gradient(90deg,var(--primary),var(--support));color:#08121A;font-weight:750;
+text-decoration:none}
+.katex{background:var(--panel2);border:1px dashed var(--line);border-radius:10px;padding:12px 16px;
+font-family:ui-monospace,monospace;color:var(--primary);margin:1.2em 0}
+.embed{color:var(--muted);font-family:ui-monospace,monospace;font-size:13px}
+.note{max-width:840px;color:var(--muted);font-size:13px;margin-top:14px}
+.post hr{border:0;border-top:1px solid var(--line);margin:2em 0}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand">Swatch<span>Deck</span> · DEV.to preview</div>
+  <div class="rule"><i style="background:#0F172A"></i><i style="background:#00F5D4"></i>
+    <i style="background:#F15BB5"></i><i style="background:#9B5DE5"></i></div>
+  <div class="spacer"></div>
+  <a class="btn" href="../00-swatch-deck-theme-kit.md" target="_blank">View raw .md</a>
+  <button class="btn" onclick="var d=document.documentElement;
+    d.dataset.theme=d.dataset.theme==='dark'?'light':'dark'">🌗 Theme</button>
+</header>
+<div class="layout">
+  <nav class="files"><h2>Articles</h2><a href="00-swatch-deck-theme-kit.html" class="active">swatch deck theme kit<small>Reusable theme kit</small></a><a href="01-colorfiind-developer-tour.html" class="">colorfiind developer tour<small>Feature tour</small></a><a href="02-hex-to-design-tokens.html" class="">hex to design tokens<small>Tokens pipeline</small></a><a href="03-seasonal-palettes-ui-themes.html" class="">seasonal palettes ui themes<small>Seasonal themes</small></a><a href="04-neon-dark-mode-glow-ui.html" class="">neon dark mode glow ui<small>Neon dark mode</small></a><a href="05-automate-palette-workflow.html" class="">automate palette workflow<small>Automation</small></a></nav>
+  <div>
+    <article>
+      <img class="cover" src="https://placehold.co/1000x420/0F172A/00F5D4.png" alt="cover" />
+      <div class="meta">
+        <div class="tags"><span class="tag">#writing</span><span class="tag">#markdown</span><span class="tag">#css</span><span class="tag">#design</span></div>
+        <h1>The Swatch Deck — a reusable DEV.to theme kit for color posts</h1>
+        <p class="desc">Copy-paste building blocks for color-heavy DEV.to articles: real color swatches that actually render, tabbed code blocks, collapsibles, contrast tables and palette rules.</p>
+        <div class="fm">published: <b>false</b> · tags: 4/4 · cover_image: set</div>
+      </div>
+      <div class="post"><p class='band'><img src="https://placehold.co/250x14/0F172A/0F172A.png" alt="Swatch Deck rule" /><img src="https://placehold.co/250x14/00F5D4/00F5D4.png" alt="Swatch Deck rule" /><img src="https://placehold.co/250x14/F15BB5/F15BB5.png" alt="Swatch Deck rule" /><img src="https://placehold.co/250x14/9B5DE5/9B5DE5.png" alt="Swatch Deck rule" /></p>
+<p>DEV.to strips <code>&lt;style&gt;</code> tags and inline <code>style=&quot;&quot;</code> attributes, so you cannot paint a div pink and call it a day. What you <em>can</em> do is let <strong>images carry the color</strong> and let <strong>fenced code blocks carry the texture</strong>. That is the whole trick behind this theme.</p>
+<h2>🧱 The eight blocks</h2>
+<div class='tw'><table><thead><tr><th>#</th><th>Block</th><th>What it does</th><th>Renders on DEV?</th></tr></thead><tbody><tr><td>1</td><td>Cover band</td><td>1000×420 PNG, palette + title</td><td>✅</td></tr><tr><td>2</td><td>Palette band</td><td>4 touching swatch images = one bar</td><td>✅</td></tr><tr><td>3</td><td>Color rule</td><td>thin band instead of <code>---</code></td><td>✅</td></tr><tr><td>4</td><td>Swatch table</td><td>color + HEX + RGB + HSL + contrast</td><td>✅</td></tr><tr><td>5</td><td>Code tab</td><td>filename line above a fenced block</td><td>✅</td></tr><tr><td>6</td><td>Diff block</td><td>red/green &quot;before → after&quot;</td><td>✅</td></tr><tr><td>7</td><td>Terminal block</td><td>a <code>console</code> fence for a shell look</td><td>✅</td></tr><tr><td>8</td><td>Collapsible</td><td>the <em>details</em> liquid tag for long code</td><td>✅</td></tr><tr><td>—</td><td><code>&lt;style&gt;</code>, inline style attributes, <code>&lt;script&gt;</code></td><td>sanitized away</td><td>🚫</td></tr></tbody></table></div>
+<p class='band'><img src="https://placehold.co/250x8/0F172A/0F172A.png" alt="rule" /><img src="https://placehold.co/250x8/00F5D4/00F5D4.png" alt="rule" /><img src="https://placehold.co/250x8/F15BB5/F15BB5.png" alt="rule" /><img src="https://placehold.co/250x8/9B5DE5/9B5DE5.png" alt="rule" /></p>
+<h2>1 · Palette band</h2>
+<p>Four images on <strong>one line with no spaces between them</strong> butt up against each other and read as a single bar:</p>
+<pre class="code lang-markdown" data-lang="markdown"><code>![swatch](https:<span class="t-comment">//placehold.co/210x110/0F172A/0F172A.png)![swatch](https://placehold.co/210x110/00F5D4/00F5D4.png)![swatch](https://placehold.co/210x110/F15BB5/F15BB5.png)![swatch](https://placehold.co/210x110/9B5DE5/9B5DE5.png)</span>
+</code></pre>
+<p>Result:</p>
+<p class='band'><img src="https://placehold.co/210x110/0F172A/0F172A.png" alt="swatch" /><img src="https://placehold.co/210x110/00F5D4/00F5D4.png" alt="swatch" /><img src="https://placehold.co/210x110/F15BB5/F15BB5.png" alt="swatch" /><img src="https://placehold.co/210x110/9B5DE5/9B5DE5.png" alt="swatch" /></p>
+<p>The URL shape is <code>placehold.co/{W}x{H}/{background}/{textColor}.png</code>. Passing the <strong>same hex twice</strong> hides the auto-generated size label, so you get a clean solid block. <code>dummyimage.com/210x110/0f172a/0f172a.png</code> is a drop-in fallback if placehold.co is ever down.</p>
+<h2>2 · Color rule</h2>
+<p>A 10–14px band replaces the boring <code>---</code> divider and keeps the article&#x27;s palette in the reader&#x27;s eye:</p>
+<pre class="code lang-markdown" data-lang="markdown"><code>![rule](https:<span class="t-comment">//placehold.co/250x12/0F172A/0F172A.png)![rule](https://placehold.co/250x12/00F5D4/00F5D4.png)![rule](https://placehold.co/250x12/F15BB5/F15BB5.png)![rule](https://placehold.co/250x12/9B5DE5/9B5DE5.png)</span>
+</code></pre>
+<h2>3 · Swatch table</h2>
+<div class='tw'><table><thead><tr><th>Swatch</th><th>HEX</th><th>RGB</th><th>HSL</th><th>On <code>#0F172A</code></th><th>Role</th></tr></thead><tbody><tr><td><img src="https://placehold.co/110x44/0F172A/0F172A.png" alt="" /></td><td><code>#0F172A</code></td><td><code>15, 23, 42</code></td><td><code>222° 47% 11%</code></td><td>—</td><td>Base</td></tr><tr><td><img src="https://placehold.co/110x44/00F5D4/00F5D4.png" alt="" /></td><td><code>#00F5D4</code></td><td><code>0, 245, 212</code></td><td><code>172° 100% 48%</code></td><td><strong>12.76:1</strong> ✅</td><td>Primary</td></tr><tr><td><img src="https://placehold.co/110x44/F15BB5/F15BB5.png" alt="" /></td><td><code>#F15BB5</code></td><td><code>241, 91, 181</code></td><td><code>324° 84% 65%</code></td><td><strong>5.87:1</strong> ✅</td><td>Accent</td></tr><tr><td><img src="https://placehold.co/110x44/9B5DE5/9B5DE5.png" alt="" /></td><td><code>#9B5DE5</code></td><td><code>155, 93, 229</code></td><td><code>267° 72% 63%</code></td><td><strong>4.33:1</strong> 🟡</td><td>Support</td></tr></tbody></table></div>
+<h2>4 · Code tabs — five looks for five jobs</h2>
+<p>Give each block a <strong>tab line</strong> right above it. The bold monospace filename plus an em-dash caption reads like an editor tab and visually separates one code look from the next.</p>
+<p><strong><code>tokens.css</code></strong> ⌁ <em>the source of truth</em></p>
+<pre class="code lang-css" data-lang="css"><code>:root {
+  <span class="t-prop">--color-surface</span>: <span class="t-color"><i class="chip" style="background:#0F172A"></i>#0F172A</span>;
+  <span class="t-prop">--color-primary</span>: <span class="t-color"><i class="chip" style="background:#00F5D4"></i>#00F5D4</span>;
+}
+</code></pre>
+<p><strong><code>tailwind.config.js</code></strong> ⌁ <em>the framework mirror</em></p>
+<pre class="code lang-js" data-lang="js"><code>module.exports = {
+  theme: { extend: { colors: { palette: { surface: &<span <span class="t-kw">class</span>="t-comment">#x27;#0F172A&#x27; } } } },</span>
+};
+</code></pre>
+<p><strong><code>patch</code></strong> ⌁ <em>before → after, in red and green</em></p>
+<pre class="code lang-diff" data-lang="diff"><code><span class="d-del">- background: #1e1e1e;</span>
+<span class="d-del">- color: #cccccc;</span>
+<span class="d-add">+ background: var(--color-surface);</span>
+<span class="d-add">+ color: var(--color-primary);</span>
+</code></pre>
+<p><strong><code>terminal</code></strong> ⌁ <em>no syntax highlighting, all vibe</em></p>
+<pre class="code lang-console" data-lang="console"><code><span class="sh-prompt">$</span><span class="sh-cmd"> npx colorfiind-tokens neon-diner-harmony</span>
+<span class="sh-ok">✔ wrote tokens.css   (4 custom properties)</span>
+<span class="sh-ok">✔ wrote tokens.json  (4 design tokens)</span>
+<span class="sh-out"></span></code></pre>
+<p><strong><code>data</code></strong> ⌁ <em>machine-readable</em></p>
+<pre class="code lang-jsonc" data-lang="jsonc"><code>{
+  <span class="t-comment">// one palette, four tokens</span>
+  &quot;surface&quot;: &quot;<span class="t-color"><i class="chip" style="background:#0F172A"></i>#0F172A</span>&quot;,
+  &quot;primary&quot;: &quot;<span class="t-color"><i class="chip" style="background:#00F5D4"></i>#00F5D4</span>&quot;
+}
+</code></pre>
+<h2>5 · Liquid tags worth using</h2>
+<details class='liquid' open><summary>💡 Click to expand a collapsible</summary>
+<p>Long snippets, alternate framework versions and &quot;the boring full config&quot; belong in here so the article keeps its rhythm.</p>
+<pre class="code lang-scss" data-lang="scss"><code><span class="t-kw">$surface</span>: <span class="t-color"><i class="chip" style="background:#0F172A"></i>#0F172A</span>;
+<span class="t-kw">$primary</span>: <span class="t-color"><i class="chip" style="background:#00F5D4"></i>#00F5D4</span>;
+</code></pre>
+</details>
+<pre class="code lang-liquid" data-lang="liquid"><code><span class="t-kw">{% details Summary text %}</span> hidden content <span class="t-kw">{% enddetails %}</span>
+{% cta https:<span class="t-comment">//colorfiind.com %} Browse 34,000+ palettes <span class="t-kw">{% endcta %}</span></span>
+{% embed https:<span class="t-comment">//codepen.io/your/pen %}</span>
+<span class="t-kw">{% katex inline %}</span> L = <span class="t-number">0</span>.2126R + <span class="t-number">0</span>.7152G + <span class="t-number">0</span>.0722B <span class="t-kw">{% endkatex %}</span>
+</code></pre>
+<h2>6 · Front matter template</h2>
+<pre class="code lang-yaml" data-lang="yaml"><code>---
+<span class="t-kw">title</span>: &quot;Your title — max ~<span class="t-number">60</span> chars for the card&quot;
+<span class="t-kw">published</span>: false
+<span class="t-kw">description</span>: &quot;One sentence, <span class="t-number">120</span>-<span class="t-number">160</span> chars, shows up in the feed and in OG cards.&quot;
+<span class="t-kw">tags</span>: css, webdev, design, beginners
+<span class="t-kw">cover_image</span>: https:<span class="t-comment">//your-cdn/cover-palette.png</span>
+<span class="t-kw">canonical_url</span>: https:<span class="t-comment">//your-site.com/original-post</span>
+<span class="t-kw">series</span>: &quot;Color for Developers&quot;
+---
+</code></pre>
+<blockquote><p>🧪 <strong>Lab note</strong> — <code>tags</code> is a <strong>maximum of four</strong>, comma separated, no <code>#</code>. <code>cover_image</code> looks best at exactly <strong>1000×420</strong>. Keep <code>published: false</code> until the preview looks right, then flip it.</p></blockquote>
+<p class='band'><img src="https://placehold.co/250x12/0F172A/0F172A.png" alt="rule" /><img src="https://placehold.co/250x12/00F5D4/00F5D4.png" alt="rule" /><img src="https://placehold.co/250x12/F15BB5/F15BB5.png" alt="rule" /><img src="https://placehold.co/250x12/9B5DE5/9B5DE5.png" alt="rule" /></p>
+<h2>7 · Generate all of it</h2>
+<p>Every band, table and token block in this series came out of one script:</p>
+<pre class="code lang-console" data-lang="console"><code><span class="sh-prompt">$</span><span class="sh-cmd"> python3 tools/palette_kit.py swatches \</span>
+<span class="sh-out">    --name &quot;Neon Diner Harmony&quot; --slug neon-diner-harmony \</span>
+<span class="sh-out">    --colors 0F172A 00F5D4 F15BB5 9B5DE5</span>
+<span class="sh-out"></span></code></pre>
+<a class='cta' href='https://colorfiind.com' target='_blank' rel='noopener'>Pick a palette to theme your next post</a></div>
+    </article>
+    <p class="note">Static local preview — Liquid tags are simulated, DEV renders them natively.
+    Colour swatches load from placehold.co, so they need internet access.</p>
+  </div>
+</div>
+</body>
+</html>

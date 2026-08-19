@@ -11,10 +11,13 @@ Three things you can do with it — pick the one you need.
 cover image, tags, colour swatches, highlighted code blocks, collapsibles, CTA buttons.
 
 ```bash
+python3 content/devto/tools/build_preview.py      # only needed after editing a .md
 python3 -m http.server 8080 --bind 0.0.0.0 --directory content/devto
 ```
 
 Open <http://localhost:8080/> → pick an article in the left sidebar → 🌗 toggles light/dark.
+The pages are plain pre-built HTML (no JS, no CDN), so they render even on a locked-down network —
+only the swatch images need internet.
 
 **Option 2 — just open the `.md` files** in VS Code (`Ctrl/Cmd + Shift + V` for the built-in preview)
 or straight on GitHub. Swatches render there too, because they are images.

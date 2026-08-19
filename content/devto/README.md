@@ -14,7 +14,8 @@ content/devto/
 ├── 05-automate-palette-workflow.md  ← one script → every format (py/node/php)
 ├── assets/                          ← 1000×420 covers + 1200×260 strips (PNG)
 ├── data/palettes.json               ← the 16 real palettes used across the posts
-├── index.html                       ← local DEV-like preview (open this)
+├── preview/                         ← generated static preview (open index.html)
+├── index.html                       ← redirect into the preview
 └── tools/palette_kit.py             ← generator for swatches, tokens, contrast, covers
 ```
 
@@ -23,13 +24,17 @@ content/devto/
 ## 1. Preview locally
 
 ```bash
+python3 content/devto/tools/build_preview.py            # rebuild after editing any .md
 python3 -m http.server 8080 --bind 0.0.0.0 --directory content/devto
 # open http://localhost:8080/
 ```
 
-The preview parses the front matter, simulates DEV's Liquid tags (`details`, `cta`, `katex`, `embed`),
-highlights each code block and labels it with its language — so you see roughly what DEV will show,
-including a light/dark toggle.
+The preview is **pre-rendered static HTML** — no JavaScript, no CDN, nothing to install. Only the
+colour swatches need internet (they load from placehold.co).
+
+It shows the front matter as a DEV-style header, simulates the Liquid tags (`details`, `cta`, `katex`,
+`embed`), highlights every code block and labels it with its language, and has a light/dark toggle.
+Hex codes inside code blocks even get a little colour chip.
 
 ## 2. Publish an article
 

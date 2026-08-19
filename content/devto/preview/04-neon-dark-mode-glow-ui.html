@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Neon Dark Mode That Doesn&#x27;t Hurt: Building a Glow UI from ColorFiind&#x27;s Neon Palettes — DEV preview</title>
+<style>
+:root{--bg:#0B0F1A;--panel:#111827;--panel2:#0F172A;--line:#1F2A44;--ink:#E7E9EE;
+--muted:#94A3B8;--primary:#00F5D4;--accent:#F15BB5;--support:#9B5DE5;--radius:14px}
+html[data-theme=light]{--bg:#F5F7F9;--panel:#fff;--panel2:#EFF2F6;--line:#DDE3EC;
+--ink:#1B2333;--muted:#5B6478;--primary:#0E7C86;--accent:#B4276F;--support:#6D3FBF}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+font:16px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+a{color:var(--primary)}
+header.top{position:sticky;top:0;z-index:20;display:flex;gap:14px;align-items:center;padding:12px 18px;
+background:var(--bg);border-bottom:1px solid var(--line)}
+.brand{font-weight:800}.brand span{color:var(--primary)}
+.rule{display:flex;height:6px;width:150px;border-radius:99px;overflow:hidden}.rule i{flex:1}
+.spacer{flex:1}
+.btn{font:inherit;cursor:pointer;border:1px solid var(--line);background:var(--panel);color:var(--ink);
+border-radius:99px;padding:6px 14px;text-decoration:none}
+.btn:hover{border-color:var(--primary)}
+.layout{display:grid;grid-template-columns:290px minmax(0,1fr);gap:26px;padding:22px;align-items:start}
+@media(max-width:900px){.layout{grid-template-columns:1fr}}
+nav.files{position:sticky;top:70px;background:var(--panel);border:1px solid var(--line);
+border-radius:var(--radius);padding:12px;display:flex;flex-direction:column;gap:6px}
+nav.files h2{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin:6px 8px 8px}
+nav.files a{display:block;padding:9px 11px;border-radius:10px;text-decoration:none;color:var(--ink);
+font-size:14px;border:1px solid transparent}
+nav.files a:hover{background:var(--panel2)}
+nav.files a.active{background:var(--panel2);border-color:var(--primary);color:var(--primary)}
+nav.files small{display:block;color:var(--muted);font-size:11.5px}
+article{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+padding-bottom:48px;max-width:840px;width:100%;overflow:hidden}
+.cover{width:100%;display:block;border-bottom:1px solid var(--line)}
+.meta{padding:22px clamp(18px,4vw,44px) 0}
+.meta h1{font-size:clamp(26px,4vw,40px);line-height:1.18;margin:.2em 0 .3em}
+.tags{display:flex;flex-wrap:wrap;gap:8px}
+.tag{font-size:12.5px;color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:2px 8px}
+.desc{color:var(--muted);font-size:15px}
+.fm{font-size:12px;color:var(--muted);border-top:1px dashed var(--line);
+border-bottom:1px dashed var(--line);padding:8px 0;margin-bottom:6px}
+.post{padding:0 clamp(18px,4vw,44px)}
+.post img{max-width:100%;vertical-align:top}
+.post p.band{line-height:0;margin:1.2em 0}
+.post h2{margin-top:1.9em;font-size:26px;border-bottom:1px solid var(--line);padding-bottom:.25em}
+.post h3{margin-top:1.5em;font-size:20px}
+.post blockquote{margin:1.4em 0;padding:.9em 1.1em;background:var(--panel2);
+border-left:4px solid var(--accent);border-radius:0 10px 10px 0}
+.post blockquote p{margin:0}
+.tw{overflow-x:auto;margin:1.3em 0}
+.post table{border-collapse:collapse;width:100%;font-size:14.5px}
+.post th,.post td{border:1px solid var(--line);padding:8px 11px;text-align:left;vertical-align:middle}
+.post th{background:var(--panel2)}
+.post td img{vertical-align:middle}
+.post :not(pre)>code{background:var(--panel2);padding:.15em .4em;border-radius:6px;font-size:.9em;
+font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+pre.code{background:#0d1117;border:1px solid var(--line);border-radius:12px;padding:18px;
+overflow-x:auto;position:relative;margin:1.3em 0}
+pre.code code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13.5px;
+line-height:1.62;color:#C9D1D9;white-space:pre}
+pre.code::before{content:attr(data-lang);position:absolute;top:0;right:0;font-size:10.5px;
+letter-spacing:.12em;text-transform:uppercase;color:#0B0F1A;background:var(--primary);
+padding:2px 10px;border-radius:0 11px 0 10px;font-family:ui-monospace,monospace}
+pre.lang-diff{border-color:#F15BB5}
+pre.lang-console,pre.lang-bash{background:#05070d;border-color:#00F5D4}
+.t-comment{color:#6E7A8A;font-style:italic}
+.t-string{color:#A5D6FF}.t-number{color:#F0A868}.t-kw{color:#FF7B9C}
+.t-prop{color:#9B5DE5;font-weight:600}.t-tag{color:#7EE787}
+.t-color{color:#FFD479}
+.chip{display:inline-block;width:.78em;height:.78em;margin-right:.35em;border-radius:3px;
+border:1px solid rgba(255,255,255,.35);vertical-align:-1px}
+.d-add{color:#7EE787;display:block;background:rgba(46,160,67,.15)}
+.d-del{color:#FF9492;display:block;background:rgba(248,81,73,.14)}
+.d-hunk{color:#79C0FF;display:block}
+.sh-prompt{color:#F15BB5;font-weight:700}.sh-cmd{color:#E7E9EE}
+.sh-ok{color:#7EE787;display:block}.sh-out{color:#9DF7E4;display:block}
+details.liquid{background:var(--panel2);border:1px solid var(--line);border-radius:12px;
+padding:10px 16px;margin:1.4em 0}
+details.liquid summary{cursor:pointer;font-weight:650}
+.cta{display:block;text-align:center;margin:1.8em 0;padding:14px 20px;border-radius:12px;
+background:linear-gradient(90deg,var(--primary),var(--support));color:#08121A;font-weight:750;
+text-decoration:none}
+.katex{background:var(--panel2);border:1px dashed var(--line);border-radius:10px;padding:12px 16px;
+font-family:ui-monospace,monospace;color:var(--primary);margin:1.2em 0}
+.embed{color:var(--muted);font-family:ui-monospace,monospace;font-size:13px}
+.note{max-width:840px;color:var(--muted);font-size:13px;margin-top:14px}
+.post hr{border:0;border-top:1px solid var(--line);margin:2em 0}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand">Swatch<span>Deck</span> · DEV.to preview</div>
+  <div class="rule"><i style="background:#0F172A"></i><i style="background:#00F5D4"></i>
+    <i style="background:#F15BB5"></i><i style="background:#9B5DE5"></i></div>
+  <div class="spacer"></div>
+  <a class="btn" href="../04-neon-dark-mode-glow-ui.md" target="_blank">View raw .md</a>
+  <button class="btn" onclick="var d=document.documentElement;
+    d.dataset.theme=d.dataset.theme==='dark'?'light':'dark'">🌗 Theme</button>
+</header>
+<div class="layout">
+  <nav class="files"><h2>Articles</h2><a href="00-swatch-deck-theme-kit.html" class="">swatch deck theme kit<small>Reusable theme kit</small></a><a href="01-colorfiind-developer-tour.html" class="">colorfiind developer tour<small>Feature tour</small></a><a href="02-hex-to-design-tokens.html" class="">hex to design tokens<small>Tokens pipeline</small></a><a href="03-seasonal-palettes-ui-themes.html" class="">seasonal palettes ui themes<small>Seasonal themes</small></a><a href="04-neon-dark-mode-glow-ui.html" class="active">neon dark mode glow ui<small>Neon dark mode</small></a><a href="05-automate-palette-workflow.html" class="">automate palette workflow<small>Automation</small></a></nav>
+  <div>
+    <article>
+      <img class="cover" src="https://placehold.co/1000x420/09090B/00E5FF.png" alt="cover" />
+      <div class="meta">
+        <div class="tags"><span class="tag">#css</span><span class="tag">#webdev</span><span class="tag">#darkmode</span><span class="tag">#design</span></div>
+        <h1>Neon Dark Mode That Doesn&#x27;t Hurt: Building a Glow UI from ColorFiind&#x27;s Neon Palettes</h1>
+        <p class="desc">Neon palettes look incredible in a screenshot and burn your retinas in production. Here&#x27;s the CSS system that keeps the glow and fixes the pain — halation, focus rings, glow tokens and a reduced-motion path.</p>
+        <div class="fm">published: <b>false</b> · tags: 4/4 · cover_image: set</div>
+      </div>
+      <div class="post"><p class='band'><img src="https://placehold.co/250x110/09090B/09090B.png" alt="Maple Drift" /><img src="https://placehold.co/250x110/FF007F/FF007F.png" alt="Maple Drift" /><img src="https://placehold.co/250x110/00E5FF/00E5FF.png" alt="Maple Drift" /><img src="https://placehold.co/250x110/B8F500/B8F500.png" alt="Maple Drift" /></p>
+<blockquote><p>🎨 <strong>Palette in play</strong> — <a href="https://colorfiind.com/palette/maple-drift" target="_blank" rel="noopener">Maple Drift</a> · <code>#09090B</code> <code>#FF007F</code> <code>#00E5FF</code> <code>#B8F500</code></p></blockquote>
+<p>Every neon theme starts the same way. You find a palette like this one, you build a landing page in an hour, it looks like the future, and three days later you notice you have been squinting at your own product.</p>
+<p>The colors are not the problem. <strong>The way they are applied is.</strong> <a href="https://colorfiind.com/category/neon" target="_blank" rel="noopener">ColorFiind&#x27;s neon category</a> is full of palettes with the exact structure you want — one near-black base plus three high-luminance signals — and that structure is a rule waiting to be written down.</p>
+<p class='band'><img src="https://placehold.co/250x12/09090B/09090B.png" alt="rule" /><img src="https://placehold.co/250x12/FF007F/FF007F.png" alt="rule" /><img src="https://placehold.co/250x12/00E5FF/00E5FF.png" alt="rule" /><img src="https://placehold.co/250x12/B8F500/B8F500.png" alt="rule" /></p>
+<h2>⚡ 1 · Read the structure, not the vibe</h2>
+<p>Every good neon palette on ColorFiind is <code>1 base + 3 signals</code>:</p>
+<div class='tw'><table><thead><tr><th>Swatch</th><th>HEX</th><th>Luminance</th><th>On base</th><th>Grade</th><th>Role</th></tr></thead><tbody><tr><td><img src="https://placehold.co/110x44/09090B/09090B.png" alt="" /></td><td><code>#09090B</code></td><td>0.003</td><td>—</td><td>—</td><td>canvas</td></tr><tr><td><img src="https://placehold.co/110x44/FF007F/FF007F.png" alt="" /></td><td><code>#FF007F</code></td><td>0.228</td><td><strong>5.27:1</strong></td><td>✅ AA</td><td>accent / brand</td></tr><tr><td><img src="https://placehold.co/110x44/00E5FF/00E5FF.png" alt="" /></td><td><code>#00E5FF</code></td><td>0.633</td><td><strong>12.93:1</strong></td><td>✅ AAA</td><td>primary / links</td></tr><tr><td><img src="https://placehold.co/110x44/B8F500/B8F500.png" alt="" /></td><td><code>#B8F500</code></td><td>0.755</td><td><strong>15.25:1</strong></td><td>✅ AAA</td><td>success / highlight</td></tr></tbody></table></div>
+<p>Two things fall out of that table immediately:</p>
+<ol><li>The two bright signals are <strong>more readable than most light-mode text</strong>. They are your primary and success colors, not decoration.</li><li>The pink is the weakest at 5.27:1 — fine for headings and buttons, risky for 14px body copy on a glowing background.</li></ol>
+<p>Three more neon palettes with the same skeleton:</p>
+<div class='tw'><table><thead><tr><th>Palette</th><th>Base</th><th>Signals</th></tr></thead><tbody><tr><td><a href="https://colorfiind.com/palette/neon-diner-harmony" target="_blank" rel="noopener">Neon Diner Harmony</a></td><td><img src="https://placehold.co/54x24/0F172A/0F172A.png" alt="" /> <code>#0F172A</code></td><td><img src="https://placehold.co/54x24/00F5D4/00F5D4.png" alt="" /><img src="https://placehold.co/54x24/F15BB5/F15BB5.png" alt="" /><img src="https://placehold.co/54x24/9B5DE5/9B5DE5.png" alt="" /></td></tr><tr><td><a href="https://colorfiind.com/palette/clay-flare-spectrum" target="_blank" rel="noopener">Clay Flare Spectrum</a></td><td><img src="https://placehold.co/54x24/10002B/10002B.png" alt="" /> <code>#10002B</code></td><td><img src="https://placehold.co/54x24/240046/240046.png" alt="" /><img src="https://placehold.co/54x24/FF006E/FF006E.png" alt="" /><img src="https://placehold.co/54x24/00F5D4/00F5D4.png" alt="" /></td></tr><tr><td><a href="https://colorfiind.com/palette/pine-field-gallery" target="_blank" rel="noopener">Pine Field Gallery</a></td><td><img src="https://placehold.co/54x24/03071E/03071E.png" alt="" /> <code>#03071E</code></td><td><img src="https://placehold.co/54x24/DC2F02/DC2F02.png" alt="" /><img src="https://placehold.co/54x24/F48C06/F48C06.png" alt="" /><img src="https://placehold.co/54x24/FFBA08/FFBA08.png" alt="" /></td></tr></tbody></table></div>
+<h2>🩹 2 · Why it hurts — halation, and the 3 fixes</h2>
+<p>Saturated bright-on-black text bleeds at the edges for a lot of eyes — astigmatism especially. This is <strong>halation</strong>, and it is why &quot;pure white on pure black&quot; is a bad default even though it scores 21:1.</p>
+<p>Three fixes, all cheap:</p>
+<p><strong><code>fix-1.css</code></strong> ⌁ <em>never pure black, never pure white</em></p>
+<pre class="code lang-diff" data-lang="diff"><code><span class="d-del">- --bg:  #000000;</span>
+<span class="d-del">- --ink: #FFFFFF;</span>
+<span class="d-add">+ --bg:  #09090B;   /* the palette&#x27;s base, not absolute black */</span>
+<span class="d-add">+ --ink: #E7E9EE;   /* 16.4:1 — plenty, without the buzz      */</span>
+</code></pre>
+<p><strong><code>fix-2.css</code></strong> ⌁ <em>body text is never a neon</em></p>
+<pre class="code lang-css" data-lang="css"><code>:root {
+  <span class="t-prop">--ink</span>:        <span class="t-color"><i class="chip" style="background:#E7E9EE"></i>#E7E9EE</span>;   <span class="t-comment">/* all paragraphs                */</span>
+  <span class="t-prop">--ink-muted</span>:  <span class="t-color"><i class="chip" style="background:#9AA3B2"></i>#9AA3B2</span>;   <span class="t-comment">/* captions, timestamps          */</span>
+  <span class="t-prop">--neon-cyan</span>:  <span class="t-color"><i class="chip" style="background:#00E5FF"></i>#00E5FF</span>;   <span class="t-comment">/* links, focus, primary actions */</span>
+  <span class="t-prop">--neon-lime</span>:  <span class="t-color"><i class="chip" style="background:#B8F500"></i>#B8F500</span>;   <span class="t-comment">/* success, active nav, badges   */</span>
+  <span class="t-prop">--neon-pink</span>:  <span class="t-color"><i class="chip" style="background:#FF007F"></i>#FF007F</span>;   <span class="t-comment">/* brand, headings, one CTA      */</span>
+}
+
+p, li, td { color: var(--ink); }                 <span class="t-comment">/* boring on purpose */</span>
+a         { color: var(--neon-cyan); }
+</code></pre>
+<p><strong><code>fix-3.css</code></strong> ⌁ <em>the glow lives in the shadow, not in the text</em></p>
+<pre class="code lang-css" data-lang="css"><code>.neon-card {
+  <span class="t-prop">background</span>: color-mix(in srgb, var(--neon-cyan) <span class="t-number">6</span>%, <span class="t-color"><i class="chip" style="background:#101014"></i>#101014</span>);
+  <span class="t-prop">border</span>: <span class="t-number">1px</span> solid color-mix(in srgb, var(--neon-cyan) <span class="t-number">35</span>%, transparent);
+  <span class="t-prop">border-radius</span>: <span class="t-number">14px</span>;
+  <span class="t-prop">box-shadow</span>:
+    <span class="t-number">0</span> <span class="t-number">0</span> <span class="t-number">0</span> <span class="t-number">1px</span> color-mix(in srgb, var(--neon-cyan) <span class="t-number">18</span>%, transparent),
+    <span class="t-number">0</span> <span class="t-number">14px</span> <span class="t-number">40px</span> -<span class="t-number">18px</span> var(--neon-cyan);
+}
+</code></pre>
+<blockquote><p>🧪 <strong>Lab note</strong> — <code>color-mix()</code> is the whole trick. One neon token generates its own tint, border, glow and hover state, so a palette swap is still a one-line change. Supported in every current browser; <code>rgb(0 229 255 / 6%)</code> is the fallback.</p></blockquote>
+<p class='band'><img src="https://placehold.co/250x12/09090B/09090B.png" alt="rule" /><img src="https://placehold.co/250x12/FF007F/FF007F.png" alt="rule" /><img src="https://placehold.co/250x12/00E5FF/00E5FF.png" alt="rule" /><img src="https://placehold.co/250x12/B8F500/B8F500.png" alt="rule" /></p>
+<h2>🧱 3 · The full theme</h2>
+<p><strong><code>neon.css</code></strong> ⌁ <em>complete, copy-paste-able</em></p>
+<pre class="code lang-css" data-lang="css"><code>:root[data-theme=&<span class="t-comment">#x27;neon&#x27;] {</span>
+  <span class="t-comment">/* canvas — three steps of near-black */</span>
+  <span class="t-prop">--bg-base</span>:     <span class="t-color"><i class="chip" style="background:#09090B"></i>#09090B</span>;
+  <span class="t-prop">--bg-raised</span>:   <span class="t-color"><i class="chip" style="background:#101014"></i>#101014</span>;
+  <span class="t-prop">--bg-overlay</span>:  <span class="t-color"><i class="chip" style="background:#17171D"></i>#17171D</span>;
+
+  <span class="t-comment">/* type */</span>
+  <span class="t-prop">--ink</span>:         <span class="t-color"><i class="chip" style="background:#E7E9EE"></i>#E7E9EE</span>;
+  <span class="t-prop">--ink-muted</span>:   <span class="t-color"><i class="chip" style="background:#9AA3B2"></i>#9AA3B2</span>;
+
+  <span class="t-comment">/* signals, straight from Maple Drift */</span>
+  <span class="t-prop">--neon-cyan</span>:   <span class="t-color"><i class="chip" style="background:#00E5FF"></i>#00E5FF</span>;
+  <span class="t-prop">--neon-lime</span>:   <span class="t-color"><i class="chip" style="background:#B8F500"></i>#B8F500</span>;
+  <span class="t-prop">--neon-pink</span>:   <span class="t-color"><i class="chip" style="background:#FF007F"></i>#FF007F</span>;
+
+  <span class="t-comment">/* semantic aliases — components use these only */</span>
+  <span class="t-prop">--primary</span>:     var(--neon-cyan);
+  <span class="t-prop">--primary-ink</span>: <span class="t-color"><i class="chip" style="background:#04252B"></i>#04252B</span>;
+  <span class="t-prop">--success</span>:     var(--neon-lime);
+  <span class="t-prop">--success-ink</span>: <span class="t-color"><i class="chip" style="background:#14200B"></i>#14200B</span>;
+  <span class="t-prop">--brand</span>:       var(--neon-pink);
+  <span class="t-prop">--brand-ink</span>:   <span class="t-color"><i class="chip" style="background:#1A0010"></i>#1A0010</span>;
+
+  <span class="t-prop">--focus-ring</span>:  <span class="t-number">0</span> <span class="t-number">0</span> <span class="t-number">0</span> <span class="t-number">3px</span> color-mix(in srgb, var(--neon-cyan) <span class="t-number">55</span>%, transparent);
+  <span class="t-prop">--radius</span>:      <span class="t-number">12px</span>;
+}
+
+body {
+  <span class="t-prop">background</span>:
+    radial-gradient(<span class="t-number">1200px</span> <span class="t-number">600px</span> at <span class="t-number">15</span>% -<span class="t-number">10</span>%, color-mix(in srgb, var(--neon-pink) <span class="t-number">10</span>%, transparent), transparent),
+    radial-gradient(<span class="t-number">900px</span> <span class="t-number">500px</span> at <span class="t-number">90</span>% <span class="t-number">0</span>%, color-mix(in srgb, var(--neon-cyan) <span class="t-number">10</span>%, transparent), transparent),
+    var(--bg-base);
+  <span class="t-prop">color</span>: var(--ink);
+}
+
+.btn-primary {
+  <span class="t-prop">background</span>: var(--primary);
+  <span class="t-prop">color</span>: var(--primary-ink);
+  <span class="t-prop">border-radius</span>: var(--radius);
+  <span class="t-prop">padding</span>: <span class="t-number">0.7rem</span> <span class="t-number">1.4rem</span>;
+  <span class="t-prop">font-weight</span>: <span class="t-number">650</span>;
+}
+.btn-primary:hover { box-shadow: <span class="t-number">0</span> <span class="t-number">10px</span> <span class="t-number">30px</span> -<span class="t-number">12px</span> var(--primary); }
+
+:where(a, button, input, select, textarea):focus-visible {
+  <span class="t-prop">outline</span>: none;
+  <span class="t-prop">box-shadow</span>: var(--focus-ring);
+}
+
+.badge-success {
+  <span class="t-prop">background</span>: color-mix(in srgb, var(--success) <span class="t-number">14</span>%, transparent);
+  <span class="t-prop">color</span>: var(--success);
+  <span class="t-prop">border</span>: <span class="t-number">1px</span> solid color-mix(in srgb, var(--success) <span class="t-number">40</span>%, transparent);
+  <span class="t-prop">border-radius</span>: <span class="t-number">999px</span>;
+  <span class="t-prop">padding</span>: <span class="t-number">0.2rem</span> <span class="t-number">0.7rem</span>;
+  <span class="t-prop">font-size</span>: <span class="t-number">0.8rem</span>;
+}
+</code></pre>
+<p>Text-on-neon pairings, pre-solved:</p>
+<div class='tw'><table><thead><tr><th>Background</th><th>Ink</th><th>Ratio</th></tr></thead><tbody><tr><td><img src="https://placehold.co/70x26/00E5FF/00E5FF.png" alt="" /> <code>#00E5FF</code></td><td><code>#04252B</code></td><td><strong>10.46:1</strong> ✅</td></tr><tr><td><img src="https://placehold.co/70x26/B8F500/B8F500.png" alt="" /> <code>#B8F500</code></td><td><code>#14200B</code></td><td><strong>12.97:1</strong> ✅</td></tr><tr><td><img src="https://placehold.co/70x26/FF007F/FF007F.png" alt="" /> <code>#FF007F</code></td><td><code>#1A0010</code></td><td><strong>5.29:1</strong> ✅</td></tr></tbody></table></div>
+<blockquote><p>🚧 <strong>Trap</strong> — light text on <code>#FF007F</code> maxes out at <strong>3.43:1</strong>; the pink is simply too luminous to carry white type. Dark ink on pink is the only combination that passes AA, and it looks better anyway.</p></blockquote>
+<h2>🎬 4 · Motion: glow responsibly</h2>
+<p>A pulsing glow is the signature move of a neon UI and the fastest way to make someone close the tab. Gate it.</p>
+<pre class="code lang-css" data-lang="css"><code><span class="t-kw">@keyframes</span> pulse {
+  <span class="t-number">0</span>%, <span class="t-number">100</span>% { box-shadow: <span class="t-number">0</span> <span class="t-number">0</span> <span class="t-number">0</span> <span class="t-number">0</span> color-mix(in srgb, var(--neon-pink) <span class="t-number">45</span>%, transparent); }
+  <span class="t-number">50</span>%      { box-shadow: <span class="t-number">0</span> <span class="t-number">0</span> <span class="t-number">26px</span> <span class="t-number">6px</span> color-mix(in srgb, var(--neon-pink) <span class="t-number">22</span>%, transparent); }
+}
+
+.live-dot { animation: pulse <span class="t-number">2.4s</span> ease-in-out infinite; }
+
+<span class="t-kw">@media</span> (prefers-reduced-motion: reduce) {
+  .live-dot {
+    <span class="t-prop">animation</span>: none;
+    <span class="t-prop">box-shadow</span>: <span class="t-number">0</span> <span class="t-number">0</span> <span class="t-number">0</span> <span class="t-number">2px</span> color-mix(in srgb, var(--neon-pink) <span class="t-number">50</span>%, transparent);
+  }
+}
+</code></pre>
+<details class='liquid' open><summary>🌗 Add a &quot;dim the neon&quot; user setting (people will thank you)</summary>
+<pre class="code lang-css" data-lang="css"><code>:root[data-intensity=&<span class="t-comment">#x27;calm&#x27;] {</span>
+  <span class="t-prop">--neon-cyan</span>: <span class="t-color"><i class="chip" style="background:#58C7D8"></i>#58C7D8</span>;
+  <span class="t-prop">--neon-lime</span>: <span class="t-color"><i class="chip" style="background:#A8C965"></i>#A8C965</span>;
+  <span class="t-prop">--neon-pink</span>: <span class="t-color"><i class="chip" style="background:#D45C92"></i>#D45C92</span>;
+}
+</code></pre>
+<pre class="code lang-js" data-lang="js"><code><span class="t-kw">const</span> intensity = localStorage.getItem(&<span <span class="t-kw">class</span>="t-comment">#x27;intensity&#x27;) ?? &#x27;full&#x27;;</span>
+document.documentElement.dataset.intensity = intensity;
+
+document.querySelector(&<span <span class="t-kw">class</span>="t-comment">#x27;#calm&#x27;).addEventListener(&#x27;change&#x27;, (e) =&gt; {</span>
+  <span class="t-kw">const</span> value = e.target.checked ? &<span <span class="t-kw">class</span>="t-comment">#x27;calm&#x27; : &#x27;full&#x27;;</span>
+  document.documentElement.dataset.intensity = value;
+  localStorage.setItem(&<span <span class="t-kw">class</span>="t-comment">#x27;intensity&#x27;, value);</span>
+});
+</code></pre>
+<p>Same tokens, desaturated by roughly 45%. Two lines of JS, one extra CSS block, and your neon theme becomes usable for an eight-hour workday.</p>
+</details>
+<h2>🧪 5 · Ship-gate it in CI</h2>
+<p>Neon themes drift. Someone adds <code>color: #FF007F</code> to a 13px label at 2am. Catch it automatically:</p>
+<pre class="code lang-js" data-lang="js"><code><span <span class="t-kw">class</span>="t-comment">// contrast.test.js</span>
+<span class="t-kw">import</span> { contrast } <span class="t-kw">from</span> &<span <span class="t-kw">class</span>="t-comment">#x27;./contrast.js&#x27;;</span>
+
+<span class="t-kw">const</span> BG = &<span <span class="t-kw">class</span>="t-comment">#x27;#09090B&#x27;;</span>
+<span class="t-kw">const</span> tokens = {
+  ink:   &<span <span class="t-kw">class</span>="t-comment">#x27;#E7E9EE&#x27;,</span>
+  cyan:  &<span <span class="t-kw">class</span>="t-comment">#x27;#00E5FF&#x27;,</span>
+  lime:  &<span <span class="t-kw">class</span>="t-comment">#x27;#B8F500&#x27;,</span>
+  pink:  &<span <span class="t-kw">class</span>="t-comment">#x27;#FF007F&#x27;,</span>
+};
+
+describe(&<span <span class="t-kw">class</span>="t-comment">#x27;neon theme on base&#x27;, () =&gt; {</span>
+  <span class="t-kw">for</span> (<span class="t-kw">const</span> [name, hex] <span class="t-kw">of</span> Object.entries(tokens)) {
+    it(<span <span class="t-kw">class</span>="t-string">`${name} clears 4.5:1`</span>, () =&gt; {
+      expect(contrast(hex, BG)).toBeGreaterThanOrEqual(<span <span class="t-kw">class</span>="t-number">4.5</span>);
+    });
+  }
+});
+</code></pre>
+<pre class="code lang-console" data-lang="console"><code><span class="sh-prompt">$</span><span class="sh-cmd"> npm test -- contrast</span>
+<span class="sh-out"></span>
+<span class="sh-ok"> PASS  ./contrast.test.js</span>
+<span class="sh-out">  neon theme on base</span>
+<span class="sh-ok">    ✓ ink clears 4.5:1   (16.38)</span>
+<span class="sh-ok">    ✓ cyan clears 4.5:1  (12.93)</span>
+<span class="sh-ok">    ✓ lime clears 4.5:1  (15.25)</span>
+<span class="sh-ok">    ✓ pink clears 4.5:1  (5.27)</span>
+<span class="sh-out"></span>
+<span class="sh-out">Tests: 4 passed, 4 total</span>
+<span class="sh-out"></span></code></pre>
+<h2>🧾 The checklist</h2>
+<ul><li>Pick a neon palette with a <strong>real base color</strong>, not <code>#000</code>.</li><li>Body copy is always the neutral ink. Neons are for links, states, borders and one CTA.</li><li>Put the glow in <code>box-shadow</code> and tinted backgrounds, never in the letterforms.</li><li>Give every neon an <code>-ink</code> partner and store it as a token.</li><li>Respect <code>prefers-reduced-motion</code>, and consider a &quot;calm&quot; intensity toggle.</li><li>Assert contrast in CI so the theme can&#x27;t rot.</li></ul>
+<a class='cta' href='https://colorfiind.com/category/neon' target='_blank' rel='noopener'>Browse the neon palettes on ColorFiind</a>
+<p><em>Building something dark and loud? Drop your base + three signals in the comments.</em> 👇</p></div>
+    </article>
+    <p class="note">Static local preview — Liquid tags are simulated, DEV renders them natively.
+    Colour swatches load from placehold.co, so they need internet access.</p>
+  </div>
+</div>
+</body>
+</html>

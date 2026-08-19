@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Seasonal Color Analysis for Developers: Soft Summer UI vs Deep Winter Dark Mode — DEV preview</title>
+<style>
+:root{--bg:#0B0F1A;--panel:#111827;--panel2:#0F172A;--line:#1F2A44;--ink:#E7E9EE;
+--muted:#94A3B8;--primary:#00F5D4;--accent:#F15BB5;--support:#9B5DE5;--radius:14px}
+html[data-theme=light]{--bg:#F5F7F9;--panel:#fff;--panel2:#EFF2F6;--line:#DDE3EC;
+--ink:#1B2333;--muted:#5B6478;--primary:#0E7C86;--accent:#B4276F;--support:#6D3FBF}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+font:16px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+a{color:var(--primary)}
+header.top{position:sticky;top:0;z-index:20;display:flex;gap:14px;align-items:center;padding:12px 18px;
+background:var(--bg);border-bottom:1px solid var(--line)}
+.brand{font-weight:800}.brand span{color:var(--primary)}
+.rule{display:flex;height:6px;width:150px;border-radius:99px;overflow:hidden}.rule i{flex:1}
+.spacer{flex:1}
+.btn{font:inherit;cursor:pointer;border:1px solid var(--line);background:var(--panel);color:var(--ink);
+border-radius:99px;padding:6px 14px;text-decoration:none}
+.btn:hover{border-color:var(--primary)}
+.layout{display:grid;grid-template-columns:290px minmax(0,1fr);gap:26px;padding:22px;align-items:start}
+@media(max-width:900px){.layout{grid-template-columns:1fr}}
+nav.files{position:sticky;top:70px;background:var(--panel);border:1px solid var(--line);
+border-radius:var(--radius);padding:12px;display:flex;flex-direction:column;gap:6px}
+nav.files h2{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin:6px 8px 8px}
+nav.files a{display:block;padding:9px 11px;border-radius:10px;text-decoration:none;color:var(--ink);
+font-size:14px;border:1px solid transparent}
+nav.files a:hover{background:var(--panel2)}
+nav.files a.active{background:var(--panel2);border-color:var(--primary);color:var(--primary)}
+nav.files small{display:block;color:var(--muted);font-size:11.5px}
+article{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+padding-bottom:48px;max-width:840px;width:100%;overflow:hidden}
+.cover{width:100%;display:block;border-bottom:1px solid var(--line)}
+.meta{padding:22px clamp(18px,4vw,44px) 0}
+.meta h1{font-size:clamp(26px,4vw,40px);line-height:1.18;margin:.2em 0 .3em}
+.tags{display:flex;flex-wrap:wrap;gap:8px}
+.tag{font-size:12.5px;color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:2px 8px}
+.desc{color:var(--muted);font-size:15px}
+.fm{font-size:12px;color:var(--muted);border-top:1px dashed var(--line);
+border-bottom:1px dashed var(--line);padding:8px 0;margin-bottom:6px}
+.post{padding:0 clamp(18px,4vw,44px)}
+.post img{max-width:100%;vertical-align:top}
+.post p.band{line-height:0;margin:1.2em 0}
+.post h2{margin-top:1.9em;font-size:26px;border-bottom:1px solid var(--line);padding-bottom:.25em}
+.post h3{margin-top:1.5em;font-size:20px}
+.post blockquote{margin:1.4em 0;padding:.9em 1.1em;background:var(--panel2);
+border-left:4px solid var(--accent);border-radius:0 10px 10px 0}
+.post blockquote p{margin:0}
+.tw{overflow-x:auto;margin:1.3em 0}
+.post table{border-collapse:collapse;width:100%;font-size:14.5px}
+.post th,.post td{border:1px solid var(--line);padding:8px 11px;text-align:left;vertical-align:middle}
+.post th{background:var(--panel2)}
+.post td img{vertical-align:middle}
+.post :not(pre)>code{background:var(--panel2);padding:.15em .4em;border-radius:6px;font-size:.9em;
+font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+pre.code{background:#0d1117;border:1px solid var(--line);border-radius:12px;padding:18px;
+overflow-x:auto;position:relative;margin:1.3em 0}
+pre.code code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13.5px;
+line-height:1.62;color:#C9D1D9;white-space:pre}
+pre.code::before{content:attr(data-lang);position:absolute;top:0;right:0;font-size:10.5px;
+letter-spacing:.12em;text-transform:uppercase;color:#0B0F1A;background:var(--primary);
+padding:2px 10px;border-radius:0 11px 0 10px;font-family:ui-monospace,monospace}
+pre.lang-diff{border-color:#F15BB5}
+pre.lang-console,pre.lang-bash{background:#05070d;border-color:#00F5D4}
+.t-comment{color:#6E7A8A;font-style:italic}
+.t-string{color:#A5D6FF}.t-number{color:#F0A868}.t-kw{color:#FF7B9C}
+.t-prop{color:#9B5DE5;font-weight:600}.t-tag{color:#7EE787}
+.t-color{color:#FFD479}
+.chip{display:inline-block;width:.78em;height:.78em;margin-right:.35em;border-radius:3px;
+border:1px solid rgba(255,255,255,.35);vertical-align:-1px}
+.d-add{color:#7EE787;display:block;background:rgba(46,160,67,.15)}
+.d-del{color:#FF9492;display:block;background:rgba(248,81,73,.14)}
+.d-hunk{color:#79C0FF;display:block}
+.sh-prompt{color:#F15BB5;font-weight:700}.sh-cmd{color:#E7E9EE}
+.sh-ok{color:#7EE787;display:block}.sh-out{color:#9DF7E4;display:block}
+details.liquid{background:var(--panel2);border:1px solid var(--line);border-radius:12px;
+padding:10px 16px;margin:1.4em 0}
+details.liquid summary{cursor:pointer;font-weight:650}
+.cta{display:block;text-align:center;margin:1.8em 0;padding:14px 20px;border-radius:12px;
+background:linear-gradient(90deg,var(--primary),var(--support));color:#08121A;font-weight:750;
+text-decoration:none}
+.katex{background:var(--panel2);border:1px dashed var(--line);border-radius:10px;padding:12px 16px;
+font-family:ui-monospace,monospace;color:var(--primary);margin:1.2em 0}
+.embed{color:var(--muted);font-family:ui-monospace,monospace;font-size:13px}
+.note{max-width:840px;color:var(--muted);font-size:13px;margin-top:14px}
+.post hr{border:0;border-top:1px solid var(--line);margin:2em 0}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand">Swatch<span>Deck</span> · DEV.to preview</div>
+  <div class="rule"><i style="background:#0F172A"></i><i style="background:#00F5D4"></i>
+    <i style="background:#F15BB5"></i><i style="background:#9B5DE5"></i></div>
+  <div class="spacer"></div>
+  <a class="btn" href="../03-seasonal-palettes-ui-themes.md" target="_blank">View raw .md</a>
+  <button class="btn" onclick="var d=document.documentElement;
+    d.dataset.theme=d.dataset.theme==='dark'?'light':'dark'">🌗 Theme</button>
+</header>
+<div class="layout">
+  <nav class="files"><h2>Articles</h2><a href="00-swatch-deck-theme-kit.html" class="">swatch deck theme kit<small>Reusable theme kit</small></a><a href="01-colorfiind-developer-tour.html" class="">colorfiind developer tour<small>Feature tour</small></a><a href="02-hex-to-design-tokens.html" class="">hex to design tokens<small>Tokens pipeline</small></a><a href="03-seasonal-palettes-ui-themes.html" class="active">seasonal palettes ui themes<small>Seasonal themes</small></a><a href="04-neon-dark-mode-glow-ui.html" class="">neon dark mode glow ui<small>Neon dark mode</small></a><a href="05-automate-palette-workflow.html" class="">automate palette workflow<small>Automation</small></a></nav>
+  <div>
+    <article>
+      <img class="cover" src="https://placehold.co/1000x420/6D0F2B/E8E9E5.png" alt="cover" />
+      <div class="meta">
+        <div class="tags"><span class="tag">#css</span><span class="tag">#design</span><span class="tag">#ux</span><span class="tag">#webdev</span></div>
+        <h1>Seasonal Color Analysis for Developers: Soft Summer UI vs Deep Winter Dark Mode</h1>
+        <p class="desc">Seasonal palettes are a temperature-and-contrast system, not fashion jargon. Here&#x27;s how to use ColorFiind&#x27;s season pages to pick a UI theme that matches what your product actually does.</p>
+        <div class="fm">published: <b>false</b> · tags: 4/4 · cover_image: set</div>
+      </div>
+      <div class="post"><p class='band'><img src="https://placehold.co/125x110/D8C7D8/D8C7D8.png" alt="Soft Summer" /><img src="https://placehold.co/125x110/8FA1B3/8FA1B3.png" alt="Soft Summer" /><img src="https://placehold.co/125x110/E6DDE3/E6DDE3.png" alt="Soft Summer" /><img src="https://placehold.co/125x110/9B8FA3/9B8FA3.png" alt="Soft Summer" /><img src="https://placehold.co/125x110/6D0F2B/6D0F2B.png" alt="Deep Winter" /><img src="https://placehold.co/125x110/004D40/004D40.png" alt="Deep Winter" /><img src="https://placehold.co/125x110/0B3D91/0B3D91.png" alt="Deep Winter" /><img src="https://placehold.co/125x110/2A1458/2A1458.png" alt="Deep Winter" /></p>
+<blockquote><p>🎨 <strong>Palettes in play</strong> — <a href="https://colorfiind.com/palette/soft-summer-atelier" target="_blank" rel="noopener">Soft Summer Atelier</a> <em>(left)</em> vs <a href="https://colorfiind.com/palette/deep-winter-journal" target="_blank" rel="noopener">Deep Winter Journal</a> <em>(right)</em></p></blockquote>
+<p>Seasonal color analysis sounds like something that belongs in a fashion magazine, and that is exactly why developers skip it. Underneath the vocabulary, though, it is a <strong>two-axis classification system</strong> — and it happens to answer the two questions we ask about every UI theme:</p>
+<ol><li><strong>Temperature</strong> — are the colors warm (yellow-based) or cool (blue-based)?</li><li><strong>Contrast + saturation</strong> — is the palette loud and high-contrast, or muted and quiet?</li></ol>
+<p><a href="https://colorfiind.com" target="_blank" rel="noopener">ColorFiind&#x27;s season pages</a> already sort thousands of palettes along those axes, which turns &quot;pick a theme&quot; into &quot;pick a quadrant&quot;.</p>
+<p class='band'><img src="https://placehold.co/166x12/D8C7D8/D8C7D8.png" alt="rule" /><img src="https://placehold.co/167x12/8FA1B3/8FA1B3.png" alt="rule" /><img src="https://placehold.co/167x12/6D0F2B/6D0F2B.png" alt="rule" /><img src="https://placehold.co/250x12/0B3D91/0B3D91.png" alt="rule" /><img src="https://placehold.co/250x12/2A1458/2A1458.png" alt="rule" /></p>
+<h2>🧭 1 · The map</h2>
+<div class='tw'><table><thead><tr><th>Season</th><th>Temperature</th><th>Contrast</th><th>Feels like</th><th>Ships well as</th></tr></thead><tbody><tr><td><strong>Spring</strong></td><td>warm</td><td>bright</td><td>fresh, playful</td><td>marketing, kids apps, onboarding</td></tr><tr><td><strong>Summer</strong></td><td>cool</td><td>soft</td><td>calm, hazy</td><td>reading apps, wellness, docs</td></tr><tr><td><strong>Autumn</strong></td><td>warm</td><td>muted-rich</td><td>grounded, earthy</td><td>food, crafts, editorial, commerce</td></tr><tr><td><strong>Winter</strong></td><td>cool</td><td>high</td><td>sharp, precise</td><td>dashboards, fintech, dev tools</td></tr></tbody></table></div>
+<p>Each season splits again — <code>soft summer</code>, <code>cool summer</code>, <code>true summer</code>, <code>light summer</code>; <code>deep winter</code>, <code>bright winter</code>, <code>dark winter</code>, <code>cool winter</code> — and every sub-season is its own URL:</p>
+<pre class="code lang-console" data-lang="console"><code><span class="sh-prompt">$</span><span class="sh-cmd"> tree colorfiind.com/season</span>
+<span class="sh-out">season</span>
+<span class="sh-out">├── spring/{spring,light,warm,bright,true}-color-palette</span>
+<span class="sh-out">├── summer/{summer,soft,cool,light,true}-color-palette</span>
+<span class="sh-out">├── autumn/{autumn,soft,deep,dark,warm,true}-color-palette</span>
+<span class="sh-out">└── winter/{winter,deep,cool,bright,dark,true}-color-palette</span>
+<span class="sh-out"></span></code></pre>
+<h2>🌫️ 2 · Soft Summer — the low-contrast reading UI</h2>
+<p class='band'><img src="https://placehold.co/250x96/D8C7D8/D8C7D8.png" alt="" /><img src="https://placehold.co/250x96/8FA1B3/8FA1B3.png" alt="" /><img src="https://placehold.co/250x96/E6DDE3/E6DDE3.png" alt="" /><img src="https://placehold.co/250x96/9B8FA3/9B8FA3.png" alt="" /></p>
+<p>Soft summer is cool, greyed-down and deliberately low contrast — dusty mauve, slate blue, fog. It is the palette equivalent of a quiet room. Ideal for long-form reading, journaling apps, meditation timers, documentation, anything where the interface should get out of the way.</p>
+<p>And it is a <strong>trap</strong> if you use it naively:</p>
+<div class='tw'><table><thead><tr><th>Pair</th><th>Ratio</th><th>Verdict</th></tr></thead><tbody><tr><td><code>#8FA1B3</code> on <code>#E6DDE3</code></td><td>2.00:1</td><td>🚫 unreadable</td></tr><tr><td><code>#9B8FA3</code> on <code>#E6DDE3</code></td><td>2.31:1</td><td>🚫 unreadable</td></tr><tr><td><code>#D8C7D8</code> on <code>#E6DDE3</code></td><td>1.21:1</td><td>🚫 invisible</td></tr></tbody></table></div>
+<p>Every in-palette pair fails. That does not make the palette bad — it means <strong>soft summer is a set of surfaces, and you must bring your own ink</strong>.</p>
+<p><strong><code>soft-summer.css</code></strong> ⌁ <em>palette for atmosphere, one dark for type</em></p>
+<pre class="code lang-css" data-lang="css"><code>:root {
+  <span class="t-comment">/* from the palette — surfaces only */</span>
+  <span class="t-prop">--color-page</span>:     <span class="t-color"><i class="chip" style="background:#E6DDE3"></i>#E6DDE3</span>;
+  <span class="t-prop">--color-card</span>:     <span class="t-color"><i class="chip" style="background:#D8C7D8"></i>#D8C7D8</span>;
+  <span class="t-prop">--color-line</span>:     <span class="t-color"><i class="chip" style="background:#9B8FA3"></i>#9B8FA3</span>;
+  <span class="t-prop">--color-muted</span>:    <span class="t-color"><i class="chip" style="background:#8FA1B3"></i>#8FA1B3</span>;
+
+  <span class="t-comment">/* the color you had to add yourself */</span>
+  <span class="t-prop">--color-ink</span>:      <span class="t-color"><i class="chip" style="background:#241F2B"></i>#241F2B</span>;   <span class="t-comment">/* 12.11:1 on --color-page ✅ AAA */</span>
+  <span class="t-prop">--color-ink-soft</span>: <span class="t-color"><i class="chip" style="background:#4A4353"></i>#4A4353</span>;   <span class="t-comment">/*  7.13:1                 ✅ AAA */</span>
+}
+
+body {
+  <span class="t-prop">background</span>: var(--color-page);
+  <span class="t-prop">color</span>: var(--color-ink);
+  <span class="t-prop">font-size</span>: <span class="t-number">1.0625rem</span>;
+  <span class="t-prop">line-height</span>: <span class="t-number">1.7</span>;
+  <span class="t-prop">max-width</span>: <span class="t-number">68ch</span>;
+}
+
+.card {
+  <span class="t-prop">background</span>: var(--color-card);
+  <span class="t-prop">border</span>: <span class="t-number">1px</span> solid color-mix(in srgb, var(--color-line) <span class="t-number">45</span>%, transparent);
+  <span class="t-prop">border-radius</span>: <span class="t-number">16px</span>;
+}
+
+.meta { color: var(--color-ink-soft); }        <span class="t-comment">/* not --color-muted! */</span>
+hr    { border: <span class="t-number">0</span>; border-top: <span class="t-number">1px</span> solid var(--color-line); }
+</code></pre>
+<blockquote><p>🧪 <strong>Lab note</strong> — the muted palette colors still do real work: borders, dividers, disabled states, chart fills, hover backgrounds. They just never carry text. Write that rule into the theme file as a comment and code review gets 80% easier.</p></blockquote>
+<h2>❄️ 3 · Deep Winter — the dark mode that isn&#x27;t grey soup</h2>
+<p class='band'><img src="https://placehold.co/250x96/6D0F2B/6D0F2B.png" alt="" /><img src="https://placehold.co/250x96/004D40/004D40.png" alt="" /><img src="https://placehold.co/250x96/0B3D91/0B3D91.png" alt="" /><img src="https://placehold.co/250x96/2A1458/2A1458.png" alt="" /></p>
+<p>Deep winter is cool, saturated and high contrast: burgundy, emerald, royal blue, deep purple, black, icy white. Those are <strong>jewel tones</strong>, and jewel tones are the reason a dark theme can look expensive instead of looking like <code>#333</code>.</p>
+<p>The colors are dark enough to be <em>backgrounds</em> and saturated enough to be <em>identities</em>:</p>
+<div class='tw'><table><thead><tr><th>Color</th><th>vs <code>#FFFFFF</code></th><th>vs <code>#050505</code></th><th>Natural role</th></tr></thead><tbody><tr><td><img src="https://placehold.co/70x28/6D0F2B/6D0F2B.png" alt="" /> <code>#6D0F2B</code></td><td>11.98:1 ✅</td><td>1.70:1</td><td>destructive / danger surface</td></tr><tr><td><img src="https://placehold.co/70x28/004D40/004D40.png" alt="" /> <code>#004D40</code></td><td>9.83:1 ✅</td><td>2.07:1</td><td>success surface</td></tr><tr><td><img src="https://placehold.co/70x28/0B3D91/0B3D91.png" alt="" /> <code>#0B3D91</code></td><td>10.04:1 ✅</td><td>2.03:1</td><td>info / primary surface</td></tr><tr><td><img src="https://placehold.co/70x28/2A1458/2A1458.png" alt="" /> <code>#2A1458</code></td><td>15.68:1 ✅</td><td>1.30:1</td><td>elevated background</td></tr></tbody></table></div>
+<p>Read that table sideways and the theme designs itself: these four are <strong>surfaces on a black canvas</strong>, each carrying white text at AAA.</p>
+<p><strong><code>deep-winter.css</code></strong> ⌁ <em>status colors that are also backgrounds</em></p>
+<pre class="code lang-css" data-lang="css"><code>:root[data-theme=&<span class="t-comment">#x27;deep-winter&#x27;] {</span>
+  <span class="t-prop">--bg-base</span>:      <span class="t-color"><i class="chip" style="background:#050505"></i>#050505</span>;
+  <span class="t-prop">--bg-raised</span>:    <span class="t-color"><i class="chip" style="background:#14101F"></i>#14101F</span>;
+  <span class="t-prop">--bg-elevated</span>:  <span class="t-color"><i class="chip" style="background:#2A1458"></i>#2A1458</span>;
+
+  <span class="t-prop">--ink</span>:          <span class="t-color"><i class="chip" style="background:#F5F7FA"></i>#F5F7FA</span>;   <span class="t-comment">/* 18.99:1 on --bg-base ✅ AAA */</span>
+  <span class="t-prop">--ink-muted</span>:    <span class="t-color"><i class="chip" style="background:#A9B2C3"></i>#A9B2C3</span>;
+
+  <span class="t-prop">--info</span>:         <span class="t-color"><i class="chip" style="background:#0B3D91"></i>#0B3D91</span>;
+  <span class="t-prop">--success</span>:      <span class="t-color"><i class="chip" style="background:#004D40"></i>#004D40</span>;
+  <span class="t-prop">--danger</span>:       <span class="t-color"><i class="chip" style="background:#6D0F2B"></i>#6D0F2B</span>;
+
+  <span class="t-comment">/* icy accents live on top of the jewel surfaces */</span>
+  <span class="t-prop">--info-ink</span>:     <span class="t-color"><i class="chip" style="background:#DCE9FF"></i>#DCE9FF</span>;
+  <span class="t-prop">--success-ink</span>:  <span class="t-color"><i class="chip" style="background:#D6F5EE"></i>#D6F5EE</span>;
+  <span class="t-prop">--danger-ink</span>:   <span class="t-color"><i class="chip" style="background:#FFE1E8"></i>#FFE1E8</span>;
+}
+
+.alert {
+  <span class="t-prop">border-radius</span>: <span class="t-number">12px</span>;
+  <span class="t-prop">padding</span>: <span class="t-number">0.9rem</span> <span class="t-number">1.1rem</span>;
+  <span class="t-prop">border-left</span>: <span class="t-number">4px</span> solid currentColor;
+}
+.alert--info    { background: var(--info);    color: var(--info-ink); }
+.alert--success { background: var(--success); color: var(--success-ink); }
+.alert--danger  { background: var(--danger);  color: var(--danger-ink); }
+</code></pre>
+<p>Compare that to the default dark theme most projects ship:</p>
+<pre class="code lang-diff" data-lang="diff"><code><span class="d-del">- --bg-base:    #1e1e1e;   /* warm grey, no identity            */</span>
+<span class="d-del">- --info:       #2196f3;   /* material blue, seen it 10,000 times */</span>
+<span class="d-del">- --success:    #4caf50;</span>
+<span class="d-del">- --danger:     #f44336;</span>
+<span class="d-add">+ --bg-base:    #050505;   /* true black, lets jewels glow       */</span>
+<span class="d-add">+ --info:       #0B3D91;   /* royal blue, 10.04:1 with white     */</span>
+<span class="d-add">+ --success:    #004D40;   /* emerald, 9.83:1                    */</span>
+<span class="d-add">+ --danger:     #6D0F2B;   /* burgundy, 11.98:1                  */</span>
+</code></pre>
+<p>Same semantics, completely different product personality — and the accessibility numbers went <em>up</em>.</p>
+<p class='band'><img src="https://placehold.co/250x12/6D0F2B/6D0F2B.png" alt="rule" /><img src="https://placehold.co/250x12/004D40/004D40.png" alt="rule" /><img src="https://placehold.co/250x12/0B3D91/0B3D91.png" alt="rule" /><img src="https://placehold.co/250x12/2A1458/2A1458.png" alt="rule" /></p>
+<h2>🍂 4 · The other two quadrants, briefly</h2>
+<p class='band'><strong>Warm Autumn</strong> — <img src="https://placehold.co/90x30/FFEAB6/FFEAB6.png" alt="" /><img src="https://placehold.co/90x30/FFEEBA/FFEEBA.png" alt="" /><img src="https://placehold.co/90x30/FFD489/FFD489.png" alt="" /><img src="https://placehold.co/90x30/F9BA5D/F9BA5D.png" alt="" /> <a href="https://colorfiind.com/palette/lagoon-warm-autumn-edition" target="_blank" rel="noopener">Lagoon Warm Autumn</a></p>
+<p>Honey, amber, clay. Near-monochrome warmth for food, artisan commerce and editorial. Total internal contrast: <strong>1.45:1</strong> — surfaces only, again. Pair with <code>#3A2A12</code>.</p>
+<p class='band'><strong>Bright Spring</strong> — <img src="https://placehold.co/90x30/FFFF79/FFFF79.png" alt="" /><img src="https://placehold.co/90x30/FFD2DC/FFD2DC.png" alt="" /><img src="https://placehold.co/90x30/56D5CC/56D5CC.png" alt="" /><img src="https://placehold.co/90x30/FF8D08/FF8D08.png" alt="" /> <a href="https://colorfiind.com/palette/spring-beach-wave-colorway" target="_blank" rel="noopener">Spring Beach Wave</a></p>
+<p>Maximum energy. Great for a launch page, exhausting for a workspace. Use one as the hero background and keep the rest for illustration.</p>
+<p class='band'><strong>Cool Winter</strong> — <img src="https://placehold.co/90x30/003566/003566.png" alt="" /><img src="https://placehold.co/90x30/0077B6/0077B6.png" alt="" /><img src="https://placehold.co/90x30/D0006F/D0006F.png" alt="" /><img src="https://placehold.co/90x30/C1121F/C1121F.png" alt="" /> <a href="https://colorfiind.com/palette/cool-winter-harmony" target="_blank" rel="noopener">Cool Winter Harmony</a></p>
+<p>Icy blue structure with a shout. This is the fintech dashboard palette: navy chrome, blue data, magenta for the one number that matters.</p>
+<h2>🧮 5 · Pick your quadrant with a function</h2>
+<p>If you would rather derive the season than browse it, the two axes are computable:</p>
+<div class='katex'>\text{warmth} = \cos(h - 60^\circ) \quad\text{where } h = \text{hue in degrees}</div>
+<pre class="code lang-js" data-lang="js"><code><span class="t-kw">const</span> toHsl = (hex) =&gt; {
+  <span class="t-kw">const</span> [r, g, b] = hex.replace(&<span <span class="t-kw">class</span>="t-comment">#x27;#&#x27;, &#x27;&#x27;).match(/\w\w/g).map((h) =&gt; parseInt(h, 16) / 255);</span>
+  <span class="t-kw">const</span> max = Math.max(r, g, b), min = Math.min(r, g, b), d = max - min;
+  <span class="t-kw">const</span> l = (max + min) / <span <span class="t-kw">class</span>="t-number">2</span>;
+  <span class="t-kw">const</span> s = d === <span <span class="t-kw">class</span>="t-number">0</span> ? <span <span class="t-kw">class</span>="t-number">0</span> : d / (<span <span class="t-kw">class</span>="t-number">1</span> - Math.abs(<span <span class="t-kw">class</span>="t-number">2</span> * l - <span <span class="t-kw">class</span>="t-number">1</span>));
+  <span class="t-kw">let</span> h = <span <span class="t-kw">class</span>="t-number">0</span>;
+  <span class="t-kw">if</span> (d !== <span <span class="t-kw">class</span>="t-number">0</span>) {
+    <span class="t-kw">if</span> (max === r) h = ((g - b) / d) % <span <span class="t-kw">class</span>="t-number">6</span>;
+    <span class="t-kw">else</span> <span class="t-kw">if</span> (max === g) h = (b - r) / d + <span <span class="t-kw">class</span>="t-number">2</span>;
+    <span class="t-kw">else</span> h = (r - g) / d + <span <span class="t-kw">class</span>="t-number">4</span>;
+  }
+  <span class="t-kw">return</span> { h: (h * <span <span class="t-kw">class</span>="t-number">60</span> + <span <span class="t-kw">class</span>="t-number">360</span>) % <span <span class="t-kw">class</span>="t-number">360</span>, s, l };
+};
+
+<span class="t-kw">export</span> <span class="t-kw">function</span> classify(palette) {
+  <span class="t-kw">const</span> hsl = palette.map(toHsl);
+  <span class="t-kw">const</span> warmth = hsl.reduce((a, c) =&gt; a + Math.cos(((c.h - <span <span class="t-kw">class</span>="t-number">60</span>) * Math.PI) / <span <span class="t-kw">class</span>="t-number">180</span>), <span <span class="t-kw">class</span>="t-number">0</span>) / hsl.length;
+  <span class="t-kw">const</span> sat    = hsl.reduce((a, c) =&gt; a + c.s, <span <span class="t-kw">class</span>="t-number">0</span>) / hsl.length;
+  <span class="t-kw">const</span> spread = Math.max(...hsl.map((c) =&gt; c.l)) - Math.min(...hsl.map((c) =&gt; c.l));
+
+  <span class="t-kw">const</span> warm = warmth &gt; <span <span class="t-kw">class</span>="t-number">0</span>;
+  <span class="t-kw">const</span> loud = sat &gt; <span <span class="t-kw">class</span>="t-number">0.5</span> || spread &gt; <span <span class="t-kw">class</span>="t-number">0.55</span>;
+
+  <span class="t-kw">if</span> (warm &amp;&amp; loud)   <span class="t-kw">return</span> &<span <span class="t-kw">class</span>="t-comment">#x27;spring · warm + bright&#x27;;</span>
+  <span class="t-kw">if</span> (warm &amp;&amp; !loud)  <span class="t-kw">return</span> &<span <span class="t-kw">class</span>="t-comment">#x27;autumn · warm + muted&#x27;;</span>
+  <span class="t-kw">if</span> (!warm &amp;&amp; loud)  <span class="t-kw">return</span> &<span <span class="t-kw">class</span>="t-comment">#x27;winter · cool + high contrast&#x27;;</span>
+  <span class="t-kw">return</span> &<span <span class="t-kw">class</span>="t-comment">#x27;summer · cool + soft&#x27;;</span>
+}
+
+classify([&<span <span class="t-kw">class</span>="t-comment">#x27;#D8C7D8&#x27;, &#x27;#8FA1B3&#x27;, &#x27;#E6DDE3&#x27;, &#x27;#9B8FA3&#x27;]); // summer · cool + soft</span>
+classify([&<span <span class="t-kw">class</span>="t-comment">#x27;#6D0F2B&#x27;, &#x27;#004D40&#x27;, &#x27;#0B3D91&#x27;, &#x27;#2A1458&#x27;]); // winter · cool + high contrast</span>
+</code></pre>
+<details class='liquid' open><summary>🧪 A quick jest test so the classifier keeps its promises</summary>
+<pre class="code lang-js" data-lang="js"><code><span class="t-kw">import</span> { classify } <span class="t-kw">from</span> &<span <span class="t-kw">class</span>="t-comment">#x27;./season.js&#x27;;</span>
+
+test.each([
+  [[&<span <span class="t-kw">class</span>="t-comment">#x27;#FFEAB6&#x27;, &#x27;#FFEEBA&#x27;, &#x27;#FFD489&#x27;, &#x27;#F9BA5D&#x27;], /autumn|spring/],</span>
+  [[&<span <span class="t-kw">class</span>="t-comment">#x27;#003566&#x27;, &#x27;#0077B6&#x27;, &#x27;#D0006F&#x27;, &#x27;#C1121F&#x27;], /winter/],</span>
+  [[&<span <span class="t-kw">class</span>="t-comment">#x27;#D8C7D8&#x27;, &#x27;#8FA1B3&#x27;, &#x27;#E6DDE3&#x27;, &#x27;#9B8FA3&#x27;], /summer/],</span>
+])(&<span <span class="t-kw">class</span>="t-comment">#x27;classifies %s&#x27;, (palette, expected) =&gt; {</span>
+  expect(classify(palette)).toMatch(expected);
+});
+</code></pre>
+</details>
+<h2>🎚️ 6 · Ship both seasons in one app</h2>
+<p>The strongest move is not choosing — it is mapping <strong>light mode to a soft season and dark mode to a deep one</strong>, keeping the same semantic names.</p>
+<pre class="code lang-css" data-lang="css"><code>:root {                         <span class="t-comment">/* soft summer, daylight */</span>
+  <span class="t-prop">--page</span>: <span class="t-color"><i class="chip" style="background:#E6DDE3"></i>#E6DDE3</span>;  --card: <span class="t-color"><i class="chip" style="background:#D8C7D8"></i>#D8C7D8</span>;  --ink: <span class="t-color"><i class="chip" style="background:#241F2B"></i>#241F2B</span>;  --line: <span class="t-color"><i class="chip" style="background:#9B8FA3"></i>#9B8FA3</span>;
+}
+
+<span class="t-kw">@media</span> (prefers-color-scheme: dark) {
+  :root {                       <span class="t-comment">/* deep winter, night */</span>
+    <span class="t-prop">--page</span>: <span class="t-color"><i class="chip" style="background:#050505"></i>#050505</span>;  --card: <span class="t-color"><i class="chip" style="background:#2A1458"></i>#2A1458</span>;  --ink: <span class="t-color"><i class="chip" style="background:#F5F7FA"></i>#F5F7FA</span>;  --line: <span class="t-color"><i class="chip" style="background:#3A2A66"></i>#3A2A66</span>;
+  }
+}
+
+.panel {
+  <span class="t-prop">background</span>: var(--card);
+  <span class="t-prop">color</span>: var(--ink);
+  <span class="t-prop">border</span>: <span class="t-number">1px</span> solid var(--line);
+}
+</code></pre>
+<p>One component, two seasons, zero conditional logic.</p>
+<h2>🧾 The checklist</h2>
+<ul><li>Decide <strong>temperature</strong> first (warm/cool), <strong>contrast</strong> second (loud/quiet).</li><li>Soft seasons = surfaces. Always add your own ink color.</li><li>Deep seasons = surfaces <em>and</em> status colors. Check them against white, not against each other.</li><li>Map soft → light mode, deep → dark mode, and keep semantic names identical.</li><li>Browse the sub-season pages; the sub-season is the real spec, &quot;summer&quot; alone is too broad.</li></ul>
+<a class='cta' href='https://colorfiind.com' target='_blank' rel='noopener'>Browse palettes by season on ColorFiind</a>
+<p><em>Which quadrant is your current project in? Post the four hexes below.</em> 👇</p></div>
+    </article>
+    <p class="note">Static local preview — Liquid tags are simulated, DEV renders them natively.
+    Colour swatches load from placehold.co, so they need internet access.</p>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>34,045 Color Palettes, Zero Signups: A Developer&#x27;s Tour of ColorFiind — DEV preview</title>
+<style>
+:root{--bg:#0B0F1A;--panel:#111827;--panel2:#0F172A;--line:#1F2A44;--ink:#E7E9EE;
+--muted:#94A3B8;--primary:#00F5D4;--accent:#F15BB5;--support:#9B5DE5;--radius:14px}
+html[data-theme=light]{--bg:#F5F7F9;--panel:#fff;--panel2:#EFF2F6;--line:#DDE3EC;
+--ink:#1B2333;--muted:#5B6478;--primary:#0E7C86;--accent:#B4276F;--support:#6D3FBF}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+font:16px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+a{color:var(--primary)}
+header.top{position:sticky;top:0;z-index:20;display:flex;gap:14px;align-items:center;padding:12px 18px;
+background:var(--bg);border-bottom:1px solid var(--line)}
+.brand{font-weight:800}.brand span{color:var(--primary)}
+.rule{display:flex;height:6px;width:150px;border-radius:99px;overflow:hidden}.rule i{flex:1}
+.spacer{flex:1}
+.btn{font:inherit;cursor:pointer;border:1px solid var(--line);background:var(--panel);color:var(--ink);
+border-radius:99px;padding:6px 14px;text-decoration:none}
+.btn:hover{border-color:var(--primary)}
+.layout{display:grid;grid-template-columns:290px minmax(0,1fr);gap:26px;padding:22px;align-items:start}
+@media(max-width:900px){.layout{grid-template-columns:1fr}}
+nav.files{position:sticky;top:70px;background:var(--panel);border:1px solid var(--line);
+border-radius:var(--radius);padding:12px;display:flex;flex-direction:column;gap:6px}
+nav.files h2{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin:6px 8px 8px}
+nav.files a{display:block;padding:9px 11px;border-radius:10px;text-decoration:none;color:var(--ink);
+font-size:14px;border:1px solid transparent}
+nav.files a:hover{background:var(--panel2)}
+nav.files a.active{background:var(--panel2);border-color:var(--primary);color:var(--primary)}
+nav.files small{display:block;color:var(--muted);font-size:11.5px}
+article{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+padding-bottom:48px;max-width:840px;width:100%;overflow:hidden}
+.cover{width:100%;display:block;border-bottom:1px solid var(--line)}
+.meta{padding:22px clamp(18px,4vw,44px) 0}
+.meta h1{font-size:clamp(26px,4vw,40px);line-height:1.18;margin:.2em 0 .3em}
+.tags{display:flex;flex-wrap:wrap;gap:8px}
+.tag{font-size:12.5px;color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:2px 8px}
+.desc{color:var(--muted);font-size:15px}
+.fm{font-size:12px;color:var(--muted);border-top:1px dashed var(--line);
+border-bottom:1px dashed var(--line);padding:8px 0;margin-bottom:6px}
+.post{padding:0 clamp(18px,4vw,44px)}
+.post img{max-width:100%;vertical-align:top}
+.post p.band{line-height:0;margin:1.2em 0}
+.post h2{margin-top:1.9em;font-size:26px;border-bottom:1px solid var(--line);padding-bottom:.25em}
+.post h3{margin-top:1.5em;font-size:20px}
+.post blockquote{margin:1.4em 0;padding:.9em 1.1em;background:var(--panel2);
+border-left:4px solid var(--accent);border-radius:0 10px 10px 0}
+.post blockquote p{margin:0}
+.tw{overflow-x:auto;margin:1.3em 0}
+.post table{border-collapse:collapse;width:100%;font-size:14.5px}
+.post th,.post td{border:1px solid var(--line);padding:8px 11px;text-align:left;vertical-align:middle}
+.post th{background:var(--panel2)}
+.post td img{vertical-align:middle}
+.post :not(pre)>code{background:var(--panel2);padding:.15em .4em;border-radius:6px;font-size:.9em;
+font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+pre.code{background:#0d1117;border:1px solid var(--line);border-radius:12px;padding:18px;
+overflow-x:auto;position:relative;margin:1.3em 0}
+pre.code code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13.5px;
+line-height:1.62;color:#C9D1D9;white-space:pre}
+pre.code::before{content:attr(data-lang);position:absolute;top:0;right:0;font-size:10.5px;
+letter-spacing:.12em;text-transform:uppercase;color:#0B0F1A;background:var(--primary);
+padding:2px 10px;border-radius:0 11px 0 10px;font-family:ui-monospace,monospace}
+pre.lang-diff{border-color:#F15BB5}
+pre.lang-console,pre.lang-bash{background:#05070d;border-color:#00F5D4}
+.t-comment{color:#6E7A8A;font-style:italic}
+.t-string{color:#A5D6FF}.t-number{color:#F0A868}.t-kw{color:#FF7B9C}
+.t-prop{color:#9B5DE5;font-weight:600}.t-tag{color:#7EE787}
+.t-color{color:#FFD479}
+.chip{display:inline-block;width:.78em;height:.78em;margin-right:.35em;border-radius:3px;
+border:1px solid rgba(255,255,255,.35);vertical-align:-1px}
+.d-add{color:#7EE787;display:block;background:rgba(46,160,67,.15)}
+.d-del{color:#FF9492;display:block;background:rgba(248,81,73,.14)}
+.d-hunk{color:#79C0FF;display:block}
+.sh-prompt{color:#F15BB5;font-weight:700}.sh-cmd{color:#E7E9EE}
+.sh-ok{color:#7EE787;display:block}.sh-out{color:#9DF7E4;display:block}
+details.liquid{background:var(--panel2);border:1px solid var(--line);border-radius:12px;
+padding:10px 16px;margin:1.4em 0}
+details.liquid summary{cursor:pointer;font-weight:650}
+.cta{display:block;text-align:center;margin:1.8em 0;padding:14px 20px;border-radius:12px;
+background:linear-gradient(90deg,var(--primary),var(--support));color:#08121A;font-weight:750;
+text-decoration:none}
+.katex{background:var(--panel2);border:1px dashed var(--line);border-radius:10px;padding:12px 16px;
+font-family:ui-monospace,monospace;color:var(--primary);margin:1.2em 0}
+.embed{color:var(--muted);font-family:ui-monospace,monospace;font-size:13px}
+.note{max-width:840px;color:var(--muted);font-size:13px;margin-top:14px}
+.post hr{border:0;border-top:1px solid var(--line);margin:2em 0}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand">Swatch<span>Deck</span> · DEV.to preview</div>
+  <div class="rule"><i style="background:#0F172A"></i><i style="background:#00F5D4"></i>
+    <i style="background:#F15BB5"></i><i style="background:#9B5DE5"></i></div>
+  <div class="spacer"></div>
+  <a class="btn" href="../01-colorfiind-developer-tour.md" target="_blank">View raw .md</a>
+  <button class="btn" onclick="var d=document.documentElement;
+    d.dataset.theme=d.dataset.theme==='dark'?'light':'dark'">🌗 Theme</button>
+</header>
+<div class="layout">
+  <nav class="files"><h2>Articles</h2><a href="00-swatch-deck-theme-kit.html" class="">swatch deck theme kit<small>Reusable theme kit</small></a><a href="01-colorfiind-developer-tour.html" class="active">colorfiind developer tour<small>Feature tour</small></a><a href="02-hex-to-design-tokens.html" class="">hex to design tokens<small>Tokens pipeline</small></a><a href="03-seasonal-palettes-ui-themes.html" class="">seasonal palettes ui themes<small>Seasonal themes</small></a><a href="04-neon-dark-mode-glow-ui.html" class="">neon dark mode glow ui<small>Neon dark mode</small></a><a href="05-automate-palette-workflow.html" class="">automate palette workflow<small>Automation</small></a></nav>
+  <div>
+    <article>
+      <img class="cover" src="https://placehold.co/1000x420/3C0D4F/C6EEA0.png" alt="cover" />
+      <div class="meta">
+        <div class="tags"><span class="tag">#css</span><span class="tag">#webdev</span><span class="tag">#design</span><span class="tag">#beginners</span></div>
+        <h1>34,045 Color Palettes, Zero Signups: A Developer&#x27;s Tour of ColorFiind</h1>
+        <p class="desc">ColorFiind is a palette browser built for people who ship. Here&#x27;s the fast path from a random hex craving to copy-ready CSS variables, seasonal themes and downloadable swatch images.</p>
+        <div class="fm">published: <b>false</b> · tags: 4/4 · cover_image: set</div>
+      </div>
+      <div class="post"><p class='band'><img src="https://placehold.co/250x110/3C0D4F/3C0D4F.png" alt="Mango Garden Moment" /><img src="https://placehold.co/250x110/F22C33/F22C33.png" alt="Mango Garden Moment" /><img src="https://placehold.co/250x110/C6EEA0/C6EEA0.png" alt="Mango Garden Moment" /><img src="https://placehold.co/250x110/1681DF/1681DF.png" alt="Mango Garden Moment" /></p>
+<blockquote><p>🎨 <strong>Palette in play</strong> — <a href="https://colorfiind.com/palette/mango-garden-moment" target="_blank" rel="noopener">Mango Garden Moment</a> · <code>#3C0D4F</code> <code>#F22C33</code> <code>#C6EEA0</code> <code>#1681DF</code></p></blockquote>
+<p>Picking colors is the part of a side project where an evening quietly disappears. You open a generator, spin the wheel forty times, save three screenshots, and end up shipping the same slate-and-indigo you always ship.</p>
+<p><a href="https://colorfiind.com" target="_blank" rel="noopener">ColorFiind</a> takes a different angle: it is a <strong>browsable library</strong>, not a slot machine. 34,045 named palettes, organised by category and by season, every one of them a real URL you can bookmark, with HEX codes, a downloadable image and a ready-made <code>:root</code> block.</p>
+<p>This is the developer&#x27;s tour — what&#x27;s in there, and how to get from &quot;ooh, that one&quot; to a themed component in about two minutes.</p>
+<p class='band'><img src="https://placehold.co/250x12/3C0D4F/3C0D4F.png" alt="rule" /><img src="https://placehold.co/250x12/F22C33/F22C33.png" alt="rule" /><img src="https://placehold.co/250x12/C6EEA0/C6EEA0.png" alt="rule" /><img src="https://placehold.co/250x12/1681DF/1681DF.png" alt="rule" /></p>
+<h2>🗺️ 1 · The shape of the site</h2>
+<p>Four surfaces, and you only ever need to remember the first two.</p>
+<div class='tw'><table><thead><tr><th>Surface</th><th>URL pattern</th><th>Use it when</th></tr></thead><tbody><tr><td><strong>Home grid</strong></td><td><code>colorfiind.com</code></td><td>You want to browse and get surprised</td></tr><tr><td><strong>Palette page</strong></td><td><code>/palette/{slug}</code></td><td>You have picked one and want the codes</td></tr><tr><td><strong>Category</strong></td><td>`/category/{pastel\</td><td>vintage\</td><td>luxury\</td><td>retro\</td><td>neon\</td><td>dark\</td><td>light}`</td><td>You know the <em>vibe</em></td></tr><tr><td><strong>Season</strong></td><td>`/season/{spring\</td><td>summer\</td><td>autumn\</td><td>winter}/...`</td><td>You know the <em>temperature</em></td></tr></tbody></table></div>
+<p>The category list is short on purpose: <code>pastel</code>, <code>vintage</code>, <code>luxury</code>, <code>retro</code>, <code>neon</code>, <code>dark</code>, <code>light</code>. Seasons go one level deeper — <code>soft summer</code>, <code>deep winter</code>, <code>warm autumn</code>, <code>bright spring</code> and friends — plus a handful of themed sets like <code>sunset</code>, <code>70s</code>, <code>christmas</code>, <code>brown</code> and <code>minecraft</code>.</p>
+<pre class="code lang-console" data-lang="console"><code><span class="sh-prompt">$</span><span class="sh-cmd"> # the whole IA, as a mental model</span>
+<span class="sh-out">colorfiind.com</span>
+<span class="sh-out">├── /category/neon</span>
+<span class="sh-out">├── /category/pastel</span>
+<span class="sh-out">├── /season/winter/deep-winter-color-palette</span>
+<span class="sh-out">├── /season/autumn/warm-autumn-color-palette</span>
+<span class="sh-out">└── /palette/mango-garden-moment      ← the page that matters</span>
+<span class="sh-out"></span></code></pre>
+<h2>🔍 2 · What a palette page actually gives you</h2>
+<p>Take <a href="https://colorfiind.com/palette/mango-garden-moment" target="_blank" rel="noopener">Mango Garden Moment</a>. The page is not just four rectangles — it is a small spec sheet:</p>
+<div class='tw'><table><thead><tr><th>Swatch</th><th>HEX</th><th>RGB</th><th>HSL</th><th>Contrast vs <code>#FFFFFF</code></th><th>Suggested role</th></tr></thead><tbody><tr><td><img src="https://placehold.co/110x44/3C0D4F/3C0D4F.png" alt="" /></td><td><code>#3C0D4F</code></td><td><code>60, 13, 79</code></td><td><code>283° 72% 18%</code></td><td><strong>15.41:1</strong> ✅ AAA</td><td>Base / ink</td></tr><tr><td><img src="https://placehold.co/110x44/F22C33/F22C33.png" alt="" /></td><td><code>#F22C33</code></td><td><code>242, 44, 51</code></td><td><code>358° 88% 56%</code></td><td><strong>4.05:1</strong> 🟡 AA Large</td><td>Primary</td></tr><tr><td><img src="https://placehold.co/110x44/C6EEA0/C6EEA0.png" alt="" /></td><td><code>#C6EEA0</code></td><td><code>198, 238, 160</code></td><td><code>91° 70% 78%</code></td><td><strong>1.30:1</strong> 🚫</td><td>Accent surface</td></tr><tr><td><img src="https://placehold.co/110x44/1681DF/1681DF.png" alt="" /></td><td><code>#1681DF</code></td><td><code>22, 129, 223</code></td><td><code>208° 82% 48%</code></td><td><strong>4.01:1</strong> 🟡 AA Large</td><td>Link / info</td></tr></tbody></table></div>
+<p>Alongside the codes, each palette page carries:</p>
+<ul><li><strong>Mood</strong> — <em>&quot;Nostalgic mood: muted tones with a warm, aged feeling&quot;</em></li><li><strong>Contrast</strong> — <em>balanced / high / low</em>, so you know before you build</li><li><strong>Main tones</strong> — the dominant color families (<code>purple, red, green</code>)</li><li><strong>Best fit</strong> — <em>&quot;Heritage design: packaging, cafés, labels, editorial pages&quot;</em></li><li><strong>Pairing tips</strong> — which hex to use for background, text and accents</li><li><strong>CSS variables</strong> — a <code>:root</code> block, already written</li><li><strong>Related palettes</strong> — twelve neighbours, one click away</li><li><strong>Copy / Link / Image</strong> — per-color copy, whole-palette copy, and a PNG download</li></ul>
+<p>That last row is the one that saves the most time. <strong>Copy</strong> puts the codes on your clipboard, <strong>Image</strong> downloads a shareable swatch card for the design channel, <strong>Link</strong> grabs the permalink for the ticket.</p>
+<p class='band'><img src="https://placehold.co/250x12/3C0D4F/3C0D4F.png" alt="rule" /><img src="https://placehold.co/250x12/F22C33/F22C33.png" alt="rule" /><img src="https://placehold.co/250x12/C6EEA0/C6EEA0.png" alt="rule" /><img src="https://placehold.co/250x12/1681DF/1681DF.png" alt="rule" /></p>
+<h2>⚡ 3 · The two-minute workflow</h2>
+<p><strong><code>step 1</code></strong> ⌁ <em>grab the block ColorFiind already wrote for you</em></p>
+<pre class="code lang-css" data-lang="css"><code><span class="t-comment">/* straight off the palette page */</span>
+:root {
+  --palette-color-<span class="t-number">1</span>: <span class="t-color"><i class="chip" style="background:#3C0D4F"></i>#3C0D4F</span>;
+  --palette-color-<span class="t-number">2</span>: <span class="t-color"><i class="chip" style="background:#F22C33"></i>#F22C33</span>;
+  --palette-color-<span class="t-number">3</span>: <span class="t-color"><i class="chip" style="background:#C6EEA0"></i>#C6EEA0</span>;
+  --palette-color-<span class="t-number">4</span>: <span class="t-color"><i class="chip" style="background:#1681DF"></i>#1681DF</span>;
+}
+</code></pre>
+<p><strong><code>step 2</code></strong> ⌁ <em>rename numbers into intentions</em></p>
+<p>Numbered variables are fine for copying and terrible for maintaining. Give every color a job before it reaches a component:</p>
+<pre class="code lang-diff" data-lang="diff"><code>  :root {
+<span class="d-del">-   --palette-color-1: #3C0D4F;</span>
+<span class="d-del">-   --palette-color-2: #F22C33;</span>
+<span class="d-del">-   --palette-color-3: #C6EEA0;</span>
+<span class="d-del">-   --palette-color-4: #1681DF;</span>
+<span class="d-add">+   --color-ink:      #3C0D4F;  /* headings, body text        */</span>
+<span class="d-add">+   --color-primary:  #F22C33;  /* buttons, active states     */</span>
+<span class="d-add">+   --color-surface:  #C6EEA0;  /* cards, highlight sections  */</span>
+<span class="d-add">+   --color-link:     #1681DF;  /* links, info, focus rings   */</span>
+<span class="d-add">+   --color-page:     #FFFFFF;</span>
+  }
+</code></pre>
+<p><strong><code>step 3</code></strong> ⌁ <em>build the component against the names, never the hexes</em></p>
+<pre class="code lang-css" data-lang="css"><code>.card {
+  <span class="t-prop">background</span>: var(--color-surface);
+  <span class="t-prop">color</span>: var(--color-ink);
+  <span class="t-prop">border</span>: <span class="t-number">2px</span> solid var(--color-ink);
+  <span class="t-prop">border-radius</span>: <span class="t-number">14px</span>;
+  <span class="t-prop">padding</span>: <span class="t-number">1.5rem</span>;
+}
+
+.card__cta {
+  <span class="t-prop">background</span>: var(--color-primary);
+  <span class="t-prop">color</span>: <span class="t-color"><i class="chip" style="background:#fff"></i>#fff</span>;
+  <span class="t-prop">border-radius</span>: <span class="t-number">999px</span>;
+  <span class="t-prop">padding</span>: <span class="t-number">0.7rem</span> <span class="t-number">1.4rem</span>;
+}
+
+.card a {
+  <span class="t-prop">color</span>: var(--color-link);
+  <span class="t-prop">text-underline-offset</span>: <span class="t-number">3px</span>;
+}
+</code></pre>
+<p><code>#3C0D4F</code> on <code>#C6EEA0</code> measures <strong>11.84:1</strong> — comfortably AAA, so that card is readable before you even open a contrast checker.</p>
+<details class='liquid' open><summary>🧰 The same palette as Tailwind + design tokens</summary>
+<pre class="code lang-js" data-lang="js"><code><span <span class="t-kw">class</span>="t-comment">// tailwind.config.js</span>
+module.exports = {
+  theme: {
+    extend: {
+      colors: {
+        ink:     &<span <span class="t-kw">class</span>="t-comment">#x27;#3C0D4F&#x27;,</span>
+        primary: &<span <span class="t-kw">class</span>="t-comment">#x27;#F22C33&#x27;,</span>
+        surface: &<span <span class="t-kw">class</span>="t-comment">#x27;#C6EEA0&#x27;,</span>
+        link:    &<span <span class="t-kw">class</span>="t-comment">#x27;#1681DF&#x27;,</span>
+      },
+    },
+  },
+};
+</code></pre>
+<pre class="code lang-json" data-lang="json"><code>{
+  &quot;palette&quot;: {
+    &quot;$description&quot;: &quot;Mango Garden Moment — colorfiind.com/palette/mango-garden-moment&quot;,
+    &quot;ink&quot;:     { &quot;$type&quot;: &quot;color&quot;, &quot;$value&quot;: &quot;<span class="t-color"><i class="chip" style="background:#3C0D4F"></i>#3C0D4F</span>&quot; },
+    &quot;primary&quot;: { &quot;$type&quot;: &quot;color&quot;, &quot;$value&quot;: &quot;<span class="t-color"><i class="chip" style="background:#F22C33"></i>#F22C33</span>&quot; },
+    &quot;surface&quot;: { &quot;$type&quot;: &quot;color&quot;, &quot;$value&quot;: &quot;<span class="t-color"><i class="chip" style="background:#C6EEA0"></i>#C6EEA0</span>&quot; },
+    &quot;link&quot;:    { &quot;$type&quot;: &quot;color&quot;, &quot;$value&quot;: &quot;<span class="t-color"><i class="chip" style="background:#1681DF"></i>#1681DF</span>&quot; }
+  }
+}
+</code></pre>
+</details>
+<h2>🧭 4 · Browsing strategies that beat scrolling</h2>
+<p><strong>Strategy A — start from the mood.</strong> You know the app should feel calm and expensive? <code>/category/luxury</code> and <code>/category/vintage</code>. Should feel like a hackathon at 2am? <code>/category/neon</code>.</p>
+<p><strong>Strategy B — start from the season.</strong> Seasonal color analysis is a real system, not just fashion vocabulary. <code>deep winter</code> gives you cool, high-contrast jewel tones — the natural home of a dark UI. <code>soft summer</code> gives you muted, low-contrast greys and mauves — perfect for a reading app, dangerous for a button.</p>
+<p><strong>Strategy C — start from one palette and walk.</strong> Every palette page has a <em>Related Palettes</em> grid. Land on one you like, then walk the neighbourhood until the contrast is right. This is the fastest route to &quot;same feeling, better legibility&quot;.</p>
+<p><strong>Strategy D — start from the structure you need.</strong> Look at how the four colors relate before you look at whether they&#x27;re pretty:</p>
+<div class='tw'><table><thead><tr><th>Palette</th><th>Structure</th><th>Best used as</th></tr></thead><tbody><tr><td><img src="https://placehold.co/70x28/232E43/232E43.png" alt="" /><img src="https://placehold.co/70x28/49627F/49627F.png" alt="" /><img src="https://placehold.co/70x28/7F95B1/7F95B1.png" alt="" /><img src="https://placehold.co/70x28/E8E9E5/E8E9E5.png" alt="" /> <a href="https://colorfiind.com/palette/winter-beach-wave-colorway" target="_blank" rel="noopener">Winter Beach Wave</a></td><td>one hue, four steps</td><td>a whole dashboard scale</td></tr><tr><td><img src="https://placehold.co/70x28/0F172A/0F172A.png" alt="" /><img src="https://placehold.co/70x28/00F5D4/00F5D4.png" alt="" /><img src="https://placehold.co/70x28/F15BB5/F15BB5.png" alt="" /><img src="https://placehold.co/70x28/9B5DE5/9B5DE5.png" alt="" /> <a href="https://colorfiind.com/palette/neon-diner-harmony" target="_blank" rel="noopener">Neon Diner Harmony</a></td><td>dark base + 3 signals</td><td>dark mode with status colors</td></tr><tr><td><img src="https://placehold.co/70x28/F5F7F9/F5F7F9.png" alt="" /><img src="https://placehold.co/70x28/E3DFF1/E3DFF1.png" alt="" /><img src="https://placehold.co/70x28/E0AED7/E0AED7.png" alt="" /><img src="https://placehold.co/70x28/994129/994129.png" alt="" /> <a href="https://colorfiind.com/palette/quartz-drift-palette" target="_blank" rel="noopener">Quartz Drift</a></td><td>3 lights + 1 anchor</td><td>light UI, one strong CTA</td></tr><tr><td><img src="https://placehold.co/70x28/FFEAB6/FFEAB6.png" alt="" /><img src="https://placehold.co/70x28/FFEEBA/FFEEBA.png" alt="" /><img src="https://placehold.co/70x28/FFD489/FFD489.png" alt="" /><img src="https://placehold.co/70x28/F9BA5D/F9BA5D.png" alt="" /> <a href="https://colorfiind.com/palette/lagoon-warm-autumn-edition" target="_blank" rel="noopener">Lagoon Warm Autumn</a></td><td>near-monochrome</td><td>backgrounds only — bring your own ink</td></tr></tbody></table></div>
+<blockquote><p>🚧 <strong>Trap</strong> — that last row is the classic mistake. A gorgeous four-honey palette has <strong>1.45:1</strong> between its lightest and darkest color. It is a set of <em>surfaces</em>, not a UI. Pair it with a near-black text color and it sings; use it for text-on-background and nobody can read your app.</p></blockquote>
+<h2>♿ 5 · Read the contrast column before you fall in love</h2>
+<p>Every palette here is a design object, not a compliance certificate. Run the pairs you actually intend to ship:</p>
+<pre class="code lang-js" data-lang="js"><code><span class="t-kw">const</span> luminance = (hex) =&gt; {
+  <span class="t-kw">const</span> [r, g, b] = hex.match(/\w\w/g).map((h) =&gt; {
+    <span class="t-kw">const</span> c = parseInt(h, <span <span class="t-kw">class</span>="t-number">16</span>) / <span <span class="t-kw">class</span>="t-number">255</span>;
+    <span class="t-kw">return</span> c &lt;= <span <span class="t-kw">class</span>="t-number">0.03928</span> ? c / <span <span class="t-kw">class</span>="t-number">12.92</span> : ((c + <span <span class="t-kw">class</span>="t-number">0.055</span>) / <span <span class="t-kw">class</span>="t-number">1.055</span>) ** <span <span class="t-kw">class</span>="t-number">2.4</span>;
+  });
+  <span class="t-kw">return</span> <span <span class="t-kw">class</span>="t-number">0.2126</span> * r + <span <span class="t-kw">class</span>="t-number">0.7152</span> * g + <span <span class="t-kw">class</span>="t-number">0.0722</span> * b;
+};
+
+<span class="t-kw">export</span> <span class="t-kw">const</span> contrast = (a, b) =&gt; {
+  <span class="t-kw">const</span> [x, y] = [luminance(a), luminance(b)].sort((m, n) =&gt; n - m);
+  <span class="t-kw">return</span> +((x + <span <span class="t-kw">class</span>="t-number">0.05</span>) / (y + <span <span class="t-kw">class</span>="t-number">0.05</span>)).toFixed(<span <span class="t-kw">class</span>="t-number">2</span>);
+};
+
+contrast(&<span <span class="t-kw">class</span>="t-comment">#x27;#3C0D4F&#x27;, &#x27;#C6EEA0&#x27;); // 11.84  → AAA, ship it</span>
+contrast(&<span <span class="t-kw">class</span>="t-comment">#x27;#F22C33&#x27;, &#x27;#FFFFFF&#x27;); // 4.05   → large text or bold only</span>
+contrast(&<span <span class="t-kw">class</span>="t-comment">#x27;#C6EEA0&#x27;, &#x27;#FFFFFF&#x27;); // 1.30   → decorative surface, never text</span>
+</code></pre>
+<p>Rule of thumb that survives code review:</p>
+<ul><li><strong>4.5:1</strong> — body text. Non-negotiable.</li><li><strong>3:1</strong> — 24px+ text, or 19px+ bold, plus UI borders and icons.</li><li><strong>anything below 3:1</strong> — decoration. Backgrounds, dividers, illustrations, gradients.</li></ul>
+<h2>🎯 6 · Three real jobs, three palettes</h2>
+<p class='band'><strong>Marketing landing page</strong> — you want energy and a loud CTA. <img src="https://placehold.co/120x56/FFFF79/FFFF79.png" alt="" /><img src="https://placehold.co/120x56/FFD2DC/FFD2DC.png" alt="" /><img src="https://placehold.co/120x56/56D5CC/56D5CC.png" alt="" /><img src="https://placehold.co/120x56/FF8D08/FF8D08.png" alt="" /> <a href="https://colorfiind.com/palette/spring-beach-wave-colorway" target="_blank" rel="noopener">Spring Beach Wave</a></p>
+<p class='band'><strong>Documentation site</strong> — you want quiet, long-read comfort. <img src="https://placehold.co/120x56/D8C7D8/D8C7D8.png" alt="" /><img src="https://placehold.co/120x56/8FA1B3/8FA1B3.png" alt="" /><img src="https://placehold.co/120x56/E6DDE3/E6DDE3.png" alt="" /><img src="https://placehold.co/120x56/9B8FA3/9B8FA3.png" alt="" /> <a href="https://colorfiind.com/palette/soft-summer-atelier" target="_blank" rel="noopener">Soft Summer Atelier</a></p>
+<p class='band'><strong>Developer tool / dark app</strong> — you want signal colors that punch through black. <img src="https://placehold.co/120x56/09090B/09090B.png" alt="" /><img src="https://placehold.co/120x56/FF007F/FF007F.png" alt="" /><img src="https://placehold.co/120x56/00E5FF/00E5FF.png" alt="" /><img src="https://placehold.co/120x56/B8F500/B8F500.png" alt="" /> <a href="https://colorfiind.com/palette/maple-drift" target="_blank" rel="noopener">Maple Drift</a></p>
+<p class='band'><img src="https://placehold.co/250x12/3C0D4F/3C0D4F.png" alt="rule" /><img src="https://placehold.co/250x12/F22C33/F22C33.png" alt="rule" /><img src="https://placehold.co/250x12/C6EEA0/C6EEA0.png" alt="rule" /><img src="https://placehold.co/250x12/1681DF/1681DF.png" alt="rule" /></p>
+<h2>🧾 The checklist</h2>
+<ol><li>Browse by <strong>category</strong> for vibe, <strong>season</strong> for temperature.</li><li>Open the palette page and read <strong>Mood / Contrast / Best fit</strong> before the hexes.</li><li>Copy the <code>:root</code> block, then <strong>rename</strong> <code>--palette-color-3</code> into <code>--color-surface</code>.</li><li>Check the pairs you will actually ship — 4.5:1 for text, 3:1 for large text and borders.</li><li>Download the palette <strong>Image</strong> and drop it in the PR description so reviewers see the intent.</li><li>Bookmark the permalink. Six months later, &quot;what was that green?&quot; has an answer.</li></ol>
+<p>Next in this series: turning one of these palettes into a full token pipeline — CSS variables, Tailwind config, JSON tokens and a dark-mode flip, in one pass.</p>
+<a class='cta' href='https://colorfiind.com' target='_blank' rel='noopener'>Go find your palette on ColorFiind</a>
+<p><em>What&#x27;s your current project&#x27;s palette? Drop the four hexes in the comments — I&#x27;ll tell you which one is secretly failing contrast.</em> 👇</p></div>
+    </article>
+    <p class="note">Static local preview — Liquid tags are simulated, DEV renders them natively.
+    Colour swatches load from placehold.co, so they need internet access.</p>
+  </div>
+</div>
+</body>
+</html>

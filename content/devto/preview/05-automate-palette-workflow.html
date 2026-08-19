@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Automate Your Color Workflow: One Script, Any Palette → Tokens, Swatches &amp; README Badges — DEV preview</title>
+<style>
+:root{--bg:#0B0F1A;--panel:#111827;--panel2:#0F172A;--line:#1F2A44;--ink:#E7E9EE;
+--muted:#94A3B8;--primary:#00F5D4;--accent:#F15BB5;--support:#9B5DE5;--radius:14px}
+html[data-theme=light]{--bg:#F5F7F9;--panel:#fff;--panel2:#EFF2F6;--line:#DDE3EC;
+--ink:#1B2333;--muted:#5B6478;--primary:#0E7C86;--accent:#B4276F;--support:#6D3FBF}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+font:16px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+a{color:var(--primary)}
+header.top{position:sticky;top:0;z-index:20;display:flex;gap:14px;align-items:center;padding:12px 18px;
+background:var(--bg);border-bottom:1px solid var(--line)}
+.brand{font-weight:800}.brand span{color:var(--primary)}
+.rule{display:flex;height:6px;width:150px;border-radius:99px;overflow:hidden}.rule i{flex:1}
+.spacer{flex:1}
+.btn{font:inherit;cursor:pointer;border:1px solid var(--line);background:var(--panel);color:var(--ink);
+border-radius:99px;padding:6px 14px;text-decoration:none}
+.btn:hover{border-color:var(--primary)}
+.layout{display:grid;grid-template-columns:290px minmax(0,1fr);gap:26px;padding:22px;align-items:start}
+@media(max-width:900px){.layout{grid-template-columns:1fr}}
+nav.files{position:sticky;top:70px;background:var(--panel);border:1px solid var(--line);
+border-radius:var(--radius);padding:12px;display:flex;flex-direction:column;gap:6px}
+nav.files h2{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin:6px 8px 8px}
+nav.files a{display:block;padding:9px 11px;border-radius:10px;text-decoration:none;color:var(--ink);
+font-size:14px;border:1px solid transparent}
+nav.files a:hover{background:var(--panel2)}
+nav.files a.active{background:var(--panel2);border-color:var(--primary);color:var(--primary)}
+nav.files small{display:block;color:var(--muted);font-size:11.5px}
+article{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+padding-bottom:48px;max-width:840px;width:100%;overflow:hidden}
+.cover{width:100%;display:block;border-bottom:1px solid var(--line)}
+.meta{padding:22px clamp(18px,4vw,44px) 0}
+.meta h1{font-size:clamp(26px,4vw,40px);line-height:1.18;margin:.2em 0 .3em}
+.tags{display:flex;flex-wrap:wrap;gap:8px}
+.tag{font-size:12.5px;color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:2px 8px}
+.desc{color:var(--muted);font-size:15px}
+.fm{font-size:12px;color:var(--muted);border-top:1px dashed var(--line);
+border-bottom:1px dashed var(--line);padding:8px 0;margin-bottom:6px}
+.post{padding:0 clamp(18px,4vw,44px)}
+.post img{max-width:100%;vertical-align:top}
+.post p.band{line-height:0;margin:1.2em 0}
+.post h2{margin-top:1.9em;font-size:26px;border-bottom:1px solid var(--line);padding-bottom:.25em}
+.post h3{margin-top:1.5em;font-size:20px}
+.post blockquote{margin:1.4em 0;padding:.9em 1.1em;background:var(--panel2);
+border-left:4px solid var(--accent);border-radius:0 10px 10px 0}
+.post blockquote p{margin:0}
+.tw{overflow-x:auto;margin:1.3em 0}
+.post table{border-collapse:collapse;width:100%;font-size:14.5px}
+.post th,.post td{border:1px solid var(--line);padding:8px 11px;text-align:left;vertical-align:middle}
+.post th{background:var(--panel2)}
+.post td img{vertical-align:middle}
+.post :not(pre)>code{background:var(--panel2);padding:.15em .4em;border-radius:6px;font-size:.9em;
+font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+pre.code{background:#0d1117;border:1px solid var(--line);border-radius:12px;padding:18px;
+overflow-x:auto;position:relative;margin:1.3em 0}
+pre.code code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13.5px;
+line-height:1.62;color:#C9D1D9;white-space:pre}
+pre.code::before{content:attr(data-lang);position:absolute;top:0;right:0;font-size:10.5px;
+letter-spacing:.12em;text-transform:uppercase;color:#0B0F1A;background:var(--primary);
+padding:2px 10px;border-radius:0 11px 0 10px;font-family:ui-monospace,monospace}
+pre.lang-diff{border-color:#F15BB5}
+pre.lang-console,pre.lang-bash{background:#05070d;border-color:#00F5D4}
+.t-comment{color:#6E7A8A;font-style:italic}
+.t-string{color:#A5D6FF}.t-number{color:#F0A868}.t-kw{color:#FF7B9C}
+.t-prop{color:#9B5DE5;font-weight:600}.t-tag{color:#7EE787}
+.t-color{color:#FFD479}
+.chip{display:inline-block;width:.78em;height:.78em;margin-right:.35em;border-radius:3px;
+border:1px solid rgba(255,255,255,.35);vertical-align:-1px}
+.d-add{color:#7EE787;display:block;background:rgba(46,160,67,.15)}
+.d-del{color:#FF9492;display:block;background:rgba(248,81,73,.14)}
+.d-hunk{color:#79C0FF;display:block}
+.sh-prompt{color:#F15BB5;font-weight:700}.sh-cmd{color:#E7E9EE}
+.sh-ok{color:#7EE787;display:block}.sh-out{color:#9DF7E4;display:block}
+details.liquid{background:var(--panel2);border:1px solid var(--line);border-radius:12px;
+padding:10px 16px;margin:1.4em 0}
+details.liquid summary{cursor:pointer;font-weight:650}
+.cta{display:block;text-align:center;margin:1.8em 0;padding:14px 20px;border-radius:12px;
+background:linear-gradient(90deg,var(--primary),var(--support));color:#08121A;font-weight:750;
+text-decoration:none}
+.katex{background:var(--panel2);border:1px dashed var(--line);border-radius:10px;padding:12px 16px;
+font-family:ui-monospace,monospace;color:var(--primary);margin:1.2em 0}
+.embed{color:var(--muted);font-family:ui-monospace,monospace;font-size:13px}
+.note{max-width:840px;color:var(--muted);font-size:13px;margin-top:14px}
+.post hr{border:0;border-top:1px solid var(--line);margin:2em 0}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand">Swatch<span>Deck</span> · DEV.to preview</div>
+  <div class="rule"><i style="background:#0F172A"></i><i style="background:#00F5D4"></i>
+    <i style="background:#F15BB5"></i><i style="background:#9B5DE5"></i></div>
+  <div class="spacer"></div>
+  <a class="btn" href="../05-automate-palette-workflow.md" target="_blank">View raw .md</a>
+  <button class="btn" onclick="var d=document.documentElement;
+    d.dataset.theme=d.dataset.theme==='dark'?'light':'dark'">🌗 Theme</button>
+</header>
+<div class="layout">
+  <nav class="files"><h2>Articles</h2><a href="00-swatch-deck-theme-kit.html" class="">swatch deck theme kit<small>Reusable theme kit</small></a><a href="01-colorfiind-developer-tour.html" class="">colorfiind developer tour<small>Feature tour</small></a><a href="02-hex-to-design-tokens.html" class="">hex to design tokens<small>Tokens pipeline</small></a><a href="03-seasonal-palettes-ui-themes.html" class="">seasonal palettes ui themes<small>Seasonal themes</small></a><a href="04-neon-dark-mode-glow-ui.html" class="">neon dark mode glow ui<small>Neon dark mode</small></a><a href="05-automate-palette-workflow.html" class="active">automate palette workflow<small>Automation</small></a></nav>
+  <div>
+    <article>
+      <img class="cover" src="https://placehold.co/1000x420/10002B/FF006E.png" alt="cover" />
+      <div class="meta">
+        <div class="tags"><span class="tag">#python</span><span class="tag">#css</span><span class="tag">#productivity</span><span class="tag">#webdev</span></div>
+        <h1>Automate Your Color Workflow: One Script, Any Palette → Tokens, Swatches &amp; README Badges</h1>
+        <p class="desc">A single CLI turns four hex codes from ColorFiind into CSS variables, Tailwind config, design tokens, a contrast report, README swatch tables and DEV.to-ready markdown. Python, Node and PHP versions included.</p>
+        <div class="fm">published: <b>false</b> · tags: 4/4 · cover_image: set</div>
+      </div>
+      <div class="post"><p class='band'><img src="https://placehold.co/250x110/10002B/10002B.png" alt="Clay Flare Spectrum" /><img src="https://placehold.co/250x110/240046/240046.png" alt="Clay Flare Spectrum" /><img src="https://placehold.co/250x110/FF006E/FF006E.png" alt="Clay Flare Spectrum" /><img src="https://placehold.co/250x110/00F5D4/00F5D4.png" alt="Clay Flare Spectrum" /></p>
+<blockquote><p>🎨 <strong>Palette in play</strong> — <a href="https://colorfiind.com/palette/clay-flare-spectrum" target="_blank" rel="noopener">Clay Flare Spectrum</a> · <code>#10002B</code> <code>#240046</code> <code>#FF006E</code> <code>#00F5D4</code></p></blockquote>
+<p>Here is a thing I did by hand far too many times: open a palette on <a href="https://colorfiind.com" target="_blank" rel="noopener">ColorFiind</a>, copy four hexes, paste them into a CSS file, retype them into <code>tailwind.config.js</code>, retype them <em>again</em> into a tokens file, then paste each one into a contrast checker, then build a swatch table for the README.</p>
+<p>Twelve minutes. Per palette. With at least one typo.</p>
+<p>So I wrote the script. This post is the script, in three languages, plus the CI job that keeps it honest.</p>
+<p class='band'><img src="https://placehold.co/250x12/10002B/10002B.png" alt="rule" /><img src="https://placehold.co/250x12/240046/240046.png" alt="rule" /><img src="https://placehold.co/250x12/FF006E/FF006E.png" alt="rule" /><img src="https://placehold.co/250x12/00F5D4/00F5D4.png" alt="rule" /></p>
+<h2>🎯 What &quot;done&quot; looks like</h2>
+<pre class="code lang-console" data-lang="console"><code><span class="sh-prompt">$</span><span class="sh-cmd"> palette-kit all --name &quot;Clay Flare Spectrum&quot; \</span>
+<span class="sh-out">    --slug clay-flare-spectrum \</span>
+<span class="sh-out">    --colors 10002B 240046 FF006E 00F5D4</span>
+<span class="sh-out"></span>
+<span class="sh-ok">✔ theme.css              4 custom properties + semantic layer</span>
+<span class="sh-ok">✔ tailwind.colors.js     framework mirror</span>
+<span class="sh-ok">✔ tokens.json            W3C design tokens</span>
+<span class="sh-ok">✔ contrast.md            16-pair WCAG matrix</span>
+<span class="sh-ok">✔ swatches.md            markdown that renders colour anywhere</span>
+<span class="sh-ok">✔ cover.png              1000x420 article cover</span>
+<span class="sh-out"></span></code></pre>
+<p>Six artifacts, one command, zero retyping.</p>
+<h2>🧮 1 · The only math you need</h2>
+<p>Everything — contrast grades, &quot;is this text readable&quot;, &quot;should the label be black or white&quot; — comes out of relative luminance:</p>
+<div class='katex'>L = 0.2126R + 0.7152G + 0.0722B</div>
+<p>…where each channel is linearised, and contrast between two colors is:</p>
+<div class='katex'>\text{ratio} = \frac{L_{\text{lighter}} + 0.05}{L_{\text{darker}} + 0.05}</div>
+<p><strong><code>contrast.py</code></strong> ⌁ <em>35 lines, no dependencies</em></p>
+<pre class="code lang-python" data-lang="python"><code><span class="t-kw">def</span> _channel(c: int) -&gt; float:
+    s = c / <span <span class="t-kw">class</span>="t-number">255</span>
+    <span class="t-kw">return</span> s / <span <span class="t-kw">class</span>="t-number">12.92</span> <span class="t-kw">if</span> s &lt;= <span <span class="t-kw">class</span>="t-number">0.03928</span> <span class="t-kw">else</span> ((s + <span <span class="t-kw">class</span>="t-number">0.055</span>) / <span <span class="t-kw">class</span>="t-number">1.055</span>) ** <span <span class="t-kw">class</span>="t-number">2.4</span>
+
+
+<span class="t-kw">def</span> luminance(hex_code: str) -&gt; float:
+    h = hex_code.lstrip(&quot;<span <span class="t-kw">class</span>="t-comment">#&quot;)</span>
+    r, g, b = (int(h[i:i + <span <span class="t-kw">class</span>="t-number">2</span>], <span <span class="t-kw">class</span>="t-number">16</span>) <span class="t-kw">for</span> i <span class="t-kw">in</span> (<span <span class="t-kw">class</span>="t-number">0</span>, <span <span class="t-kw">class</span>="t-number">2</span>, <span <span class="t-kw">class</span>="t-number">4</span>))
+    <span class="t-kw">return</span> <span <span class="t-kw">class</span>="t-number">0.2126</span> * _channel(r) + <span <span class="t-kw">class</span>="t-number">0.7152</span> * _channel(g) + <span <span class="t-kw">class</span>="t-number">0.0722</span> * _channel(b)
+
+
+<span class="t-kw">def</span> contrast(a: str, b: str) -&gt; float:
+    la, lb = sorted((luminance(a), luminance(b)), reverse=<span class="t-kw">True</span>)
+    <span class="t-kw">return</span> round((la + <span <span class="t-kw">class</span>="t-number">0.05</span>) / (lb + <span <span class="t-kw">class</span>="t-number">0.05</span>), <span <span class="t-kw">class</span>="t-number">2</span>)
+
+
+<span class="t-kw">def</span> grade(ratio: float) -&gt; str:
+    <span class="t-kw">return</span> (&quot;AAA&quot; <span class="t-kw">if</span> ratio &gt;= <span <span class="t-kw">class</span>="t-number">7</span> <span class="t-kw">else</span>
+            &quot;AA&quot; <span class="t-kw">if</span> ratio &gt;= <span <span class="t-kw">class</span>="t-number">4.5</span> <span class="t-kw">else</span>
+            &quot;AA Large&quot; <span class="t-kw">if</span> ratio &gt;= <span <span class="t-kw">class</span>="t-number">3</span> <span class="t-kw">else</span> &quot;fail&quot;)
+
+
+<span class="t-kw">def</span> readable_ink(bg: str) -&gt; str:
+    &quot;&quot;&quot;Black <span class="t-kw">or</span> white text <span class="t-kw">for</span> any background — the one-liner you keep.&quot;&quot;&quot;
+    <span class="t-kw">return</span> &quot;<span <span class="t-kw">class</span>="t-color"><i <span class="t-kw">class</span>="chip" style="background:#000000"></i>#000000</span>&quot; <span class="t-kw">if</span> luminance(bg) &gt; <span <span class="t-kw">class</span>="t-number">0.42</span> <span class="t-kw">else</span> &quot;<span <span class="t-kw">class</span>="t-color"><i <span class="t-kw">class</span>="chip" style="background:#FFFFFF"></i>#FFFFFF</span>&quot;
+</code></pre>
+<pre class="code lang-console" data-lang="console"><code><span class="sh-out">&gt;&gt;&gt; contrast(&quot;#FF006E&quot;, &quot;#10002B&quot;), grade(5.18)</span>
+<span class="sh-out">(5.18, &#x27;AA&#x27;)</span>
+<span class="sh-out">&gt;&gt;&gt; readable_ink(&quot;#00F5D4&quot;)</span>
+<span class="sh-out">&#x27;#000000&#x27;</span>
+<span class="sh-out"></span></code></pre>
+<h2>🖨️ 2 · Emit every format from one list</h2>
+<p><strong><code>palette_kit.py</code></strong> ⌁ <em>the generator core</em></p>
+<pre class="code lang-python" data-lang="python"><code>NAMES = [&quot;surface&quot;, &quot;primary&quot;, &quot;accent&quot;, &quot;support&quot;]
+
+
+<span class="t-kw">def</span> css_vars(name, colors):
+    body = &quot;\n&quot;.join(f&quot;  --color-{k}: {c};&quot; <span class="t-kw">for</span> k, c <span class="t-kw">in</span> zip(NAMES, colors))
+    <span class="t-kw">return</span> f&quot;<span <span class="t-kw">class</span>="t-comment">/* {name} — colorfiind.com */</span>\n:root {{\n{body}\n}}&quot;
+
+
+<span class="t-kw">def</span> tailwind(colors):
+    body = &quot;\n&quot;.join(f&quot;        {k}: &<span <span class="t-kw">class</span>="t-comment">#x27;{c}&#x27;,&quot; <span class="t-kw">for</span> k, c <span class="t-kw">in</span> zip(NAMES, colors))</span>
+    <span class="t-kw">return</span> (&quot;module.exports = {\n  theme: { extend: { colors: {\n&quot;
+            f&quot;      palette: {{\n{body}\n      }},\n&quot;
+            &quot;  } } },\n};&quot;)
+
+
+<span class="t-kw">def</span> tokens(name, slug, colors):
+    <span class="t-kw">import</span> json
+    <span class="t-kw">return</span> json.dumps({
+        &quot;palette&quot;: {
+            &quot;$description&quot;: f&quot;{name} — colorfiind.com/palette/{slug}&quot;,
+            **{k: {&quot;$type&quot;: &quot;color&quot;, &quot;$value&quot;: c} <span class="t-kw">for</span> k, c <span class="t-kw">in</span> zip(NAMES, colors)},
+        }
+    }, indent=<span <span class="t-kw">class</span>="t-number">2</span>)
+</code></pre>
+<h2>🖼️ 3 · The swatch trick that renders everywhere</h2>
+<p>READMEs, DEV.to posts, GitHub issues, Notion — none of them let you set a background color. All of them render images. So generate the color <em>as</em> an image:</p>
+<pre class="code lang-python" data-lang="python"><code>SWATCH = &quot;https:<span <span class="t-kw">class</span>="t-comment">//placehold.co/{w}x{h}/{hex}/{hex}.png&quot;</span>
+
+
+<span class="t-kw">def</span> band(colors, w=<span <span class="t-kw">class</span>="t-number">210</span>, h=<span <span class="t-kw">class</span>="t-number">110</span>):
+    &quot;&quot;&quot;Touching images on one line = a seamless palette bar.&quot;&quot;&quot;
+    <span class="t-kw">return</span> &quot;&quot;.join(
+        f&quot;![{c}]({SWATCH.format(w=w, h=h, hex=c.lstrip(&<span <span class="t-kw">class</span>="t-comment">#x27;#&#x27;))})&quot; <span class="t-kw">for</span> c <span class="t-kw">in</span> colors</span>
+    )
+
+
+<span class="t-kw">def</span> table(colors):
+    rows = [&quot;| Swatch | HEX | Contrast vs white | Grade |&quot;,
+            &quot;| :----: | :-- | :---------------- | :---- |&quot;]
+    <span class="t-kw">for</span> c <span class="t-kw">in</span> colors:
+        r = contrast(c, &quot;<span <span class="t-kw">class</span>="t-color"><i <span class="t-kw">class</span>="chip" style="background:#FFFFFF"></i>#FFFFFF</span>&quot;)
+        rows.append(
+            f&quot;| ![]({SWATCH.format(w=<span <span class="t-kw">class</span>="t-number">110</span>, h=<span <span class="t-kw">class</span>="t-number">44</span>, hex=c.lstrip(&<span <span class="t-kw">class</span>="t-comment">#x27;#&#x27;))}) &quot;</span>
+            f&quot;| <span <span class="t-kw">class</span>="t-string">`{c}`</span> | {r}:<span <span class="t-kw">class</span>="t-number">1</span> | {grade(r)} |&quot;
+        )
+    <span class="t-kw">return</span> &quot;\n&quot;.join(rows)
+</code></pre>
+<p>Passing the same hex as background <strong>and</strong> text color hides placehold.co&#x27;s default size label, leaving a clean block. Output:</p>
+<p class='band'><img src="https://placehold.co/210x110/10002B/10002B.png" alt="" /><img src="https://placehold.co/210x110/240046/240046.png" alt="" /><img src="https://placehold.co/210x110/FF006E/FF006E.png" alt="" /><img src="https://placehold.co/210x110/00F5D4/00F5D4.png" alt="" /></p>
+<div class='tw'><table><thead><tr><th>Swatch</th><th>HEX</th><th>Contrast vs white</th><th>Grade</th></tr></thead><tbody><tr><td><img src="https://placehold.co/110x44/10002B/10002B.png" alt="" /></td><td><code>#10002B</code></td><td>19.87:1</td><td>AAA</td></tr><tr><td><img src="https://placehold.co/110x44/240046/240046.png" alt="" /></td><td><code>#240046</code></td><td>18.05:1</td><td>AAA</td></tr><tr><td><img src="https://placehold.co/110x44/FF006E/FF006E.png" alt="" /></td><td><code>#FF006E</code></td><td>3.83:1</td><td>AA Large</td></tr><tr><td><img src="https://placehold.co/110x44/00F5D4/00F5D4.png" alt="" /></td><td><code>#00F5D4</code></td><td>1.40:1</td><td>fail</td></tr></tbody></table></div>
+<details class='liquid' open><summary>🏷️ Prefer shields.io badges? Here&#x27;s that variant</summary>
+<pre class="code lang-python" data-lang="python"><code>BADGE = &quot;https:<span <span class="t-kw">class</span>="t-comment">//img.shields.io/badge/{label}-{hex}?style=<span class="t-kw">for</span>-the-badge&amp;labelColor={hex}&quot;</span>
+
+<span class="t-kw">def</span> badges(colors):
+    <span class="t-kw">return</span> &quot; &quot;.join(
+        f&quot;![{c}]({BADGE.format(label=c.lstrip(&<span <span class="t-kw">class</span>="t-comment">#x27;#&#x27;), hex=c.lstrip(&#x27;#&#x27;))})&quot;</span>
+        <span class="t-kw">for</span> c <span class="t-kw">in</span> colors
+    )
+</code></pre>
+<p>Badges give you the hex printed on the chip; <code>placehold.co</code> gives you a clean block. Use badges in READMEs, blocks in articles.</p>
+</details>
+<p class='band'><img src="https://placehold.co/250x12/10002B/10002B.png" alt="rule" /><img src="https://placehold.co/250x12/240046/240046.png" alt="rule" /><img src="https://placehold.co/250x12/FF006E/FF006E.png" alt="rule" /><img src="https://placehold.co/250x12/00F5D4/00F5D4.png" alt="rule" /></p>
+<h2>🟨 4 · The Node version</h2>
+<p>Same idea, drop it in any JS project as <code>scripts/palette.mjs</code>:</p>
+<pre class="code lang-js" data-lang="js"><code><span <span class="t-kw">class</span>="t-comment">#!/usr/bin/env node</span>
+<span class="t-kw">import</span> { writeFileSync } <span class="t-kw">from</span> &<span <span class="t-kw">class</span>="t-comment">#x27;node:fs&#x27;;</span>
+
+<span class="t-kw">const</span> NAMES = [&<span <span class="t-kw">class</span>="t-comment">#x27;surface&#x27;, &#x27;primary&#x27;, &#x27;accent&#x27;, &#x27;support&#x27;];</span>
+<span class="t-kw">const</span> hex = (c) =&gt; &<span <span class="t-kw">class</span>="t-comment">#x27;#&#x27; + c.replace(&#x27;#&#x27;, &#x27;&#x27;).toUpperCase();</span>
+<span class="t-kw">const</span> colors = process.argv.slice(<span <span class="t-kw">class</span>="t-number">2</span>).map(hex);
+
+<span class="t-kw">const</span> lum = (c) =&gt; {
+  <span class="t-kw">const</span> [r, g, b] = c.slice(<span <span class="t-kw">class</span>="t-number">1</span>).match(/../g).map((h) =&gt; {
+    <span class="t-kw">const</span> v = parseInt(h, <span <span class="t-kw">class</span>="t-number">16</span>) / <span <span class="t-kw">class</span>="t-number">255</span>;
+    <span class="t-kw">return</span> v &lt;= <span <span class="t-kw">class</span>="t-number">0.03928</span> ? v / <span <span class="t-kw">class</span>="t-number">12.92</span> : ((v + <span <span class="t-kw">class</span>="t-number">0.055</span>) / <span <span class="t-kw">class</span>="t-number">1.055</span>) ** <span <span class="t-kw">class</span>="t-number">2.4</span>;
+  });
+  <span class="t-kw">return</span> <span <span class="t-kw">class</span>="t-number">0.2126</span> * r + <span <span class="t-kw">class</span>="t-number">0.7152</span> * g + <span <span class="t-kw">class</span>="t-number">0.0722</span> * b;
+};
+
+<span class="t-kw">const</span> contrast = (a, b) =&gt; {
+  <span class="t-kw">const</span> [x, y] = [lum(a), lum(b)].sort((m, n) =&gt; n - m);
+  <span class="t-kw">return</span> +((x + <span <span class="t-kw">class</span>="t-number">0.05</span>) / (y + <span <span class="t-kw">class</span>="t-number">0.05</span>)).toFixed(<span <span class="t-kw">class</span>="t-number">2</span>);
+};
+
+<span class="t-kw">const</span> pairs = NAMES.map((n, i) =&gt; [n, colors[i]]).filter(([, v]) =&gt; v);
+
+writeFileSync(&<span <span class="t-kw">class</span>="t-comment">#x27;theme.css&#x27;,</span>
+  <span <span class="t-kw">class</span>="t-string">`:root {\n${pairs.map(([n, v]) =&gt; `</span>  --color-${n}: ${v};<span <span class="t-kw">class</span>="t-string">`).join(&#x27;\n&#x27;)}\n}\n`</span>);
+
+writeFileSync(&<span <span class="t-kw">class</span>="t-comment">#x27;tokens.json&#x27;, JSON.stringify(</span>
+  Object.fromEntries(pairs.map(([n, v]) =&gt; [n, { $type: &<span <span class="t-kw">class</span>="t-comment">#x27;color&#x27;, $value: v }])), <span class="t-kw">null</span>, 2));</span>
+
+writeFileSync(&<span <span class="t-kw">class</span>="t-comment">#x27;swatches.md&#x27;,</span>
+  pairs.map(([, v]) =&gt;
+    <span <span class="t-kw">class</span>="t-string">`![${v}](https://placehold.co/210x110/${v.slice(1)}/${v.slice(1)}.png)`</span>).join(&<span <span class="t-kw">class</span>="t-comment">#x27;&#x27;) + &#x27;\n&#x27;);</span>
+
+console.table(pairs.map(([name, value]) =&gt; ({
+  name, value, onWhite: contrast(value, &<span <span class="t-kw">class</span>="t-comment">#x27;#FFFFFF&#x27;), onBlack: contrast(value, &#x27;#000000&#x27;),</span>
+})));
+</code></pre>
+<pre class="code lang-console" data-lang="console"><code><span class="sh-prompt">$</span><span class="sh-cmd"> node scripts/palette.mjs 10002B 240046 FF006E 00F5D4</span>
+<span class="sh-out">┌─────────┬───────────┬───────────┬──────────┬─────────┐</span>
+<span class="sh-out">│ (index) │   name    │   value   │ onWhite  │ onBlack │</span>
+<span class="sh-out">├─────────┼───────────┼───────────┼──────────┼─────────┤</span>
+<span class="sh-out">│    0    │ &#x27;surface&#x27; │ &#x27;#10002B&#x27; │  19.87   │  1.06   │</span>
+<span class="sh-out">│    1    │ &#x27;primary&#x27; │ &#x27;#240046&#x27; │  18.05   │  1.16   │</span>
+<span class="sh-out">│    2    │ &#x27;accent&#x27;  │ &#x27;#FF006E&#x27; │   3.83   │  5.48   │</span>
+<span class="sh-out">│    3    │ &#x27;support&#x27; │ &#x27;#00F5D4&#x27; │   1.40   │  15.01  │</span>
+<span class="sh-out">└─────────┴───────────┴───────────┴──────────┴─────────┘</span>
+<span class="sh-out"></span></code></pre>
+<p>That <code>onWhite</code> / <code>onBlack</code> split is the whole light-vs-dark-mode decision in one glance.</p>
+<h2>🐘 5 · The PHP version</h2>
+<p>For the WordPress / Laravel / plain-PHP crowd, and for build steps that already run on a LAMP box:</p>
+<pre class="code lang-php" data-lang="php"><code>&lt;?php
+<span class="t-kw">declare</span>(<span class="t-kw">strict_types</span>=<span <span class="t-kw">class</span>="t-number">1</span>);
+
+<span class="t-kw">function</span> luminance(<span class="t-kw">string</span> $hex): <span class="t-kw">float</span> {
+    $hex = ltrim($hex, &<span <span class="t-kw">class</span>="t-comment">#x27;#&#x27;);</span>
+    [$r, $g, $b] = array_map(
+        <span class="t-kw">static</span> <span class="t-kw">function</span> (<span class="t-kw">string</span> $part): <span class="t-kw">float</span> {
+            $c = hexdec($part) / <span <span class="t-kw">class</span>="t-number">255</span>;
+            <span class="t-kw">return</span> $c &lt;= <span <span class="t-kw">class</span>="t-number">0.03928</span> ? $c / <span <span class="t-kw">class</span>="t-number">12.92</span> : (($c + <span <span class="t-kw">class</span>="t-number">0.055</span>) / <span <span class="t-kw">class</span>="t-number">1.055</span>) ** <span <span class="t-kw">class</span>="t-number">2.4</span>;
+        },
+        str_split($hex, <span <span class="t-kw">class</span>="t-number">2</span>)
+    );
+    <span class="t-kw">return</span> <span <span class="t-kw">class</span>="t-number">0.2126</span> * $r + <span <span class="t-kw">class</span>="t-number">0.7152</span> * $g + <span <span class="t-kw">class</span>="t-number">0.0722</span> * $b;
+}
+
+<span class="t-kw">function</span> contrast(<span class="t-kw">string</span> $a, <span class="t-kw">string</span> $b): <span class="t-kw">float</span> {
+    $l = [luminance($a), luminance($b)];
+    rsort($l);
+    <span class="t-kw">return</span> round(($l[<span <span class="t-kw">class</span>="t-number">0</span>] + <span <span class="t-kw">class</span>="t-number">0.05</span>) / ($l[<span <span class="t-kw">class</span>="t-number">1</span>] + <span <span class="t-kw">class</span>="t-number">0.05</span>), <span <span class="t-kw">class</span>="t-number">2</span>);
+}
+
+<span class="t-kw">function</span> cssVars(<span class="t-kw">string</span> $name, <span class="t-kw">array</span> $colors): <span class="t-kw">string</span> {
+    $keys = [&<span <span class="t-kw">class</span>="t-comment">#x27;surface&#x27;, &#x27;primary&#x27;, &#x27;accent&#x27;, &#x27;support&#x27;];</span>
+    $out  = &quot;<span <span class="t-kw">class</span>="t-comment">/* {$name} — colorfiind.com */</span>\n:root {\n&quot;;
+    <span class="t-kw">foreach</span> ($colors <span class="t-kw">as</span> $i =&gt; $hex) {
+        $out .= sprintf(&quot;  --color-%s: %s;\n&quot;, $keys[$i] ?? &quot;extra-{$i}&quot;, $hex);
+    }
+    <span class="t-kw">return</span> $out . &quot;}\n&quot;;
+}
+
+$palette = [&<span <span class="t-kw">class</span>="t-comment">#x27;#10002B&#x27;, &#x27;#240046&#x27;, &#x27;#FF006E&#x27;, &#x27;#00F5D4&#x27;];</span>
+file_put_contents(&<span <span class="t-kw">class</span>="t-comment">#x27;theme.css&#x27;, cssVars(&#x27;Clay Flare Spectrum&#x27;, $palette));</span>
+<span class="t-kw">printf</span>(&quot;accent on surface: %.2f:<span <span class="t-kw">class</span>="t-number">1</span>\n&quot;, contrast(&<span <span class="t-kw">class</span>="t-comment">#x27;#FF006E&#x27;, &#x27;#10002B&#x27;));</span>
+</code></pre>
+<pre class="code lang-console" data-lang="console"><code><span class="sh-prompt">$</span><span class="sh-cmd"> php palette.php</span>
+<span class="sh-out">accent on surface: 5.18:1</span>
+<span class="sh-out"></span></code></pre>
+<h2>🤖 6 · Keep it honest in CI</h2>
+<p>Colors rot. A designer tweaks one token, a junior hardcodes a hex, and six weeks later your &quot;accessible&quot; theme is not. Fail the build instead:</p>
+<pre class="code lang-yaml" data-lang="yaml"><code><span class="t-comment"># .github/workflows/contrast.yml</span>
+<span class="t-kw">name</span>: contrast
+<span class="t-kw">
+on</span>: [push, pull_request]
+<span class="t-kw">
+jobs</span>:
+<span class="t-kw">  audit</span>:
+<span class="t-kw">    runs-on</span>: ubuntu-latest
+<span class="t-kw">    steps</span>:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+<span class="t-kw">        with</span>:
+<span class="t-kw">          python-version</span>: &<span class="t-comment">#x27;3.12&#x27;</span>
+      - name: Audit theme contrast
+<span class="t-kw">        run</span>: python3 tools/palette_kit.py contrast --from-json data/palettes.json
+      - name: Fail if any text pair is below AA
+<span class="t-kw">        run</span>: python3 tools/audit.py --min <span class="t-number">4.5</span> --pairs data/text-pairs.json
+</code></pre>
+<pre class="code lang-diff" data-lang="diff"><code>  # data/text-pairs.json — the pairs you actually ship
+  [
+    { &quot;fg&quot;: &quot;#E7E9EE&quot;, &quot;bg&quot;: &quot;#10002B&quot;, &quot;use&quot;: &quot;body&quot; },
+    { &quot;fg&quot;: &quot;#00F5D4&quot;, &quot;bg&quot;: &quot;#10002B&quot;, &quot;use&quot;: &quot;links&quot; },
+<span class="d-del">-   { &quot;fg&quot;: &quot;#7A5AA8&quot;, &quot;bg&quot;: &quot;#240046&quot;, &quot;use&quot;: &quot;labels&quot; },</span>
+<span class="d-add">+   { &quot;fg&quot;: &quot;#B9A6E0&quot;, &quot;bg&quot;: &quot;#240046&quot;, &quot;use&quot;: &quot;labels&quot; }</span>
+  ]
+</code></pre>
+<p><em>(<code>#7A5AA8</code> on <code>#240046</code> is 3.31:1 — a fail for label text. Lightening the violet to <code>#B9A6E0</code> takes it to 8.25:1.)</em></p>
+<h2>🧾 The checklist</h2>
+<ol><li>Store the palette <strong>once</strong>, in JSON, with the ColorFiind URL next to it.</li><li>Generate CSS, Tailwind and tokens — never retype a hex.</li><li>Generate swatch markdown too; your README should show the colors, not list them.</li><li>Compute <code>onWhite</code> / <code>onBlack</code> for every color to decide light vs dark mode roles.</li><li>Put a contrast assertion in CI with the pairs you really ship.</li><li>Regenerate, don&#x27;t edit. The script is the source of truth; the artifacts are build output.</li></ol>
+<p>The full generator used for this series — bands, tables, contrast matrices and 1000×420 cover art — lives in the repo linked below. Point it at any palette and it prints a post&#x27;s worth of markdown.</p>
+<a class='cta' href='https://colorfiind.com' target='_blank' rel='noopener'>Find a palette to feed the script</a>
+<p><em>What&#x27;s the most tedious part of your color workflow? Tell me and I&#x27;ll add a flag for it.</em> 👇</p></div>
+    </article>
+    <p class="note">Static local preview — Liquid tags are simulated, DEV renders them natively.
+    Colour swatches load from placehold.co, so they need internet access.</p>
+  </div>
+</div>
+</body>
+</html>
