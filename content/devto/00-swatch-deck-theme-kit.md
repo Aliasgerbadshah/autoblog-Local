@@ -6,10 +6,12 @@ tags: writing, markdown, css, design
 ---
 
 <!-- Cover image: upload your own 1000x420 image in the DEV editor,
+
      then paste the URL it returns into a new `cover_image:` line above.
      A ready-made generation prompt for this post is in COVER-PROMPTS.md. -->
 
 <!--
+
   ┌───────────────────────────────────────────────────────────────┐
   │  SWATCH DECK — theme kit v1                                   │
   │  Every article in this series uses these blocks in this order │
@@ -18,9 +20,13 @@ tags: writing, markdown, css, design
   This file is a reference sheet, not a post you have to publish.
 -->
 
-![Section divider bar in vivid teal](https://placehold.co/1000x10/00F5D4/00F5D4.png)
+&nbsp;
 
 DEV.to strips `<style>` tags and inline `style=""` attributes, so you cannot paint a div pink and call it a day. What you *can* do is let **images carry the color** and let **fenced code blocks carry the texture**. Two rules make it work: images are **block-level on DEV**, so anything that must sit side by side goes in a **table row**; and a divider is a **single wide bar**, not four small ones.
+
+&nbsp;
+
+![Section divider bar in vivid teal](https://placehold.co/1000x8/00F5D4/00F5D4.png)
 
 ## 🧱 The eight blocks
 
@@ -36,7 +42,9 @@ DEV.to strips `<style>` tags and inline `style=""` attributes, so you cannot pai
 | 8 | Collapsible | the *details* liquid tag for long code | ✅ |
 | — | `<style>`, inline style attributes, `<script>` | sanitized away | 🚫 |
 
-![Section divider bar in vivid teal](https://placehold.co/1000x10/00F5D4/00F5D4.png)
+&nbsp;
+
+![Section divider bar in vivid magenta](https://placehold.co/1000x8/F15BB5/F15BB5.png)
 
 ## 1 · Palette band — use a table row, not a line of images
 
@@ -61,11 +69,17 @@ The URL shape is `placehold.co/{W}x{H}/{background}/{textColor}.png`. Passing th
 the auto-generated size label, so you get a clean solid block. `dummyimage.com/120x56/0f172a/0f172a.png`
 is a drop-in fallback if placehold.co is ever down.
 
+&nbsp;
+
 Keep swatches at **120×56 or smaller** inside tables — four columns of 210px overflow the article width
 on mobile.
 
 > 🚧 **Trap** — the same rule applies *inside* a cell. Four images in one cell stack too. One colour per
 > cell, always.
+
+&nbsp;
+
+![Section divider bar in indigo](https://placehold.co/1000x8/9B5DE5/9B5DE5.png)
 
 ## 2 · Color rule — one wide bar
 
@@ -75,9 +89,11 @@ A divider wants to be a single image, for exactly the same reason:
 ![Section divider bar in vivid teal](https://placehold.co/1000x10/00F5D4/00F5D4.png)
 ```
 
-![Section divider bar in vivid teal](https://placehold.co/1000x10/00F5D4/00F5D4.png)
-
 It scales down to any screen width, and it beats a grey `---` for keeping the article's palette present.
+
+&nbsp;
+
+![Section divider bar in vivid teal](https://placehold.co/1000x8/00F5D4/00F5D4.png)
 
 ## 3 · Swatch table
 
@@ -88,9 +104,15 @@ It scales down to any screen width, and it beats a grey `---` for keeping the ar
 | ![vivid magenta swatch #F15BB5](https://placehold.co/110x44/F15BB5/F15BB5.png) | `#F15BB5` | `241, 91, 181` | `324° 84% 65%` | **5.87:1** ✅ | Accent |
 | ![indigo swatch #9B5DE5](https://placehold.co/110x44/9B5DE5/9B5DE5.png) | `#9B5DE5` | `155, 93, 229` | `267° 72% 63%` | **4.33:1** 🟡 | Support |
 
+&nbsp;
+
+![Section divider bar in vivid magenta](https://placehold.co/1000x8/F15BB5/F15BB5.png)
+
 ## 4 · Code tabs — five looks for five jobs
 
 Give each block a **tab line** right above it. The bold monospace filename plus an em-dash caption reads like an editor tab and visually separates one code look from the next.
+
+&nbsp;
 
 **`tokens.css`** ⌁ *the source of truth*
 
@@ -136,9 +158,15 @@ $ npx palette-tokens 0F172A 00F5D4 F15BB5 9B5DE5
 }
 ```
 
+&nbsp;
+
+![Section divider bar in indigo](https://placehold.co/1000x8/9B5DE5/9B5DE5.png)
+
 ## 5 · Liquid tags worth using
 
 {% details 💡 Click to expand a collapsible %}
+
+&nbsp;
 
 Long snippets, alternate framework versions and "the boring full config" belong in here so the article keeps its rhythm.
 
@@ -156,6 +184,10 @@ $primary: #00F5D4;
 {% katex inline %} L = 0.2126R + 0.7152G + 0.0722B {% endkatex %}
 ```
 
+&nbsp;
+
+![Section divider bar in vivid teal](https://placehold.co/1000x8/00F5D4/00F5D4.png)
+
 ## 6 · Front matter template
 
 ```yaml
@@ -171,7 +203,9 @@ series: "Color for Developers"
 
 > 🧪 **Lab note** — `tags` is a **maximum of four**, comma separated, no `#`. `cover_image` looks best at exactly **1000×420**. Keep `published: false` until the preview looks right, then flip it.
 
-![Section divider bar in vivid teal](https://placehold.co/1000x10/00F5D4/00F5D4.png)
+&nbsp;
+
+![Section divider bar in vivid magenta](https://placehold.co/1000x8/F15BB5/F15BB5.png)
 
 ## 7 · Generate all of it
 
@@ -182,5 +216,3 @@ $ python3 tools/palette_kit.py swatches \
     --name "Neon Diner Harmony" --slug neon-diner-harmony \
     --colors 0F172A 00F5D4 F15BB5 9B5DE5
 ```
-
-

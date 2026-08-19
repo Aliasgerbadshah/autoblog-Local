@@ -104,6 +104,21 @@ Needs Python 3.9+ (stdlib only) and ImageMagick for the PNG commands.
 
 ---
 
+## Formatting & spacing
+
+```bash
+python3 content/devto/tools/format_md.py          # section dividers + tidy spacing
+python3 content/devto/tools/format_md.py --airy   # …plus a blank line between paragraphs
+```
+
+`format_md.py` enforces the reading rhythm: one blank line between every block, and before each `##`
+topic a spacer plus a full-width colour bar that cycles through the article's own palette. Run it with
+`--airy` for extra space between paragraphs, or without to tighten things back up — it's idempotent, so
+you can flip between the two freely.
+
+> DEV's Markdown has no way to set margins, so the spacer is a paragraph containing `&nbsp;`.
+> That is the one reliable trick for adding vertical air.
+
 ## Before you paste: run the linter
 
 ```bash

@@ -197,6 +197,11 @@ def render(md: str) -> str:
             i += 1
             continue
 
+        if stripped == "&nbsp;":
+            out.append("<p class='spacer'>&nbsp;</p>")
+            i += 1
+            continue
+
         if re.fullmatch(r"\x01\d+\x01", stripped):
             out.append(blocks[int(stripped.strip("\x01"))])
             i += 1
@@ -364,6 +369,8 @@ font-family:ui-monospace,monospace;color:var(--primary);margin:1.2em 0}
 .embed{color:var(--muted);font-family:ui-monospace,monospace;font-size:13px}
 .note{max-width:840px;color:var(--muted);font-size:13px;margin-top:14px}
 .post hr{border:0;border-top:1px solid var(--line);margin:2em 0}
+.post p:empty,.post p.spacer{margin:1.1em 0;min-height:1.1em}
+.post h2{margin-top:1.2em}
 """
 
 PAGE = """<!DOCTYPE html>

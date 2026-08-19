@@ -6,6 +6,7 @@ tags: css, tailwindcss, webdev, frontend
 ---
 
 <!-- Cover image: upload your own 1000x420 image in the DEV editor,
+
      then paste the URL it returns into a new `cover_image:` line above.
      A ready-made generation prompt for this post is in COVER-PROMPTS.md. -->
 
@@ -17,9 +18,13 @@ tags: css, tailwindcss, webdev, frontend
 
 Four hex codes is not a theme. A theme is four hex codes that survived a rename, a framework, a dark mode toggle and a designer asking "can we make the accent 10% lighter everywhere?"
 
+&nbsp;
+
 This post is the pipeline I run every time I pull a palette from anywhere. Same four colors, six formats, and the important part — **the naming step in the middle that makes all the rest boring**.
 
-![Section divider bar in vivid teal](https://placehold.co/1000x10/00F5D4/00F5D4.png)
+&nbsp;
+
+![Section divider bar in vivid teal](https://placehold.co/1000x8/00F5D4/00F5D4.png)
 
 ## 📐 The pipeline
 
@@ -35,9 +40,15 @@ $ palette → raw vars → semantic names → framework config → tokens.json �
 | ![vivid magenta swatch #F15BB5](https://placehold.co/110x44/F15BB5/F15BB5.png) | `#F15BB5` | **5.87:1** | ✅ AA | accent |
 | ![indigo swatch #9B5DE5](https://placehold.co/110x44/9B5DE5/9B5DE5.png) | `#9B5DE5` | **4.33:1** | 🟡 AA Large | support |
 
+&nbsp;
+
+![Section divider bar in vivid magenta](https://placehold.co/1000x8/F15BB5/F15BB5.png)
+
 ## 1️⃣ Layer one — the raw palette
 
 Write the raw palette down exactly once. **Copy it verbatim and do not touch it again.** It is your receipt: it says exactly which palette this theme came from.
+
+&nbsp;
 
 **`styles/palette.css`** ⌁ *raw, never referenced by components*
 
@@ -52,9 +63,15 @@ Write the raw palette down exactly once. **Copy it verbatim and do not touch it 
 }
 ```
 
+&nbsp;
+
+![Section divider bar in indigo](https://placehold.co/1000x8/9B5DE5/9B5DE5.png)
+
 ## 2️⃣ Layer two — the semantic layer
 
 This is where the value is. Raw hexes describe *what a color is*; semantic tokens describe *what it does*. Components only ever see layer two, which is why swapping palettes later costs one file instead of forty.
+
+&nbsp;
 
 **`styles/theme.css`** ⌁ *the only layer components import*
 
@@ -88,9 +105,15 @@ This is where the value is. Raw hexes describe *what a color is*; semantic token
 
 > 🧪 **Lab note** — `--color-primary-ink` is the token people forget. Every brand color needs a partner that is readable *on top of it*. `#00F5D4` is bright: white text on it is **1.4:1** (invisible), while `#04231D` on it is **11.88:1**. Store the answer once instead of rediscovering it in every button.
 
+&nbsp;
+
+![Section divider bar in light magenta](https://placehold.co/1000x8/E0AED7/E0AED7.png)
+
 ## 3️⃣ Layer three — the component layer
 
 Components consume semantics and nothing else. Notice there is not a single hex below.
+
+&nbsp;
 
 **`components/button.css`** ⌁ *zero hardcoded colors*
 
@@ -137,11 +160,15 @@ Here is the refactor that usually happens at this point, in the format that make
 
 Two wins in four lines: the palette became swappable, **and** the white-on-pink text (3.04:1 — a fail for body copy) became near-black on pink at **6.27:1**.
 
-![Section divider bar in vivid teal](https://placehold.co/1000x10/00F5D4/00F5D4.png)
+&nbsp;
+
+![Section divider bar in dark red](https://placehold.co/1000x8/994129/994129.png)
 
 ## 4️⃣ Tailwind, SCSS, and everything else
 
 Same four colors, wearing different clothes.
+
+&nbsp;
 
 **`tailwind.config.js`** ⌁ *semantic names all the way down*
 
@@ -208,9 +235,15 @@ export type ThemeColor = keyof typeof theme;
 
 {% enddetails %}
 
+&nbsp;
+
+![Section divider bar in vivid teal](https://placehold.co/1000x8/00F5D4/00F5D4.png)
+
 ## 5️⃣ tokens.json — the format that outlives your framework
 
 If design tooling is anywhere near your project, export W3C-style design tokens. Style Dictionary, Figma plugins and Storybook all speak this.
+
+&nbsp;
 
 **`tokens/palette.tokens.json`** ⌁ *the portable version*
 
@@ -236,6 +269,10 @@ ios
 android
   ✔ build/android/colors.xml
 ```
+
+&nbsp;
+
+![Section divider bar in vivid magenta](https://placehold.co/1000x8/F15BB5/F15BB5.png)
 
 ## 6️⃣ Light mode for free
 
@@ -282,7 +319,9 @@ document.querySelector('#toggle').addEventListener('click', () => {
 
 > 🚧 **Trap** — do not reuse the same accent across both modes without re-checking it. `#00F5D4` is **12.76:1** on the dark surface and **1.4:1** on white. Same color, opposite verdict. Each mode needs its own contrast pass.
 
-![Section divider bar in vivid teal](https://placehold.co/1000x10/00F5D4/00F5D4.png)
+&nbsp;
+
+![Section divider bar in indigo](https://placehold.co/1000x8/9B5DE5/9B5DE5.png)
 
 ## 🤖 Automate the boring 90%
 
@@ -313,6 +352,10 @@ $ node palette-to-tokens.mjs 0F172A 00F5D4 F15BB5 9B5DE5
 ✔ theme.css  ✔ tokens.json  ✔ tailwind.colors.js
 ```
 
+&nbsp;
+
+![Section divider bar in light magenta](https://placehold.co/1000x8/E0AED7/E0AED7.png)
+
 ## 🧾 The checklist
 
 1. Write the raw palette into `palette.css` once. Keep the source link in a comment.
@@ -323,5 +366,3 @@ $ node palette-to-tokens.mjs 0F172A 00F5D4 F15BB5 9B5DE5
 6. Script the conversion — you will do it again next project.
 
 Next up: seasonal palettes as a theming system — why *soft summer* makes a beautiful reading app and *deep winter* makes the best dark mode you have shipped.
-
-

@@ -89,6 +89,8 @@ font-family:ui-monospace,monospace;color:var(--primary);margin:1.2em 0}
 .embed{color:var(--muted);font-family:ui-monospace,monospace;font-size:13px}
 .note{max-width:840px;color:var(--muted);font-size:13px;margin-top:14px}
 .post hr{border:0;border-top:1px solid var(--line);margin:2em 0}
+.post p:empty,.post p.spacer{margin:1.1em 0;min-height:1.1em}
+.post h2{margin-top:1.2em}
 </style>
 </head>
 <body>
@@ -117,8 +119,10 @@ font-family:ui-monospace,monospace;color:var(--primary);margin:1.2em 0}
       <div class="post"><div class='tw'><table><thead><tr><th><code>#09090B</code></th><th><code>#FF007F</code></th><th><code>#00E5FF</code></th><th><code>#B8F500</code></th></tr></thead><tbody><tr><td><img src="https://placehold.co/120x56/09090B/09090B.png" alt="near-black swatch #09090B" /></td><td><img src="https://placehold.co/120x56/FF007F/FF007F.png" alt="vivid pink swatch #FF007F" /></td><td><img src="https://placehold.co/120x56/00E5FF/00E5FF.png" alt="vivid teal swatch #00E5FF" /></td><td><img src="https://placehold.co/120x56/B8F500/B8F500.png" alt="vivid lime swatch #B8F500" /></td></tr></tbody></table></div>
 <blockquote><p>🎨 <strong>Palette in play</strong> — <strong>Maple Drift</strong> · <code>#09090B</code> <code>#FF007F</code> <code>#00E5FF</code> <code>#B8F500</code></p></blockquote>
 <p>Every neon theme starts the same way. You find a palette like this one, you build a landing page in an hour, it looks like the future, and three days later you notice you have been squinting at your own product.</p>
+<p class='spacer'>&nbsp;</p>
 <p>The colors are not the problem. <strong>The way they are applied is.</strong> a good palette library&#x27;s neon category is full of palettes with the exact structure you want — one near-black base plus three high-luminance signals — and that structure is a rule waiting to be written down.</p>
-<p><img src="https://placehold.co/1000x10/FF007F/FF007F.png" alt="Section divider bar in vivid pink" /></p>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/FF007F/FF007F.png" alt="Section divider bar in vivid pink" /></p>
 <h2>⚡ 1 · Read the structure, not the vibe</h2>
 <p>Every good neon palette is <code>1 base + 3 signals</code>:</p>
 <div class='tw'><table><thead><tr><th>Swatch</th><th>HEX</th><th>Luminance</th><th>On base</th><th>Grade</th><th>Role</th></tr></thead><tbody><tr><td><img src="https://placehold.co/110x44/09090B/09090B.png" alt="near-black swatch #09090B" /></td><td><code>#09090B</code></td><td>0.003</td><td>—</td><td>—</td><td>canvas</td></tr><tr><td><img src="https://placehold.co/110x44/FF007F/FF007F.png" alt="vivid pink swatch #FF007F" /></td><td><code>#FF007F</code></td><td>0.228</td><td><strong>5.27:1</strong></td><td>✅ AA</td><td>accent / brand</td></tr><tr><td><img src="https://placehold.co/110x44/00E5FF/00E5FF.png" alt="vivid teal swatch #00E5FF" /></td><td><code>#00E5FF</code></td><td>0.633</td><td><strong>12.93:1</strong></td><td>✅ AAA</td><td>primary / links</td></tr><tr><td><img src="https://placehold.co/110x44/B8F500/B8F500.png" alt="vivid lime swatch #B8F500" /></td><td><code>#B8F500</code></td><td>0.755</td><td><strong>15.25:1</strong></td><td>✅ AAA</td><td>success / highlight</td></tr></tbody></table></div>
@@ -126,9 +130,13 @@ font-family:ui-monospace,monospace;color:var(--primary);margin:1.2em 0}
 <ol><li>The two bright signals are <strong>more readable than most light-mode text</strong>. They are your primary and success colors, not decoration.</li><li>The pink is the weakest at 5.27:1 — fine for headings and buttons, risky for 14px body copy on a glowing background.</li></ol>
 <p>Three more neon palettes with the same skeleton:</p>
 <div class='tw'><table><thead><tr><th>Palette</th><th>Base</th><th>Signal 1</th><th>Signal 2</th><th>Signal 3</th></tr></thead><tbody><tr><td><strong>Neon Diner Harmony</strong></td><td><img src="https://placehold.co/76x34/0F172A/0F172A.png" alt="navy swatch #0F172A" /></td><td><img src="https://placehold.co/76x34/00F5D4/00F5D4.png" alt="vivid teal swatch #00F5D4" /></td><td><img src="https://placehold.co/76x34/F15BB5/F15BB5.png" alt="vivid magenta swatch #F15BB5" /></td><td><img src="https://placehold.co/76x34/9B5DE5/9B5DE5.png" alt="indigo swatch #9B5DE5" /></td></tr><tr><td><strong>Clay Flare Spectrum</strong></td><td><img src="https://placehold.co/76x34/10002B/10002B.png" alt="deep indigo swatch #10002B" /></td><td><img src="https://placehold.co/76x34/240046/240046.png" alt="deep indigo swatch #240046" /></td><td><img src="https://placehold.co/76x34/FF006E/FF006E.png" alt="vivid pink swatch #FF006E" /></td><td><img src="https://placehold.co/76x34/00F5D4/00F5D4.png" alt="vivid teal swatch #00F5D4" /></td></tr><tr><td><strong>Pine Field Gallery</strong></td><td><img src="https://placehold.co/76x34/03071E/03071E.png" alt="near-black swatch #03071E" /></td><td><img src="https://placehold.co/76x34/DC2F02/DC2F02.png" alt="dark red swatch #DC2F02" /></td><td><img src="https://placehold.co/76x34/F48C06/F48C06.png" alt="vivid orange swatch #F48C06" /></td><td><img src="https://placehold.co/76x34/FFBA08/FFBA08.png" alt="vivid orange swatch #FFBA08" /></td></tr></tbody></table></div>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/00E5FF/00E5FF.png" alt="Section divider bar in vivid teal" /></p>
 <h2>🩹 2 · Why it hurts — halation, and the 3 fixes</h2>
 <p>Saturated bright-on-black text bleeds at the edges for a lot of eyes — astigmatism especially. This is <strong>halation</strong>, and it is why &quot;pure white on pure black&quot; is a bad default even though it scores 21:1.</p>
+<p class='spacer'>&nbsp;</p>
 <p>Three fixes, all cheap:</p>
+<p class='spacer'>&nbsp;</p>
 <p><strong><code>fix-1.css</code></strong> ⌁ <em>never pure black, never pure white</em></p>
 <pre class="code lang-diff" data-lang="diff"><code><span class="d-del">- --bg:  #000000;</span>
 <span class="d-del">- --ink: #FFFFFF;</span>
@@ -158,7 +166,8 @@ a         { color: var(--neon-cyan); }
 }
 </code></pre>
 <blockquote><p>🧪 <strong>Lab note</strong> — <code>color-mix()</code> is the whole trick. One neon token generates its own tint, border, glow and hover state, so a palette swap is still a one-line change. Supported in every current browser; <code>rgb(0 229 255 / 6%)</code> is the fallback.</p></blockquote>
-<p><img src="https://placehold.co/1000x10/FF007F/FF007F.png" alt="Section divider bar in vivid pink" /></p>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/B8F500/B8F500.png" alt="Section divider bar in vivid lime" /></p>
 <h2>🧱 3 · The full theme</h2>
 <p><strong><code>neon.css</code></strong> ⌁ <em>complete, copy-paste-able</em></p>
 <pre class="code lang-css" data-lang="css"><code>:root[data-theme=&<span class="t-comment">#x27;neon&#x27;] {</span>
@@ -222,6 +231,8 @@ body {
 <p>Text-on-neon pairings, pre-solved:</p>
 <div class='tw'><table><thead><tr><th>Background</th><th>Ink</th><th>Ratio</th></tr></thead><tbody><tr><td><img src="https://placehold.co/70x26/00E5FF/00E5FF.png" alt="vivid teal swatch #00E5FF" /> <code>#00E5FF</code></td><td><code>#04252B</code></td><td><strong>10.46:1</strong> ✅</td></tr><tr><td><img src="https://placehold.co/70x26/B8F500/B8F500.png" alt="vivid lime swatch #B8F500" /> <code>#B8F500</code></td><td><code>#14200B</code></td><td><strong>12.97:1</strong> ✅</td></tr><tr><td><img src="https://placehold.co/70x26/FF007F/FF007F.png" alt="vivid pink swatch #FF007F" /> <code>#FF007F</code></td><td><code>#1A0010</code></td><td><strong>5.29:1</strong> ✅</td></tr></tbody></table></div>
 <blockquote><p>🚧 <strong>Trap</strong> — light text on <code>#FF007F</code> maxes out at <strong>3.43:1</strong>; the pink is simply too luminous to carry white type. Dark ink on pink is the only combination that passes AA, and it looks better anyway.</p></blockquote>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/00F5D4/00F5D4.png" alt="Section divider bar in vivid teal" /></p>
 <h2>🎬 4 · Motion: glow responsibly</h2>
 <p>A pulsing glow is the signature move of a neon UI and the fastest way to make someone close the tab. Gate it.</p>
 <pre class="code lang-css" data-lang="css"><code><span class="t-kw">@keyframes</span> pulse {
@@ -255,7 +266,10 @@ document.querySelector(&<span <span class="t-kw">class</span>="t-comment">#x27;#
 });
 </code></pre>
 <p>Same tokens, desaturated by roughly 45%. Two lines of JS, one extra CSS block, and your neon theme becomes usable for an eight-hour workday.</p>
+<p class='spacer'>&nbsp;</p>
 </details>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/F15BB5/F15BB5.png" alt="Section divider bar in vivid magenta" /></p>
 <h2>🧪 5 · Ship-gate it in CI</h2>
 <p>Neon themes drift. Someone adds <code>color: #FF007F</code> to a 13px label at 2am. Catch it automatically:</p>
 <pre class="code lang-js" data-lang="js"><code><span <span class="t-kw">class</span>="t-comment">// contrast.test.js</span>
@@ -288,6 +302,8 @@ describe(&<span <span class="t-kw">class</span>="t-comment">#x27;neon theme on b
 <span class="sh-out"></span>
 <span class="sh-out">Tests: 4 passed, 4 total</span>
 <span class="sh-out"></span></code></pre>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/9B5DE5/9B5DE5.png" alt="Section divider bar in indigo" /></p>
 <h2>🧾 The checklist</h2>
 <ul><li>Pick a neon palette with a <strong>real base color</strong>, not <code>#000</code>.</li><li>Body copy is always the neutral ink. Neons are for links, states, borders and one CTA.</li><li>Put the glow in <code>box-shadow</code> and tinted backgrounds, never in the letterforms.</li><li>Give every neon an <code>-ink</code> partner and store it as a token.</li><li>Respect <code>prefers-reduced-motion</code>, and consider a &quot;calm&quot; intensity toggle.</li><li>Assert contrast in CI so the theme can&#x27;t rot.</li></ul>
 <p><em>Building something dark and loud? Drop your base + three signals in the comments.</em> 👇</p></div>

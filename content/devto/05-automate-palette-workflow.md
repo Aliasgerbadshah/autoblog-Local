@@ -6,6 +6,7 @@ tags: python, css, productivity, webdev
 ---
 
 <!-- Cover image: upload your own 1000x420 image in the DEV editor,
+
      then paste the URL it returns into a new `cover_image:` line above.
      A ready-made generation prompt for this post is in COVER-PROMPTS.md. -->
 
@@ -17,11 +18,17 @@ tags: python, css, productivity, webdev
 
 Here is a thing I did by hand far too many times: open a palette, copy four hexes, paste them into a CSS file, retype them into `tailwind.config.js`, retype them *again* into a tokens file, then paste each one into a contrast checker, then build a swatch table for the README.
 
+&nbsp;
+
 Twelve minutes. Per palette. With at least one typo.
+
+&nbsp;
 
 So I wrote the script. This post is the script, in three languages, plus the CI job that keeps it honest.
 
-![Section divider bar in deep indigo](https://placehold.co/1000x10/10002B/10002B.png)
+&nbsp;
+
+![Section divider bar in vivid pink](https://placehold.co/1000x8/FF006E/FF006E.png)
 
 ## 🎯 What "done" looks like
 
@@ -40,19 +47,31 @@ $ palette-kit all --name "Clay Flare Spectrum" \
 
 Six artifacts, one command, zero retyping.
 
+&nbsp;
+
+![Section divider bar in vivid teal](https://placehold.co/1000x8/00F5D4/00F5D4.png)
+
 ## 🧮 1 · The only math you need
 
 Everything — contrast grades, "is this text readable", "should the label be black or white" — comes out of relative luminance:
+
+&nbsp;
 
 {% katex %}
 L = 0.2126R + 0.7152G + 0.0722B
 {% endkatex %}
 
+&nbsp;
+
 …where each channel is linearised, and contrast between two colors is:
+
+&nbsp;
 
 {% katex %}
 \text{ratio} = \frac{L_{\text{lighter}} + 0.05}{L_{\text{darker}} + 0.05}
 {% endkatex %}
+
+&nbsp;
 
 **`contrast.py`** ⌁ *35 lines, no dependencies*
 
@@ -61,23 +80,19 @@ def _channel(c: int) -> float:
     s = c / 255
     return s / 12.92 if s <= 0.03928 else ((s + 0.055) / 1.055) ** 2.4
 
-
 def luminance(hex_code: str) -> float:
     h = hex_code.lstrip("#")
     r, g, b = (int(h[i:i + 2], 16) for i in (0, 2, 4))
     return 0.2126 * _channel(r) + 0.7152 * _channel(g) + 0.0722 * _channel(b)
 
-
 def contrast(a: str, b: str) -> float:
     la, lb = sorted((luminance(a), luminance(b)), reverse=True)
     return round((la + 0.05) / (lb + 0.05), 2)
-
 
 def grade(ratio: float) -> str:
     return ("AAA" if ratio >= 7 else
             "AA" if ratio >= 4.5 else
             "AA Large" if ratio >= 3 else "fail")
-
 
 def readable_ink(bg: str) -> str:
     """Black or white text for any background — the one-liner you keep."""
@@ -91,6 +106,10 @@ def readable_ink(bg: str) -> str:
 '#000000'
 ```
 
+&nbsp;
+
+![Section divider bar in vivid pink](https://placehold.co/1000x8/FF006E/FF006E.png)
+
 ## 🖨️ 2 · Emit every format from one list
 
 **`palette_kit.py`** ⌁ *the generator core*
@@ -98,18 +117,15 @@ def readable_ink(bg: str) -> str:
 ```python
 NAMES = ["surface", "primary", "accent", "support"]
 
-
 def css_vars(name, colors):
     body = "\n".join(f"  --color-{k}: {c};" for k, c in zip(NAMES, colors))
     return f"/* {name} */\n:root {{\n{body}\n}}"
-
 
 def tailwind(colors):
     body = "\n".join(f"        {k}: '{c}'," for k, c in zip(NAMES, colors))
     return ("module.exports = {\n  theme: { extend: { colors: {\n"
             f"      palette: {{\n{body}\n      }},\n"
             "  } } },\n};")
-
 
 def tokens(name, slug, colors):
     import json
@@ -121,6 +137,10 @@ def tokens(name, slug, colors):
     }, indent=2)
 ```
 
+&nbsp;
+
+![Section divider bar in vivid teal](https://placehold.co/1000x8/00F5D4/00F5D4.png)
+
 ## 🖼️ 3 · The swatch trick that renders everywhere
 
 READMEs, DEV.to posts, GitHub issues, Notion — none of them let you set a background color. All of them render images. So generate the color *as* an image:
@@ -128,18 +148,15 @@ READMEs, DEV.to posts, GitHub issues, Notion — none of them let you set a back
 ```python
 SWATCH = "https://placehold.co/{w}x{h}/{hex}/{hex}.png"
 
-
 def alt(c):
     """Never ship an empty ![]( ) — describe the colour."""
     return f"{color_name(c)} swatch {c}"        # e.g. "vivid teal swatch #00F5D4"
-
 
 def band(colors, w=210, h=110):
     """Touching images on one line = a seamless palette bar."""
     return "".join(
         f"![{alt(c)}]({SWATCH.format(w=w, h=h, hex=c.lstrip('#'))})" for c in colors
     )
-
 
 def table(colors):
     rows = ["| Swatch | HEX | Contrast vs white | Grade |",
@@ -180,9 +197,13 @@ def badges(colors):
 
 Badges give you the hex printed on the chip; `placehold.co` gives you a clean block. Use badges in READMEs, blocks in articles.
 
+&nbsp;
+
 {% enddetails %}
 
-![Section divider bar in deep indigo](https://placehold.co/1000x10/10002B/10002B.png)
+&nbsp;
+
+![Section divider bar in vivid pink](https://placehold.co/1000x8/FF006E/FF006E.png)
 
 ## 🟨 4 · The Node version
 
@@ -240,6 +261,10 @@ $ node scripts/palette.mjs 10002B 240046 FF006E 00F5D4
 
 That `onWhite` / `onBlack` split is the whole light-vs-dark-mode decision in one glance.
 
+&nbsp;
+
+![Section divider bar in vivid teal](https://placehold.co/1000x8/00F5D4/00F5D4.png)
+
 ## 🐘 5 · The PHP version
 
 For the WordPress / Laravel / plain-PHP crowd, and for build steps that already run on a LAMP box:
@@ -285,6 +310,10 @@ $ php palette.php
 accent on surface: 5.18:1
 ```
 
+&nbsp;
+
+![Section divider bar in vivid pink](https://placehold.co/1000x8/FF006E/FF006E.png)
+
 ## 🤖 6 · Keep it honest in CI
 
 Colors rot. A designer tweaks one token, a junior hardcodes a hex, and six weeks later your "accessible" theme is not. Fail the build instead:
@@ -321,6 +350,10 @@ jobs:
 
 *(`#7A5AA8` on `#240046` is 3.31:1 — a fail for label text. Lightening the violet to `#B9A6E0` takes it to 8.25:1.)*
 
+&nbsp;
+
+![Section divider bar in vivid teal](https://placehold.co/1000x8/00F5D4/00F5D4.png)
+
 ## 🧾 The checklist
 
 1. Store the palette **once**, in JSON, with its source URL next to it.
@@ -332,5 +365,6 @@ jobs:
 
 The full generator used for this series — bands, tables, contrast matrices and 1000×420 cover art — lives in the repo linked below. Point it at any palette and it prints a post's worth of markdown.
 
+&nbsp;
 
 *What's the most tedious part of your color workflow? Tell me and I'll add a flag for it.* 👇

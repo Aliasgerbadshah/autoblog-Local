@@ -89,6 +89,8 @@ font-family:ui-monospace,monospace;color:var(--primary);margin:1.2em 0}
 .embed{color:var(--muted);font-family:ui-monospace,monospace;font-size:13px}
 .note{max-width:840px;color:var(--muted);font-size:13px;margin-top:14px}
 .post hr{border:0;border-top:1px solid var(--line);margin:2em 0}
+.post p:empty,.post p.spacer{margin:1.1em 0;min-height:1.1em}
+.post h2{margin-top:1.2em}
 </style>
 </head>
 <body>
@@ -117,15 +119,20 @@ font-family:ui-monospace,monospace;color:var(--primary);margin:1.2em 0}
       <div class="post"><div class='tw'><table><thead><tr><th><code>#0F172A</code></th><th><code>#00F5D4</code></th><th><code>#F15BB5</code></th><th><code>#9B5DE5</code></th></tr></thead><tbody><tr><td><img src="https://placehold.co/120x56/0F172A/0F172A.png" alt="navy swatch #0F172A" /></td><td><img src="https://placehold.co/120x56/00F5D4/00F5D4.png" alt="vivid teal swatch #00F5D4" /></td><td><img src="https://placehold.co/120x56/F15BB5/F15BB5.png" alt="vivid magenta swatch #F15BB5" /></td><td><img src="https://placehold.co/120x56/9B5DE5/9B5DE5.png" alt="indigo swatch #9B5DE5" /></td></tr></tbody></table></div>
 <blockquote><p>🎨 <strong>Palette in play</strong> — midnight, mint, magenta, violet · <code>#0F172A</code> <code>#00F5D4</code> <code>#F15BB5</code> <code>#9B5DE5</code></p></blockquote>
 <p>Four hex codes is not a theme. A theme is four hex codes that survived a rename, a framework, a dark mode toggle and a designer asking &quot;can we make the accent 10% lighter everywhere?&quot;</p>
+<p class='spacer'>&nbsp;</p>
 <p>This post is the pipeline I run every time I pull a palette from anywhere. Same four colors, six formats, and the important part — <strong>the naming step in the middle that makes all the rest boring</strong>.</p>
-<p><img src="https://placehold.co/1000x10/00F5D4/00F5D4.png" alt="Section divider bar in vivid teal" /></p>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/00F5D4/00F5D4.png" alt="Section divider bar in vivid teal" /></p>
 <h2>📐 The pipeline</h2>
 <pre class="code lang-console" data-lang="console"><code><span class="sh-prompt">$</span><span class="sh-cmd"> palette → raw vars → semantic names → framework config → tokens.json → dark mode</span>
 <span class="sh-out">   1 min     10 sec      2 min           1 min             30 sec       auto</span>
 <span class="sh-out"></span></code></pre>
 <div class='tw'><table><thead><tr><th>Swatch</th><th>HEX</th><th>On <code>#0F172A</code></th><th>Grade</th><th>Job</th></tr></thead><tbody><tr><td><img src="https://placehold.co/110x44/0F172A/0F172A.png" alt="navy swatch #0F172A" /></td><td><code>#0F172A</code></td><td>—</td><td>—</td><td>surface</td></tr><tr><td><img src="https://placehold.co/110x44/00F5D4/00F5D4.png" alt="vivid teal swatch #00F5D4" /></td><td><code>#00F5D4</code></td><td><strong>12.76:1</strong></td><td>✅ AAA</td><td>primary</td></tr><tr><td><img src="https://placehold.co/110x44/F15BB5/F15BB5.png" alt="vivid magenta swatch #F15BB5" /></td><td><code>#F15BB5</code></td><td><strong>5.87:1</strong></td><td>✅ AA</td><td>accent</td></tr><tr><td><img src="https://placehold.co/110x44/9B5DE5/9B5DE5.png" alt="indigo swatch #9B5DE5" /></td><td><code>#9B5DE5</code></td><td><strong>4.33:1</strong></td><td>🟡 AA Large</td><td>support</td></tr></tbody></table></div>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/F15BB5/F15BB5.png" alt="Section divider bar in vivid magenta" /></p>
 <h2>1️⃣ Layer one — the raw palette</h2>
 <p>Write the raw palette down exactly once. <strong>Copy it verbatim and do not touch it again.</strong> It is your receipt: it says exactly which palette this theme came from.</p>
+<p class='spacer'>&nbsp;</p>
 <p><strong><code>styles/palette.css</code></strong> ⌁ <em>raw, never referenced by components</em></p>
 <pre class="code lang-css" data-lang="css"><code><span class="t-comment">/* Palette: midnight, mint, magenta, violet
  */</span>
@@ -136,8 +143,11 @@ font-family:ui-monospace,monospace;color:var(--primary);margin:1.2em 0}
   --palette-color-<span class="t-number">4</span>: <span class="t-color"><i class="chip" style="background:#9B5DE5"></i>#9B5DE5</span>;
 }
 </code></pre>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/9B5DE5/9B5DE5.png" alt="Section divider bar in indigo" /></p>
 <h2>2️⃣ Layer two — the semantic layer</h2>
 <p>This is where the value is. Raw hexes describe <em>what a color is</em>; semantic tokens describe <em>what it does</em>. Components only ever see layer two, which is why swapping palettes later costs one file instead of forty.</p>
+<p class='spacer'>&nbsp;</p>
 <p><strong><code>styles/theme.css</code></strong> ⌁ <em>the only layer components import</em></p>
 <pre class="code lang-css" data-lang="css"><code>:root {
   <span class="t-comment">/* surfaces */</span>
@@ -166,8 +176,11 @@ font-family:ui-monospace,monospace;color:var(--primary);margin:1.2em 0}
 }
 </code></pre>
 <blockquote><p>🧪 <strong>Lab note</strong> — <code>--color-primary-ink</code> is the token people forget. Every brand color needs a partner that is readable <em>on top of it</em>. <code>#00F5D4</code> is bright: white text on it is <strong>1.4:1</strong> (invisible), while <code>#04231D</code> on it is <strong>11.88:1</strong>. Store the answer once instead of rediscovering it in every button.</p></blockquote>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/E0AED7/E0AED7.png" alt="Section divider bar in light magenta" /></p>
 <h2>3️⃣ Layer three — the component layer</h2>
 <p>Components consume semantics and nothing else. Notice there is not a single hex below.</p>
+<p class='spacer'>&nbsp;</p>
 <p><strong><code>components/button.css</code></strong> ⌁ <em>zero hardcoded colors</em></p>
 <pre class="code lang-css" data-lang="css"><code>.btn {
   <span class="t-prop">background</span>: var(--color-primary);
@@ -206,9 +219,11 @@ font-family:ui-monospace,monospace;color:var(--primary);margin:1.2em 0}
   }
 </code></pre>
 <p>Two wins in four lines: the palette became swappable, <strong>and</strong> the white-on-pink text (3.04:1 — a fail for body copy) became near-black on pink at <strong>6.27:1</strong>.</p>
-<p><img src="https://placehold.co/1000x10/00F5D4/00F5D4.png" alt="Section divider bar in vivid teal" /></p>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/994129/994129.png" alt="Section divider bar in dark red" /></p>
 <h2>4️⃣ Tailwind, SCSS, and everything else</h2>
 <p>Same four colors, wearing different clothes.</p>
+<p class='spacer'>&nbsp;</p>
 <p><strong><code>tailwind.config.js</code></strong> ⌁ <em>semantic names all the way down</em></p>
 <pre class="code lang-js" data-lang="js"><code><span <span class="t-kw">class</span>="t-comment">/** @type {<span class="t-kw">import</span>(&#x27;tailwindcss&#x27;).Config} */</span>
 module.exports = {
@@ -263,8 +278,11 @@ module.exports = {
 <span class="t-kw">export</span> <span class="t-kw">type</span> ThemeColor = <span class="t-kw">keyof</span> typeof theme;
 </code></pre>
 </details>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/00F5D4/00F5D4.png" alt="Section divider bar in vivid teal" /></p>
 <h2>5️⃣ tokens.json — the format that outlives your framework</h2>
 <p>If design tooling is anywhere near your project, export W3C-style design tokens. Style Dictionary, Figma plugins and Storybook all speak this.</p>
+<p class='spacer'>&nbsp;</p>
 <p><strong><code>tokens/palette.tokens.json</code></strong> ⌁ <em>the portable version</em></p>
 <pre class="code lang-json" data-lang="json"><code>{
   &quot;$schema&quot;: &quot;https:<span class="t-comment">//design-tokens.github.io/community-group/format/&quot;,</span>
@@ -285,6 +303,8 @@ module.exports = {
 <span class="sh-out">android</span>
 <span class="sh-ok">  ✔ build/android/colors.xml</span>
 <span class="sh-out"></span></code></pre>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/F15BB5/F15BB5.png" alt="Section divider bar in vivid magenta" /></p>
 <h2>6️⃣ Light mode for free</h2>
 <p>Because components never touch hexes, an entire second theme is one media query. Swap the neon palette for a light one — here a soft quartz set — and keep every semantic name identical.</p>
 <div class='tw'><table><thead><tr><th><code>#F5F7F9</code></th><th><code>#E3DFF1</code></th><th><code>#E0AED7</code></th><th><code>#994129</code></th></tr></thead><tbody><tr><td><img src="https://placehold.co/120x56/F5F7F9/F5F7F9.png" alt="off-white swatch #F5F7F9" /></td><td><img src="https://placehold.co/120x56/E3DFF1/E3DFF1.png" alt="pale indigo swatch #E3DFF1" /></td><td><img src="https://placehold.co/120x56/E0AED7/E0AED7.png" alt="light magenta swatch #E0AED7" /></td><td><img src="https://placehold.co/120x56/994129/994129.png" alt="dark red swatch #994129" /></td></tr></tbody></table></div>
@@ -320,7 +340,8 @@ document.querySelector(&<span <span class="t-kw">class</span>="t-comment">#x27;#
 });
 </code></pre>
 <blockquote><p>🚧 <strong>Trap</strong> — do not reuse the same accent across both modes without re-checking it. <code>#00F5D4</code> is <strong>12.76:1</strong> on the dark surface and <strong>1.4:1</strong> on white. Same color, opposite verdict. Each mode needs its own contrast pass.</p></blockquote>
-<p><img src="https://placehold.co/1000x10/00F5D4/00F5D4.png" alt="Section divider bar in vivid teal" /></p>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/9B5DE5/9B5DE5.png" alt="Section divider bar in indigo" /></p>
 <h2>🤖 Automate the boring 90%</h2>
 <p>Everything above is deterministic, so it can be a script. Feed it a palette, get every format out:</p>
 <pre class="code lang-js" data-lang="js"><code><span <span class="t-kw">class</span>="t-comment">#!/usr/bin/env node</span>
@@ -344,6 +365,8 @@ console.log(&<span <span class="t-kw">class</span>="t-comment">#x27;✔ theme.cs
 <pre class="code lang-console" data-lang="console"><code><span class="sh-prompt">$</span><span class="sh-cmd"> node palette-to-tokens.mjs 0F172A 00F5D4 F15BB5 9B5DE5</span>
 <span class="sh-ok">✔ theme.css  ✔ tokens.json  ✔ tailwind.colors.js</span>
 <span class="sh-out"></span></code></pre>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/E0AED7/E0AED7.png" alt="Section divider bar in light magenta" /></p>
 <h2>🧾 The checklist</h2>
 <ol><li>Write the raw palette into <code>palette.css</code> once. Keep the source link in a comment.</li><li>Never let a component import layer one.</li><li>Every brand color gets an <code>-ink</code> partner that is readable on top of it.</li><li>Export <code>tokens.json</code> the moment a designer is involved.</li><li>Re-run contrast per mode, not per color.</li><li>Script the conversion — you will do it again next project.</li></ol>
 <p>Next up: seasonal palettes as a theming system — why <em>soft summer</em> makes a beautiful reading app and <em>deep winter</em> makes the best dark mode you have shipped.</p></div>

@@ -89,6 +89,8 @@ font-family:ui-monospace,monospace;color:var(--primary);margin:1.2em 0}
 .embed{color:var(--muted);font-family:ui-monospace,monospace;font-size:13px}
 .note{max-width:840px;color:var(--muted);font-size:13px;margin-top:14px}
 .post hr{border:0;border-top:1px solid var(--line);margin:2em 0}
+.post p:empty,.post p.spacer{margin:1.1em 0;min-height:1.1em}
+.post h2{margin-top:1.2em}
 </style>
 </head>
 <body>
@@ -117,13 +119,18 @@ font-family:ui-monospace,monospace;color:var(--primary);margin:1.2em 0}
       <div class="post"><div class='tw'><table><thead><tr><th><code>#3C0D4F</code></th><th><code>#F22C33</code></th><th><code>#C6EEA0</code></th><th><code>#1681DF</code></th></tr></thead><tbody><tr><td><img src="https://placehold.co/120x56/3C0D4F/3C0D4F.png" alt="deep purple swatch #3C0D4F" /></td><td><img src="https://placehold.co/120x56/F22C33/F22C33.png" alt="vivid red swatch #F22C33" /></td><td><img src="https://placehold.co/120x56/C6EEA0/C6EEA0.png" alt="light lime swatch #C6EEA0" /></td><td><img src="https://placehold.co/120x56/1681DF/1681DF.png" alt="cyan swatch #1681DF" /></td></tr></tbody></table></div>
 <blockquote><p>🎨 <strong>Palette in play</strong> — <code>#3C0D4F</code> <code>#F22C33</code> <code>#C6EEA0</code> <code>#1681DF</code></p></blockquote>
 <p>Picking colors is the part of a side project where an evening quietly disappears. You open a generator, spin the wheel forty times, save three screenshots, and end up shipping the same slate-and-indigo you always ship.</p>
+<p class='spacer'>&nbsp;</p>
 <p>The problem is not taste. It is that <strong>a palette is chosen as a picture and used as a system</strong>. Four squares side by side always look balanced. The same four colors, applied to a heading, a body paragraph, a disabled button and a focus ring, very often do not.</p>
+<p class='spacer'>&nbsp;</p>
 <p>Here is the process I use to go from &quot;ooh, that one&quot; to a theme that survives code review.</p>
-<p><img src="https://placehold.co/1000x10/F22C33/F22C33.png" alt="Section divider bar in vivid red" /></p>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/3C0D4F/3C0D4F.png" alt="Section divider bar in deep purple" /></p>
 <h2>🧩 1 · Read the structure before the colors</h2>
 <p>Ignore whether you like it for a second and ask: <em>what shape is this palette?</em> Almost every four-color set falls into one of four structures, and the structure tells you what it can be used for.</p>
 <div class='tw'><table><thead><tr><th>Structure</th><th></th><th></th><th></th><th></th><th>Ships well as</th><th>Watch out for</th></tr></thead><tbody><tr><td><strong>Ramp</strong> — one hue, four lightnesses</td><td><img src="https://placehold.co/76x34/232E43/232E43.png" alt="navy swatch #232E43" /></td><td><img src="https://placehold.co/76x34/49627F/49627F.png" alt="dark blue swatch #49627F" /></td><td><img src="https://placehold.co/76x34/7F95B1/7F95B1.png" alt="muted blue swatch #7F95B1" /></td><td><img src="https://placehold.co/76x34/E8E9E5/E8E9E5.png" alt="light grey swatch #E8E9E5" /></td><td>a whole dashboard: bg, borders, muted text, text</td><td>no accent — you must add one</td></tr><tr><td><strong>Base + signals</strong> — one dark, three brights</td><td><img src="https://placehold.co/76x34/0F172A/0F172A.png" alt="navy swatch #0F172A" /></td><td><img src="https://placehold.co/76x34/00F5D4/00F5D4.png" alt="vivid teal swatch #00F5D4" /></td><td><img src="https://placehold.co/76x34/F15BB5/F15BB5.png" alt="vivid magenta swatch #F15BB5" /></td><td><img src="https://placehold.co/76x34/9B5DE5/9B5DE5.png" alt="indigo swatch #9B5DE5" /></td><td>dark mode with status colours</td><td>brights are unreadable on white</td></tr><tr><td><strong>Lights + anchor</strong> — three pales, one deep</td><td><img src="https://placehold.co/76x34/F5F7F9/F5F7F9.png" alt="off-white swatch #F5F7F9" /></td><td><img src="https://placehold.co/76x34/E3DFF1/E3DFF1.png" alt="pale indigo swatch #E3DFF1" /></td><td><img src="https://placehold.co/76x34/E0AED7/E0AED7.png" alt="light magenta swatch #E0AED7" /></td><td><img src="https://placehold.co/76x34/994129/994129.png" alt="dark red swatch #994129" /></td><td>light UI with one strong CTA</td><td>only one usable text colour</td></tr><tr><td><strong>Near-monochrome</strong> — four neighbours</td><td><img src="https://placehold.co/76x34/FFEAB6/FFEAB6.png" alt="light orange swatch #FFEAB6" /></td><td><img src="https://placehold.co/76x34/FFEEBA/FFEEBA.png" alt="light yellow swatch #FFEEBA" /></td><td><img src="https://placehold.co/76x34/FFD489/FFD489.png" alt="light orange swatch #FFD489" /></td><td><img src="https://placehold.co/76x34/F9BA5D/F9BA5D.png" alt="vivid orange swatch #F9BA5D" /></td><td>backgrounds, illustration, packaging</td><td><strong>no text can live here</strong></td></tr></tbody></table></div>
 <p>That last row is the classic trap. The lightest and darkest of those four honeys are <strong>1.45:1</strong> apart. It is gorgeous, and it is a set of <em>surfaces</em> — bring your own ink or nobody can read your app.</p>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/F22C33/F22C33.png" alt="Section divider bar in vivid red" /></p>
 <h2>🔬 2 · Test the pairs you will actually ship</h2>
 <p>A palette is not four colors; it is up to twelve <strong>pairings</strong>, and only a handful of them matter. Write down the pairs your UI really uses before you write any CSS:</p>
 <ul><li>body text on page background</li><li>heading on page background</li><li>button label on button fill</li><li>link on card background</li><li>border/icon on its surface</li></ul>
@@ -150,7 +157,8 @@ contrast(&<span <span class="t-kw">class</span>="t-comment">#x27;#C6EEA0&#x27;, 
 <p>Run this on the example palette and it grades itself:</p>
 <div class='tw'><table><thead><tr><th>Swatch</th><th>HEX</th><th>vs <code>#FFFFFF</code></th><th>Verdict</th></tr></thead><tbody><tr><td><img src="https://placehold.co/110x44/3C0D4F/3C0D4F.png" alt="deep purple swatch #3C0D4F" /></td><td><code>#3C0D4F</code></td><td><strong>15.41:1</strong></td><td>✅ text, headings, ink</td></tr><tr><td><img src="https://placehold.co/110x44/F22C33/F22C33.png" alt="vivid red swatch #F22C33" /></td><td><code>#F22C33</code></td><td><strong>4.05:1</strong></td><td>🟡 buttons and big type</td></tr><tr><td><img src="https://placehold.co/110x44/C6EEA0/C6EEA0.png" alt="light lime swatch #C6EEA0" /></td><td><code>#C6EEA0</code></td><td><strong>1.30:1</strong></td><td>🚫 surface only</td></tr><tr><td><img src="https://placehold.co/110x44/1681DF/1681DF.png" alt="cyan swatch #1681DF" /></td><td><code>#1681DF</code></td><td><strong>4.01:1</strong></td><td>🟡 links at 18px+</td></tr></tbody></table></div>
 <p>Nothing here is &quot;bad&quot;. The table just tells you which color is allowed to be a paragraph and which one is allowed to be a background — a decision you would otherwise make by accident.</p>
-<p><img src="https://placehold.co/1000x10/F22C33/F22C33.png" alt="Section divider bar in vivid red" /></p>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/C6EEA0/C6EEA0.png" alt="Section divider bar in light lime" /></p>
 <h2>🏷️ 3 · Name the colors after their job</h2>
 <p>This is the step that separates a palette from a theme. Numbered variables are fine for copying and terrible for maintaining:</p>
 <pre class="code lang-diff" data-lang="diff"><code>  :root {
@@ -187,6 +195,7 @@ contrast(&<span <span class="t-kw">class</span>="t-comment">#x27;#C6EEA0&#x27;, 
 }
 </code></pre>
 <p><code>#3C0D4F</code> on <code>#C6EEA0</code> is <strong>11.84:1</strong>, so that card is readable before you even open a checker. And when someone inevitably says &quot;can we try a different palette?&quot;, it is one file, not forty components.</p>
+<p class='spacer'>&nbsp;</p>
 <details class='liquid' open><summary>🧰 The same four colors as Tailwind config and design tokens</summary>
 <pre class="code lang-js" data-lang="js"><code><span <span class="t-kw">class</span>="t-comment">// tailwind.config.js</span>
 module.exports = {
@@ -212,10 +221,15 @@ module.exports = {
 }
 </code></pre>
 </details>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/1681DF/1681DF.png" alt="Section divider bar in cyan" /></p>
 <h2>🧠 4 · Four strategies for actually choosing</h2>
 <p><strong>Start from the mood.</strong> Decide the adjective first — calm, expensive, playful, technical — and search for that word rather than for colors. It is much easier to reject a palette that does not feel &quot;calm&quot; than to compare two blues.</p>
+<p class='spacer'>&nbsp;</p>
 <p><strong>Start from the temperature.</strong> Warm (yellow-based) palettes read friendly, human, editorial. Cool (blue-based) palettes read precise, clinical, trustworthy. Getting this wrong is why some fintech dashboards feel like a smoothie brand.</p>
+<p class='spacer'>&nbsp;</p>
 <p><strong>Start from a palette you like and walk sideways.</strong> Found something close but the contrast is wrong? Nudge one color&#x27;s lightness by 15% and re-measure instead of starting over. &quot;Same feeling, better legibility&quot; is nearly always two tweaks away.</p>
+<p class='spacer'>&nbsp;</p>
 <p><strong>Start from what your UI actually needs.</strong> Count the roles before you count the colors:</p>
 <pre class="code lang-console" data-lang="console"><code><span class="sh-prompt">$</span><span class="sh-cmd"> what does this UI need?</span>
 <span class="sh-out">  1 page background</span>
@@ -235,9 +249,13 @@ module.exports = {
   <span class="t-prop">--color-primary-border</span>:  color-mix(in srgb, var(--color-primary) <span class="t-number">40</span>%, transparent);
 }
 </code></pre>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/00F5D4/00F5D4.png" alt="Section divider bar in vivid teal" /></p>
 <h2>🧪 5 · Three quick sanity checks before you commit</h2>
 <p><strong>Squint test.</strong> Blur your eyes at the mockup. If everything mushes into one grey blob, your palette has no contrast hierarchy — a common outcome of very pretty, very muted palettes.</p>
+<p class='spacer'>&nbsp;</p>
 <p><strong>Greyscale test.</strong> Screenshot the UI and desaturate it. Buttons should still look like buttons. If two states are identical in greyscale, you are encoding meaning in hue alone, which fails for colorblind users.</p>
+<p class='spacer'>&nbsp;</p>
 <p><strong>One-color-removed test.</strong> Delete the accent and look again. If the interface collapses into unusable, you are leaning on decoration to do structural work.</p>
 <pre class="code lang-console" data-lang="console"><code><span class="sh-prompt">$</span><span class="sh-cmd"> checklist</span>
 <span class="sh-out">  [ ] body text ≥ 4.5:1 on every surface it appears on</span>
@@ -246,9 +264,12 @@ module.exports = {
 <span class="sh-out">  [ ] one text colour that works on the two most common surfaces</span>
 <span class="sh-out">  [ ] hover/active states derived, not hand-picked</span>
 <span class="sh-out"></span></code></pre>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/F15BB5/F15BB5.png" alt="Section divider bar in vivid magenta" /></p>
 <h2>🧾 The short version</h2>
 <ol><li>Identify the <strong>structure</strong> — ramp, base+signals, lights+anchor, or near-monochrome.</li><li>List the <strong>pairs</strong> your UI ships, and measure only those.</li><li>Rename <code>--palette-color-3</code> into <code>--color-surface</code>; components never see hexes.</li><li>Expect a four-color palette to fill about half your slots; derive the rest with <code>color-mix()</code>.</li><li>Squint, desaturate, and remove the accent before you call it done.</li></ol>
 <p>Do that and colour stops being the thing that eats an evening — it becomes four lines in a token file that you can swap in a minute.</p>
+<p class='spacer'>&nbsp;</p>
 <p><em>What&#x27;s the palette you&#x27;re using right now? Drop the four hexes in the comments and I&#x27;ll tell you which pair is quietly failing.</em> 👇</p></div>
     </article>
     <p class="note">Static local preview — Liquid tags are simulated, DEV renders them natively.

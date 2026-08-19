@@ -89,6 +89,8 @@ font-family:ui-monospace,monospace;color:var(--primary);margin:1.2em 0}
 .embed{color:var(--muted);font-family:ui-monospace,monospace;font-size:13px}
 .note{max-width:840px;color:var(--muted);font-size:13px;margin-top:14px}
 .post hr{border:0;border-top:1px solid var(--line);margin:2em 0}
+.post p:empty,.post p.spacer{margin:1.1em 0;min-height:1.1em}
+.post h2{margin-top:1.2em}
 </style>
 </head>
 <body>
@@ -117,9 +119,12 @@ font-family:ui-monospace,monospace;color:var(--primary);margin:1.2em 0}
       <div class="post"><div class='tw'><table><thead><tr><th><code>#10002B</code></th><th><code>#240046</code></th><th><code>#FF006E</code></th><th><code>#00F5D4</code></th></tr></thead><tbody><tr><td><img src="https://placehold.co/120x56/10002B/10002B.png" alt="deep indigo swatch #10002B" /></td><td><img src="https://placehold.co/120x56/240046/240046.png" alt="deep indigo swatch #240046" /></td><td><img src="https://placehold.co/120x56/FF006E/FF006E.png" alt="vivid pink swatch #FF006E" /></td><td><img src="https://placehold.co/120x56/00F5D4/00F5D4.png" alt="vivid teal swatch #00F5D4" /></td></tr></tbody></table></div>
 <blockquote><p>🎨 <strong>Palette in play</strong> — <strong>Clay Flare Spectrum</strong> · <code>#10002B</code> <code>#240046</code> <code>#FF006E</code> <code>#00F5D4</code></p></blockquote>
 <p>Here is a thing I did by hand far too many times: open a palette, copy four hexes, paste them into a CSS file, retype them into <code>tailwind.config.js</code>, retype them <em>again</em> into a tokens file, then paste each one into a contrast checker, then build a swatch table for the README.</p>
+<p class='spacer'>&nbsp;</p>
 <p>Twelve minutes. Per palette. With at least one typo.</p>
+<p class='spacer'>&nbsp;</p>
 <p>So I wrote the script. This post is the script, in three languages, plus the CI job that keeps it honest.</p>
-<p><img src="https://placehold.co/1000x10/10002B/10002B.png" alt="Section divider bar in deep indigo" /></p>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/FF006E/FF006E.png" alt="Section divider bar in vivid pink" /></p>
 <h2>🎯 What &quot;done&quot; looks like</h2>
 <pre class="code lang-console" data-lang="console"><code><span class="sh-prompt">$</span><span class="sh-cmd"> palette-kit all --name &quot;Clay Flare Spectrum&quot; \</span>
 <span class="sh-out">    --slug clay-flare-spectrum \</span>
@@ -133,33 +138,35 @@ font-family:ui-monospace,monospace;color:var(--primary);margin:1.2em 0}
 <span class="sh-ok">✔ cover.png              1000x420 article cover</span>
 <span class="sh-out"></span></code></pre>
 <p>Six artifacts, one command, zero retyping.</p>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/00F5D4/00F5D4.png" alt="Section divider bar in vivid teal" /></p>
 <h2>🧮 1 · The only math you need</h2>
 <p>Everything — contrast grades, &quot;is this text readable&quot;, &quot;should the label be black or white&quot; — comes out of relative luminance:</p>
+<p class='spacer'>&nbsp;</p>
 <div class='katex'>L = 0.2126R + 0.7152G + 0.0722B</div>
+<p class='spacer'>&nbsp;</p>
 <p>…where each channel is linearised, and contrast between two colors is:</p>
+<p class='spacer'>&nbsp;</p>
 <div class='katex'>\text{ratio} = \frac{L_{\text{lighter}} + 0.05}{L_{\text{darker}} + 0.05}</div>
+<p class='spacer'>&nbsp;</p>
 <p><strong><code>contrast.py</code></strong> ⌁ <em>35 lines, no dependencies</em></p>
 <pre class="code lang-python" data-lang="python"><code><span class="t-kw">def</span> _channel(c: int) -&gt; float:
     s = c / <span <span class="t-kw">class</span>="t-number">255</span>
     <span class="t-kw">return</span> s / <span <span class="t-kw">class</span>="t-number">12.92</span> <span class="t-kw">if</span> s &lt;= <span <span class="t-kw">class</span>="t-number">0.03928</span> <span class="t-kw">else</span> ((s + <span <span class="t-kw">class</span>="t-number">0.055</span>) / <span <span class="t-kw">class</span>="t-number">1.055</span>) ** <span <span class="t-kw">class</span>="t-number">2.4</span>
-
 
 <span class="t-kw">def</span> luminance(hex_code: str) -&gt; float:
     h = hex_code.lstrip(&quot;<span <span class="t-kw">class</span>="t-comment">#&quot;)</span>
     r, g, b = (int(h[i:i + <span <span class="t-kw">class</span>="t-number">2</span>], <span <span class="t-kw">class</span>="t-number">16</span>) <span class="t-kw">for</span> i <span class="t-kw">in</span> (<span <span class="t-kw">class</span>="t-number">0</span>, <span <span class="t-kw">class</span>="t-number">2</span>, <span <span class="t-kw">class</span>="t-number">4</span>))
     <span class="t-kw">return</span> <span <span class="t-kw">class</span>="t-number">0.2126</span> * _channel(r) + <span <span class="t-kw">class</span>="t-number">0.7152</span> * _channel(g) + <span <span class="t-kw">class</span>="t-number">0.0722</span> * _channel(b)
 
-
 <span class="t-kw">def</span> contrast(a: str, b: str) -&gt; float:
     la, lb = sorted((luminance(a), luminance(b)), reverse=<span class="t-kw">True</span>)
     <span class="t-kw">return</span> round((la + <span <span class="t-kw">class</span>="t-number">0.05</span>) / (lb + <span <span class="t-kw">class</span>="t-number">0.05</span>), <span <span class="t-kw">class</span>="t-number">2</span>)
-
 
 <span class="t-kw">def</span> grade(ratio: float) -&gt; str:
     <span class="t-kw">return</span> (&quot;AAA&quot; <span class="t-kw">if</span> ratio &gt;= <span <span class="t-kw">class</span>="t-number">7</span> <span class="t-kw">else</span>
             &quot;AA&quot; <span class="t-kw">if</span> ratio &gt;= <span <span class="t-kw">class</span>="t-number">4.5</span> <span class="t-kw">else</span>
             &quot;AA Large&quot; <span class="t-kw">if</span> ratio &gt;= <span <span class="t-kw">class</span>="t-number">3</span> <span class="t-kw">else</span> &quot;fail&quot;)
-
 
 <span class="t-kw">def</span> readable_ink(bg: str) -&gt; str:
     &quot;&quot;&quot;Black <span class="t-kw">or</span> white text <span class="t-kw">for</span> any background — the one-liner you keep.&quot;&quot;&quot;
@@ -170,22 +177,21 @@ font-family:ui-monospace,monospace;color:var(--primary);margin:1.2em 0}
 <span class="sh-out">&gt;&gt;&gt; readable_ink(&quot;#00F5D4&quot;)</span>
 <span class="sh-out">&#x27;#000000&#x27;</span>
 <span class="sh-out"></span></code></pre>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/FF006E/FF006E.png" alt="Section divider bar in vivid pink" /></p>
 <h2>🖨️ 2 · Emit every format from one list</h2>
 <p><strong><code>palette_kit.py</code></strong> ⌁ <em>the generator core</em></p>
 <pre class="code lang-python" data-lang="python"><code>NAMES = [&quot;surface&quot;, &quot;primary&quot;, &quot;accent&quot;, &quot;support&quot;]
 
-
 <span class="t-kw">def</span> css_vars(name, colors):
     body = &quot;\n&quot;.join(f&quot;  --color-{k}: {c};&quot; <span class="t-kw">for</span> k, c <span class="t-kw">in</span> zip(NAMES, colors))
     <span class="t-kw">return</span> f&quot;<span <span class="t-kw">class</span>="t-comment">/* {name} */</span>\n:root {{\n{body}\n}}&quot;
-
 
 <span class="t-kw">def</span> tailwind(colors):
     body = &quot;\n&quot;.join(f&quot;        {k}: &<span <span class="t-kw">class</span>="t-comment">#x27;{c}&#x27;,&quot; <span class="t-kw">for</span> k, c <span class="t-kw">in</span> zip(NAMES, colors))</span>
     <span class="t-kw">return</span> (&quot;module.exports = {\n  theme: { extend: { colors: {\n&quot;
             f&quot;      palette: {{\n{body}\n      }},\n&quot;
             &quot;  } } },\n};&quot;)
-
 
 <span class="t-kw">def</span> tokens(name, slug, colors):
     <span class="t-kw">import</span> json
@@ -196,22 +202,21 @@ font-family:ui-monospace,monospace;color:var(--primary);margin:1.2em 0}
         }
     }, indent=<span <span class="t-kw">class</span>="t-number">2</span>)
 </code></pre>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/00F5D4/00F5D4.png" alt="Section divider bar in vivid teal" /></p>
 <h2>🖼️ 3 · The swatch trick that renders everywhere</h2>
 <p>READMEs, DEV.to posts, GitHub issues, Notion — none of them let you set a background color. All of them render images. So generate the color <em>as</em> an image:</p>
 <pre class="code lang-python" data-lang="python"><code>SWATCH = &quot;https:<span <span class="t-kw">class</span>="t-comment">//placehold.co/{w}x{h}/{hex}/{hex}.png&quot;</span>
 
-
 <span class="t-kw">def</span> alt(c):
     &quot;&quot;&quot;Never ship an empty ![]( ) — describe the colour.&quot;&quot;&quot;
     <span class="t-kw">return</span> f&quot;{color_name(c)} swatch {c}&quot;        <span <span class="t-kw">class</span>="t-comment"># e.g. &quot;vivid teal swatch #00F5D4&quot;</span>
-
 
 <span class="t-kw">def</span> band(colors, w=<span <span class="t-kw">class</span>="t-number">210</span>, h=<span <span class="t-kw">class</span>="t-number">110</span>):
     &quot;&quot;&quot;Touching images on one line = a seamless palette bar.&quot;&quot;&quot;
     <span class="t-kw">return</span> &quot;&quot;.join(
         f&quot;![{alt(c)}]({SWATCH.format(w=w, h=h, hex=c.lstrip(&<span <span class="t-kw">class</span>="t-comment">#x27;#&#x27;))})&quot; <span class="t-kw">for</span> c <span class="t-kw">in</span> colors</span>
     )
-
 
 <span class="t-kw">def</span> table(colors):
     rows = [&quot;| Swatch | HEX | Contrast vs white | Grade |&quot;,
@@ -237,8 +242,10 @@ font-family:ui-monospace,monospace;color:var(--primary);margin:1.2em 0}
     )
 </code></pre>
 <p>Badges give you the hex printed on the chip; <code>placehold.co</code> gives you a clean block. Use badges in READMEs, blocks in articles.</p>
+<p class='spacer'>&nbsp;</p>
 </details>
-<p><img src="https://placehold.co/1000x10/10002B/10002B.png" alt="Section divider bar in deep indigo" /></p>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/FF006E/FF006E.png" alt="Section divider bar in vivid pink" /></p>
 <h2>🟨 4 · The Node version</h2>
 <p>Same idea, drop it in any JS project as <code>scripts/palette.mjs</code>:</p>
 <pre class="code lang-js" data-lang="js"><code><span <span class="t-kw">class</span>="t-comment">#!/usr/bin/env node</span>
@@ -288,6 +295,8 @@ console.table(pairs.map(([name, value]) =&gt; ({
 <span class="sh-out">└─────────┴───────────┴───────────┴──────────┴─────────┘</span>
 <span class="sh-out"></span></code></pre>
 <p>That <code>onWhite</code> / <code>onBlack</code> split is the whole light-vs-dark-mode decision in one glance.</p>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/00F5D4/00F5D4.png" alt="Section divider bar in vivid teal" /></p>
 <h2>🐘 5 · The PHP version</h2>
 <p>For the WordPress / Laravel / plain-PHP crowd, and for build steps that already run on a LAMP box:</p>
 <pre class="code lang-php" data-lang="php"><code>&lt;?php
@@ -327,6 +336,8 @@ file_put_contents(&<span <span class="t-kw">class</span>="t-comment">#x27;theme.
 <pre class="code lang-console" data-lang="console"><code><span class="sh-prompt">$</span><span class="sh-cmd"> php palette.php</span>
 <span class="sh-out">accent on surface: 5.18:1</span>
 <span class="sh-out"></span></code></pre>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/FF006E/FF006E.png" alt="Section divider bar in vivid pink" /></p>
 <h2>🤖 6 · Keep it honest in CI</h2>
 <p>Colors rot. A designer tweaks one token, a junior hardcodes a hex, and six weeks later your &quot;accessible&quot; theme is not. Fail the build instead:</p>
 <pre class="code lang-yaml" data-lang="yaml"><code><span class="t-comment"># .github/workflows/contrast.yml</span>
@@ -356,9 +367,12 @@ jobs</span>:
   ]
 </code></pre>
 <p><em>(<code>#7A5AA8</code> on <code>#240046</code> is 3.31:1 — a fail for label text. Lightening the violet to <code>#B9A6E0</code> takes it to 8.25:1.)</em></p>
+<p class='spacer'>&nbsp;</p>
+<p><img src="https://placehold.co/1000x8/00F5D4/00F5D4.png" alt="Section divider bar in vivid teal" /></p>
 <h2>🧾 The checklist</h2>
 <ol><li>Store the palette <strong>once</strong>, in JSON, with its source URL next to it.</li><li>Generate CSS, Tailwind and tokens — never retype a hex.</li><li>Generate swatch markdown too; your README should show the colors, not list them.</li><li>Compute <code>onWhite</code> / <code>onBlack</code> for every color to decide light vs dark mode roles.</li><li>Put a contrast assertion in CI with the pairs you really ship.</li><li>Regenerate, don&#x27;t edit. The script is the source of truth; the artifacts are build output.</li></ol>
 <p>The full generator used for this series — bands, tables, contrast matrices and 1000×420 cover art — lives in the repo linked below. Point it at any palette and it prints a post&#x27;s worth of markdown.</p>
+<p class='spacer'>&nbsp;</p>
 <p><em>What&#x27;s the most tedious part of your color workflow? Tell me and I&#x27;ll add a flag for it.</em> 👇</p></div>
     </article>
     <p class="note">Static local preview — Liquid tags are simulated, DEV renders them natively.

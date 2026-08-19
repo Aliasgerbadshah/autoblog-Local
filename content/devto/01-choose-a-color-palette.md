@@ -6,6 +6,7 @@ tags: css, webdev, design, beginners
 ---
 
 <!-- Cover image: upload your own 1000x420 image in the DEV editor,
+
      then paste the URL it returns into a new `cover_image:` line above.
      A ready-made generation prompt for this post is in COVER-PROMPTS.md. -->
 
@@ -17,11 +18,17 @@ tags: css, webdev, design, beginners
 
 Picking colors is the part of a side project where an evening quietly disappears. You open a generator, spin the wheel forty times, save three screenshots, and end up shipping the same slate-and-indigo you always ship.
 
+&nbsp;
+
 The problem is not taste. It is that **a palette is chosen as a picture and used as a system**. Four squares side by side always look balanced. The same four colors, applied to a heading, a body paragraph, a disabled button and a focus ring, very often do not.
+
+&nbsp;
 
 Here is the process I use to go from "ooh, that one" to a theme that survives code review.
 
-![Section divider bar in vivid red](https://placehold.co/1000x10/F22C33/F22C33.png)
+&nbsp;
+
+![Section divider bar in deep purple](https://placehold.co/1000x8/3C0D4F/3C0D4F.png)
 
 ## 🧩 1 · Read the structure before the colors
 
@@ -35,6 +42,10 @@ Ignore whether you like it for a second and ask: *what shape is this palette?* A
 | **Near-monochrome** — four neighbours | ![light orange swatch #FFEAB6](https://placehold.co/76x34/FFEAB6/FFEAB6.png) | ![light yellow swatch #FFEEBA](https://placehold.co/76x34/FFEEBA/FFEEBA.png) | ![light orange swatch #FFD489](https://placehold.co/76x34/FFD489/FFD489.png) | ![vivid orange swatch #F9BA5D](https://placehold.co/76x34/F9BA5D/F9BA5D.png) | backgrounds, illustration, packaging | **no text can live here** |
 
 That last row is the classic trap. The lightest and darkest of those four honeys are **1.45:1** apart. It is gorgeous, and it is a set of *surfaces* — bring your own ink or nobody can read your app.
+
+&nbsp;
+
+![Section divider bar in vivid red](https://placehold.co/1000x8/F22C33/F22C33.png)
 
 ## 🔬 2 · Test the pairs you will actually ship
 
@@ -86,7 +97,9 @@ Run this on the example palette and it grades itself:
 
 Nothing here is "bad". The table just tells you which color is allowed to be a paragraph and which one is allowed to be a background — a decision you would otherwise make by accident.
 
-![Section divider bar in vivid red](https://placehold.co/1000x10/F22C33/F22C33.png)
+&nbsp;
+
+![Section divider bar in light lime](https://placehold.co/1000x8/C6EEA0/C6EEA0.png)
 
 ## 🏷️ 3 · Name the colors after their job
 
@@ -132,6 +145,8 @@ Now components consume intentions, never hexes:
 
 `#3C0D4F` on `#C6EEA0` is **11.84:1**, so that card is readable before you even open a checker. And when someone inevitably says "can we try a different palette?", it is one file, not forty components.
 
+&nbsp;
+
 {% details 🧰 The same four colors as Tailwind config and design tokens %}
 
 ```js
@@ -163,13 +178,23 @@ module.exports = {
 
 {% enddetails %}
 
+&nbsp;
+
+![Section divider bar in cyan](https://placehold.co/1000x8/1681DF/1681DF.png)
+
 ## 🧠 4 · Four strategies for actually choosing
 
 **Start from the mood.** Decide the adjective first — calm, expensive, playful, technical — and search for that word rather than for colors. It is much easier to reject a palette that does not feel "calm" than to compare two blues.
 
+&nbsp;
+
 **Start from the temperature.** Warm (yellow-based) palettes read friendly, human, editorial. Cool (blue-based) palettes read precise, clinical, trustworthy. Getting this wrong is why some fintech dashboards feel like a smoothie brand.
 
+&nbsp;
+
 **Start from a palette you like and walk sideways.** Found something close but the contrast is wrong? Nudge one color's lightness by 15% and re-measure instead of starting over. "Same feeling, better legibility" is nearly always two tweaks away.
+
+&nbsp;
 
 **Start from what your UI actually needs.** Count the roles before you count the colors:
 
@@ -196,11 +221,19 @@ That is the honest math. A four-color palette is a **starting point** — you wi
 }
 ```
 
+&nbsp;
+
+![Section divider bar in vivid teal](https://placehold.co/1000x8/00F5D4/00F5D4.png)
+
 ## 🧪 5 · Three quick sanity checks before you commit
 
 **Squint test.** Blur your eyes at the mockup. If everything mushes into one grey blob, your palette has no contrast hierarchy — a common outcome of very pretty, very muted palettes.
 
+&nbsp;
+
 **Greyscale test.** Screenshot the UI and desaturate it. Buttons should still look like buttons. If two states are identical in greyscale, you are encoding meaning in hue alone, which fails for colorblind users.
+
+&nbsp;
 
 **One-color-removed test.** Delete the accent and look again. If the interface collapses into unusable, you are leaning on decoration to do structural work.
 
@@ -213,6 +246,10 @@ $ checklist
   [ ] hover/active states derived, not hand-picked
 ```
 
+&nbsp;
+
+![Section divider bar in vivid magenta](https://placehold.co/1000x8/F15BB5/F15BB5.png)
+
 ## 🧾 The short version
 
 1. Identify the **structure** — ramp, base+signals, lights+anchor, or near-monochrome.
@@ -222,5 +259,7 @@ $ checklist
 5. Squint, desaturate, and remove the accent before you call it done.
 
 Do that and colour stops being the thing that eats an evening — it becomes four lines in a token file that you can swap in a minute.
+
+&nbsp;
 
 *What's the palette you're using right now? Drop the four hexes in the comments and I'll tell you which pair is quietly failing.* 👇

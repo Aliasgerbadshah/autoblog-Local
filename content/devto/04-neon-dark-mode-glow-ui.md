@@ -6,6 +6,7 @@ tags: css, webdev, darkmode, design
 ---
 
 <!-- Cover image: upload your own 1000x420 image in the DEV editor,
+
      then paste the URL it returns into a new `cover_image:` line above.
      A ready-made generation prompt for this post is in COVER-PROMPTS.md. -->
 
@@ -17,9 +18,13 @@ tags: css, webdev, darkmode, design
 
 Every neon theme starts the same way. You find a palette like this one, you build a landing page in an hour, it looks like the future, and three days later you notice you have been squinting at your own product.
 
+&nbsp;
+
 The colors are not the problem. **The way they are applied is.** a good palette library's neon category is full of palettes with the exact structure you want — one near-black base plus three high-luminance signals — and that structure is a rule waiting to be written down.
 
-![Section divider bar in vivid pink](https://placehold.co/1000x10/FF007F/FF007F.png)
+&nbsp;
+
+![Section divider bar in vivid pink](https://placehold.co/1000x8/FF007F/FF007F.png)
 
 ## ⚡ 1 · Read the structure, not the vibe
 
@@ -45,11 +50,19 @@ Three more neon palettes with the same skeleton:
 | **Clay Flare Spectrum** | ![deep indigo swatch #10002B](https://placehold.co/76x34/10002B/10002B.png) | ![deep indigo swatch #240046](https://placehold.co/76x34/240046/240046.png) | ![vivid pink swatch #FF006E](https://placehold.co/76x34/FF006E/FF006E.png) | ![vivid teal swatch #00F5D4](https://placehold.co/76x34/00F5D4/00F5D4.png) |
 | **Pine Field Gallery** | ![near-black swatch #03071E](https://placehold.co/76x34/03071E/03071E.png) | ![dark red swatch #DC2F02](https://placehold.co/76x34/DC2F02/DC2F02.png) | ![vivid orange swatch #F48C06](https://placehold.co/76x34/F48C06/F48C06.png) | ![vivid orange swatch #FFBA08](https://placehold.co/76x34/FFBA08/FFBA08.png) |
 
+&nbsp;
+
+![Section divider bar in vivid teal](https://placehold.co/1000x8/00E5FF/00E5FF.png)
+
 ## 🩹 2 · Why it hurts — halation, and the 3 fixes
 
 Saturated bright-on-black text bleeds at the edges for a lot of eyes — astigmatism especially. This is **halation**, and it is why "pure white on pure black" is a bad default even though it scores 21:1.
 
+&nbsp;
+
 Three fixes, all cheap:
+
+&nbsp;
 
 **`fix-1.css`** ⌁ *never pure black, never pure white*
 
@@ -90,7 +103,9 @@ a         { color: var(--neon-cyan); }
 
 > 🧪 **Lab note** — `color-mix()` is the whole trick. One neon token generates its own tint, border, glow and hover state, so a palette swap is still a one-line change. Supported in every current browser; `rgb(0 229 255 / 6%)` is the fallback.
 
-![Section divider bar in vivid pink](https://placehold.co/1000x10/FF007F/FF007F.png)
+&nbsp;
+
+![Section divider bar in vivid lime](https://placehold.co/1000x8/B8F500/B8F500.png)
 
 ## 🧱 3 · The full theme
 
@@ -166,6 +181,10 @@ Text-on-neon pairings, pre-solved:
 
 > 🚧 **Trap** — light text on `#FF007F` maxes out at **3.43:1**; the pink is simply too luminous to carry white type. Dark ink on pink is the only combination that passes AA, and it looks better anyway.
 
+&nbsp;
+
+![Section divider bar in vivid teal](https://placehold.co/1000x8/00F5D4/00F5D4.png)
+
 ## 🎬 4 · Motion: glow responsibly
 
 A pulsing glow is the signature move of a neon UI and the fastest way to make someone close the tab. Gate it.
@@ -209,7 +228,13 @@ document.querySelector('#calm').addEventListener('change', (e) => {
 
 Same tokens, desaturated by roughly 45%. Two lines of JS, one extra CSS block, and your neon theme becomes usable for an eight-hour workday.
 
+&nbsp;
+
 {% enddetails %}
+
+&nbsp;
+
+![Section divider bar in vivid magenta](https://placehold.co/1000x8/F15BB5/F15BB5.png)
 
 ## 🧪 5 · Ship-gate it in CI
 
@@ -249,6 +274,10 @@ $ npm test -- contrast
 Tests: 4 passed, 4 total
 ```
 
+&nbsp;
+
+![Section divider bar in indigo](https://placehold.co/1000x8/9B5DE5/9B5DE5.png)
+
 ## 🧾 The checklist
 
 - Pick a neon palette with a **real base color**, not `#000`.
@@ -257,6 +286,5 @@ Tests: 4 passed, 4 total
 - Give every neon an `-ink` partner and store it as a token.
 - Respect `prefers-reduced-motion`, and consider a "calm" intensity toggle.
 - Assert contrast in CI so the theme can't rot.
-
 
 *Building something dark and loud? Drop your base + three signals in the comments.* 👇

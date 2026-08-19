@@ -6,6 +6,7 @@ tags: css, design, ux, webdev
 ---
 
 <!-- Cover image: upload your own 1000x420 image in the DEV editor,
+
      then paste the URL it returns into a new `cover_image:` line above.
      A ready-made generation prompt for this post is in COVER-PROMPTS.md. -->
 
@@ -22,7 +23,9 @@ Seasonal color analysis sounds like something that belongs in a fashion magazine
 
 Once you sort palettes along those two axes, "pick a theme" becomes "pick a quadrant" — and that is a decision you can make in ten seconds.
 
-![Section divider bar in dark blue](https://placehold.co/1000x10/0B3D91/0B3D91.png)
+&nbsp;
+
+![Section divider bar in burgundy](https://placehold.co/1000x8/6D0F2B/6D0F2B.png)
 
 ## 🧭 1 · The map
 
@@ -44,6 +47,10 @@ season
 └── winter/{winter,deep,cool,bright,dark,true}-color-palette
 ```
 
+&nbsp;
+
+![Section divider bar in dark blue](https://placehold.co/1000x8/0B3D91/0B3D91.png)
+
 ## 🌫️ 2 · Soft Summer — the low-contrast reading UI
 
 | `#D8C7D8` | `#8FA1B3` | `#E6DDE3` | `#9B8FA3` |
@@ -51,6 +58,8 @@ season
 | ![light magenta swatch #D8C7D8](https://placehold.co/120x56/D8C7D8/D8C7D8.png) | ![muted blue swatch #8FA1B3](https://placehold.co/120x56/8FA1B3/8FA1B3.png) | ![light magenta swatch #E6DDE3](https://placehold.co/120x56/E6DDE3/E6DDE3.png) | ![mid grey swatch #9B8FA3](https://placehold.co/120x56/9B8FA3/9B8FA3.png) |
 
 Soft summer is cool, greyed-down and deliberately low contrast — dusty mauve, slate blue, fog. It is the palette equivalent of a quiet room. Ideal for long-form reading, journaling apps, meditation timers, documentation, anything where the interface should get out of the way.
+
+&nbsp;
 
 And it is a **trap** if you use it naively:
 
@@ -61,6 +70,8 @@ And it is a **trap** if you use it naively:
 | `#D8C7D8` on `#E6DDE3` | 1.21:1 | 🚫 invisible |
 
 Every in-palette pair fails. That does not make the palette bad — it means **soft summer is a set of surfaces, and you must bring your own ink**.
+
+&nbsp;
 
 **`soft-summer.css`** ⌁ *palette for atmosphere, one dark for type*
 
@@ -97,6 +108,10 @@ hr    { border: 0; border-top: 1px solid var(--color-line); }
 
 > 🧪 **Lab note** — the muted palette colors still do real work: borders, dividers, disabled states, chart fills, hover backgrounds. They just never carry text. Write that rule into the theme file as a comment and code review gets 80% easier.
 
+&nbsp;
+
+![Section divider bar in deep indigo](https://placehold.co/1000x8/2A1458/2A1458.png)
+
 ## ❄️ 3 · Deep Winter — the dark mode that isn't grey soup
 
 | `#6D0F2B` | `#004D40` | `#0B3D91` | `#2A1458` |
@@ -104,6 +119,8 @@ hr    { border: 0; border-top: 1px solid var(--color-line); }
 | ![burgundy swatch #6D0F2B](https://placehold.co/120x56/6D0F2B/6D0F2B.png) | ![deep teal swatch #004D40](https://placehold.co/120x56/004D40/004D40.png) | ![dark blue swatch #0B3D91](https://placehold.co/120x56/0B3D91/0B3D91.png) | ![deep indigo swatch #2A1458](https://placehold.co/120x56/2A1458/2A1458.png) |
 
 Deep winter is cool, saturated and high contrast: burgundy, emerald, royal blue, deep purple, black, icy white. Those are **jewel tones**, and jewel tones are the reason a dark theme can look expensive instead of looking like `#333`.
+
+&nbsp;
 
 The colors are dark enough to be *backgrounds* and saturated enough to be *identities*:
 
@@ -115,6 +132,8 @@ The colors are dark enough to be *backgrounds* and saturated enough to be *ident
 | ![deep indigo swatch #2A1458](https://placehold.co/70x28/2A1458/2A1458.png) `#2A1458` | 15.68:1 ✅ | 1.30:1 | elevated background |
 
 Read that table sideways and the theme designs itself: these four are **surfaces on a black canvas**, each carrying white text at AAA.
+
+&nbsp;
 
 **`deep-winter.css`** ⌁ *status colors that are also backgrounds*
 
@@ -162,7 +181,9 @@ Compare that to the default dark theme most projects ship:
 
 Same semantics, completely different product personality — and the accessibility numbers went *up*.
 
-![Section divider bar in deep teal](https://placehold.co/1000x10/004D40/004D40.png)
+&nbsp;
+
+![Section divider bar in light orange](https://placehold.co/1000x8/FFD489/FFD489.png)
 
 ## 🍂 4 · The other two quadrants, briefly
 
@@ -174,6 +195,8 @@ Same semantics, completely different product personality — and the accessibili
 
 Honey, amber, clay. Near-monochrome warmth for food, artisan commerce and editorial. Total internal contrast: **1.45:1** — surfaces only, again. Pair with `#3A2A12`.
 
+&nbsp;
+
 **Bright Spring** —  **Spring Beach Wave**
 
 | `#FFFF79` | `#FFD2DC` | `#56D5CC` | `#FF8D08` |
@@ -181,6 +204,8 @@ Honey, amber, clay. Near-monochrome warmth for food, artisan commerce and editor
 | ![light yellow swatch #FFFF79](https://placehold.co/120x56/FFFF79/FFFF79.png) | ![pale red swatch #FFD2DC](https://placehold.co/120x56/FFD2DC/FFD2DC.png) | ![teal swatch #56D5CC](https://placehold.co/120x56/56D5CC/56D5CC.png) | ![vivid orange swatch #FF8D08](https://placehold.co/120x56/FF8D08/FF8D08.png) |
 
 Maximum energy. Great for a launch page, exhausting for a workspace. Use one as the hero background and keep the rest for illustration.
+
+&nbsp;
 
 **Cool Winter** —  **Cool Winter Harmony**
 
@@ -190,9 +215,15 @@ Maximum energy. Great for a launch page, exhausting for a workspace. Use one as 
 
 Icy blue structure with a shout. This is the fintech dashboard palette: navy chrome, blue data, magenta for the one number that matters.
 
+&nbsp;
+
+![Section divider bar in vivid orange](https://placehold.co/1000x8/F9BA5D/F9BA5D.png)
+
 ## 🧮 5 · Pick your quadrant with a function
 
 If you would rather derive the season than browse it, the two axes are computable:
+
+&nbsp;
 
 {% katex %}
 \text{warmth} = \cos(h - 60^\circ) \quad\text{where } h = \text{hue in degrees}
@@ -248,6 +279,10 @@ test.each([
 
 {% enddetails %}
 
+&nbsp;
+
+![Section divider bar in light yellow](https://placehold.co/1000x8/FFFF79/FFFF79.png)
+
 ## 🎚️ 6 · Ship both seasons in one app
 
 The strongest move is not choosing — it is mapping **light mode to a soft season and dark mode to a deep one**, keeping the same semantic names.
@@ -272,6 +307,10 @@ The strongest move is not choosing — it is mapping **light mode to a soft seas
 
 One component, two seasons, zero conditional logic.
 
+&nbsp;
+
+![Section divider bar in teal](https://placehold.co/1000x8/56D5CC/56D5CC.png)
+
 ## 🧾 The checklist
 
 - Decide **temperature** first (warm/cool), **contrast** second (loud/quiet).
@@ -279,6 +318,5 @@ One component, two seasons, zero conditional logic.
 - Deep seasons = surfaces *and* status colors. Check them against white, not against each other.
 - Map soft → light mode, deep → dark mode, and keep semantic names identical.
 - Browse the sub-season pages; the sub-season is the real spec, "summer" alone is too broad.
-
 
 *Which quadrant is your current project in? Post the four hexes below.* 👇
