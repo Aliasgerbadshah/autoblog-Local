@@ -364,11 +364,12 @@ function handleApiRoute($uri) {
             jsonResponse(['success' => false, 'error' => 'Google Ads Developer Token and Customer ID are required. Save them in the Keyword Planner vault section. Get Developer Token at: Google Ads → Tools & Settings → API Center'], 400);
         }
         
-        // Get OAuth credentials (reuse Blogger's or from keyword planner vault)
+        // Get OAuth credentials (use KP-specific refresh token first, then fall back to Blogger's)
         $bloggerVault = SecurityVault::getApiCredentials($userId, 'blogger_api');
-        $clientId = trim($gkwVault['client_id'] ?? $bloggerVault['client_id'] ?? '');
-        $clientSecret = trim($gkwVault['client_secret'] ?? $bloggerVault['client_secret'] ?? '');
-        $refreshToken = trim($gkwVault['refresh_token'] ?? $bloggerVault['refresh_token'] ?? '');
+        $clientId = trim($bloggerVault['client_id'] ?? '');
+        $clientSecret = trim($bloggerVault['client_secret'] ?? '');
+        // Refresh token: KP vault > Blogger vault
+        $refreshToken = trim($gkwVault['refresh_token'] ?? '') ?: trim($bloggerVault['refresh_token'] ?? '');
         
         if (empty($clientId) || empty($clientSecret) || empty($refreshToken)) {
             jsonResponse(['success' => false, 'error' => 'OAuth credentials required. Save Client ID, Client Secret, and Refresh Token in Blogger vault or Keyword Planner vault. The refresh token needs scope: https://www.googleapis.com/auth/adwords'], 400);
@@ -406,6 +407,7 @@ function handleApiRoute($uri) {
         $developerToken = trim($input['developer_token'] ?? '');
         $customerId = trim($input['customer_id'] ?? '');
         $loginCustomerId = trim($input['login_customer_id'] ?? $customerId);
+        $inputRefreshToken = trim($input['refresh_token'] ?? '');
         
         if (empty($developerToken) || empty($customerId)) {
             $gkwVault = SecurityVault::getApiCredentials($userId, 'google_keyword_planner');
@@ -418,12 +420,13 @@ function handleApiRoute($uri) {
             jsonResponse(['success' => false, 'error' => 'Developer Token and Customer ID are required.'], 400);
         }
         
-        // Get OAuth credentials
+        // Get OAuth credentials — use KP-specific refresh token first, then fall back to Blogger's
         $bloggerVault = SecurityVault::getApiCredentials($userId, 'blogger_api');
         $gkwVault = SecurityVault::getApiCredentials($userId, 'google_keyword_planner');
-        $clientId = trim($gkwVault['client_id'] ?? $bloggerVault['client_id'] ?? '');
-        $clientSecret = trim($gkwVault['client_secret'] ?? $bloggerVault['client_secret'] ?? '');
-        $refreshToken = trim($gkwVault['refresh_token'] ?? $bloggerVault['refresh_token'] ?? '');
+        $clientId = trim($bloggerVault['client_id'] ?? '');
+        $clientSecret = trim($bloggerVault['client_secret'] ?? '');
+        // Refresh token: input > KP vault > Blogger vault
+        $refreshToken = $inputRefreshToken ?: trim($gkwVault['refresh_token'] ?? '') ?: trim($bloggerVault['refresh_token'] ?? '');
         
         if (empty($clientId) || empty($clientSecret) || empty($refreshToken)) {
             jsonResponse(['success' => false, 'error' => 'OAuth credentials required. Save them in Blogger vault first.'], 400);
