@@ -773,6 +773,31 @@
                     </form>
                 </div>
 
+                <!-- Google Keyword Planner -->
+                <div style="background:var(--inner-bg); padding:1.25rem; border-radius:12px; border:1px solid var(--border-light); margin-bottom:1.25rem;">
+                    <h3 style="font-size:1rem; margin-bottom:0.75rem; color:#059669;">4. Google Keyword Planner (Real Search Volumes)</h3>
+                    <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:12px;">Get <strong>real monthly search volumes, competition & CPC</strong> from Google Ads Keyword Planner API. Replaces fake "AI estimate" volumes with actual Google data.</p>
+                    <form id="gkw-vault-form" onsubmit="return handleSaveGkwVault(event)">
+                        <div class="form-grid">
+                            <div class="form-group"><label>Developer Token</label><input type="text" id="v-gkw-dev-token" placeholder="Get from Google Ads → Tools → API Center" required></div>
+                            <div class="form-group"><label>Customer ID</label><input type="text" id="v-gkw-customer-id" placeholder="e.g. 123-456-7890" required></div>
+                            <div class="form-group"><label>Login Customer ID</label><input type="text" id="v-gkw-login-customer-id" placeholder="Same as Customer ID (or MCC ID)"></div>
+                        </div>
+                        <button type="submit" class="btn btn-purple">💾 Save Keyword Planner Credentials</button>
+                        <button type="button" class="btn" style="background:#0f172a;" onclick="testKeywordPlanner()">🔍 Test Keyword Planner</button>
+                        <div id="gkw-test-status" style="margin-top:10px;font-size:0.85rem;font-weight:700;"></div>
+                        <details style="margin-top:12px;color:var(--text-muted);font-size:0.78rem;"><summary>How to get Google Keyword Planner API credentials</summary>
+                        <ol style="padding-left:18px;line-height:1.8;">
+                            <li>Go to <a href="https://ads.google.com" target="_blank" style="color:#1b57f6;">ads.google.com</a> and create a Google Ads account (free, no campaigns needed)</li>
+                            <li>Go to <strong>Tools & Settings → API Center</strong> → Apply for <strong>Developer Token</strong> (Basic Access is free)</li>
+                            <li>Copy your <strong>Developer Token</strong> and <strong>Customer ID</strong> (top-right corner, format: 123-456-7890)</li>
+                            <li>Go to <a href="https://console.cloud.google.com" target="_blank" style="color:#1b57f6;">Google Cloud Console</a> → APIs & Services → Enable <strong>Google Ads API</strong></li>
+                            <li>Your OAuth credentials (Client ID/Secret) from Blogger vault will be reused automatically</li>
+                            <li>Generate a Refresh Token with scope: <code style="background:#f1f5f9;padding:2px 6px;border-radius:4px;">https://www.googleapis.com/auth/adwords</code> (use OAuth Playground with your own credentials, same as Blogger setup)</li>
+                        </ol></details>
+                    </form>
+                </div>
+
                 <!-- WordPress Credentials -->
                 <div style="background:var(--inner-bg); padding:1.25rem; border-radius:12px; border:1px solid var(--border-light);">
                     <h3 style="font-size:1rem; margin-bottom:0.75rem; color:var(--primary-blue);">3. WordPress REST API Integration</h3>
@@ -1084,6 +1109,12 @@
                     if (services.dataforseo_api.location_code) document.getElementById('v-dfs-location').value = services.dataforseo_api.location_code;
                 }
 
+                if (services.google_keyword_planner) {
+                    if (services.google_keyword_planner.developer_token) document.getElementById('v-gkw-dev-token').value = services.google_keyword_planner.developer_token;
+                    if (services.google_keyword_planner.customer_id) document.getElementById('v-gkw-customer-id').value = services.google_keyword_planner.customer_id;
+                    if (services.google_keyword_planner.login_customer_id) document.getElementById('v-gkw-login-customer-id').value = services.google_keyword_planner.login_customer_id;
+                }
+
                 if (services.wordpress_api) {
                     if (services.wordpress_api.wp_site_url) document.getElementById('v-wp-url').value = services.wordpress_api.wp_site_url;
                     if (services.wordpress_api.wp_username) document.getElementById('v-wp-user').value = services.wordpress_api.wp_username;
@@ -1201,6 +1232,41 @@
             const status=document.getElementById('dataforseo-test-status'); status.innerText='Testing keyword research provider...';
             const res=await fetch('/api/seo/research',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({keywords:['test keyword'],login:document.getElementById('v-dfs-login').value,password:document.getElementById('v-dfs-pass').value,location_code:Number(document.getElementById('v-dfs-location').value||2356)})});
             const data=await res.json(); status.innerText=data.success?'🟢 DataForSEO responded successfully.':'🔴 '+(data.error||data.volume?.error||'Check credentials.');
+        }
+
+        async function handleSaveGkwVault(e) {
+            e.preventDefault();
+            await saveVaultService('google_keyword_planner', {
+                account_alias: 'Google Keyword Planner',
+                developer_token: document.getElementById('v-gkw-dev-token').value,
+                customer_id: document.getElementById('v-gkw-customer-id').value,
+                login_customer_id: document.getElementById('v-gkw-login-customer-id').value || document.getElementById('v-gkw-customer-id').value
+            });
+            return false;
+        }
+
+        async function testKeywordPlanner() {
+            const status = document.getElementById('gkw-test-status');
+            status.innerHTML = '<span style="color:#2563eb;">🔍 Testing Google Keyword Planner connection...</span>';
+            try {
+                const res = await fetch('/api/vault/test-keyword-planner', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        developer_token: document.getElementById('v-gkw-dev-token').value,
+                        customer_id: document.getElementById('v-gkw-customer-id').value,
+                        login_customer_id: document.getElementById('v-gkw-login-customer-id').value
+                    })
+                });
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    status.innerHTML = '<span style="color:#10b981;">🟢 ' + escapeHtml(data.message) + '</span>';
+                } else {
+                    status.innerHTML = '<span style="color:#ef4444;">🔴 ' + escapeHtml(data.error || 'Connection failed') + '</span>';
+                }
+            } catch (err) {
+                status.innerHTML = '<span style="color:#ef4444;">🔴 Error: ' + escapeHtml(err.message) + '</span>';
+            }
         }
 
         function renderScheduleTimes() {

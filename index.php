@@ -50,6 +50,7 @@ try {
     require_once __DIR__ . '/includes/ai_provider.php';
     require_once __DIR__ . '/includes/research_agent.php';
     require_once __DIR__ . '/includes/mailer.php';
+    require_once __DIR__ . '/includes/google_keyword_planner.php';
 } catch (Exception $e) {
     http_response_code(500);
     echo '<h1>AutoBlog Setup Error</h1><p>' . htmlspecialchars($e->getMessage()) . '</p><p>Check that all files are uploaded correctly and PHP version is 8.0+</p>';
@@ -227,7 +228,7 @@ function handleApiRoute($uri) {
         }
         $summary = SecurityVault::getAllUserVaultSummary($userId);
         $services = [];
-        foreach (['blogger_api', 'brevo_api', 'wordpress_api', 'dataforseo_api', 'chat_api', 'image_api'] as $s) {
+        foreach (['blogger_api', 'brevo_api', 'wordpress_api', 'dataforseo_api', 'chat_api', 'image_api', 'google_keyword_planner'] as $s) {
             $services[$s] = SecurityVault::getApiCredentials($userId, $s);
         }
         jsonResponse(['summary' => $summary, 'services' => $services]);
@@ -254,7 +255,7 @@ function handleApiRoute($uri) {
     // Vault accounts
     if (preg_match('#^/api/vault/accounts/(.+)$#', $uri, $m)) {
         $serviceName = $m[1];
-        $allowed = ['chat_api','image_api','dataforseo_api','blogger_api','wordpress_api'];
+        $allowed = ['chat_api','image_api','dataforseo_api','blogger_api','wordpress_api','google_keyword_planner'];
         if (!in_array($serviceName, $allowed)) jsonResponse(['error' => 'Unsupported service.'], 400);
         $accounts = SecurityVault::getServiceCredentials($userId, $serviceName);
         $result = array_map(fn($x) => ['id' => $x['id'], 'account_alias' => $x['account_alias'], 'provider' => $x['data']['provider'] ?? null, 'model' => $x['data']['model'] ?? null, 'updated_at' => $x['updated_at']], $accounts);
@@ -340,6 +341,109 @@ function handleApiRoute($uri) {
             ]);
         }
         jsonResponse(['success' => false, 'error' => 'Auth code exchange failed: ' . ($result['error'] ?? 'Unknown error')], 400);
+    }
+
+    // ========== Google Keyword Planner — Get real keyword volumes ==========
+    if ($uri === '/api/keyword-planner/search' && $method === 'POST') {
+        $seedKeywords = $input['keywords'] ?? [];
+        $country = $input['country'] ?? 'India';
+        $language = $input['language_code'] ?? 'en';
+        
+        if (empty($seedKeywords)) {
+            jsonResponse(['success' => false, 'error' => 'At least one seed keyword is required.'], 400);
+        }
+        if (!is_array($seedKeywords)) $seedKeywords = [$seedKeywords];
+        
+        // Get Google Ads credentials from vault
+        $gkwVault = SecurityVault::getApiCredentials($userId, 'google_keyword_planner');
+        $developerToken = trim($input['developer_token'] ?? $gkwVault['developer_token'] ?? '');
+        $customerId = trim($input['customer_id'] ?? $gkwVault['customer_id'] ?? '');
+        $loginCustomerId = trim($input['login_customer_id'] ?? $gkwVault['login_customer_id'] ?? $customerId);
+        
+        if (empty($developerToken) || empty($customerId)) {
+            jsonResponse(['success' => false, 'error' => 'Google Ads Developer Token and Customer ID are required. Save them in the Keyword Planner vault section. Get Developer Token at: Google Ads → Tools & Settings → API Center'], 400);
+        }
+        
+        // Get OAuth credentials (reuse Blogger's or from keyword planner vault)
+        $bloggerVault = SecurityVault::getApiCredentials($userId, 'blogger_api');
+        $clientId = trim($gkwVault['client_id'] ?? $bloggerVault['client_id'] ?? '');
+        $clientSecret = trim($gkwVault['client_secret'] ?? $bloggerVault['client_secret'] ?? '');
+        $refreshToken = trim($gkwVault['refresh_token'] ?? $bloggerVault['refresh_token'] ?? '');
+        
+        if (empty($clientId) || empty($clientSecret) || empty($refreshToken)) {
+            jsonResponse(['success' => false, 'error' => 'OAuth credentials required. Save Client ID, Client Secret, and Refresh Token in Blogger vault or Keyword Planner vault. The refresh token needs scope: https://www.googleapis.com/auth/adwords'], 400);
+        }
+        
+        // Map country to location ID
+        $locationMap = ['india' => 2356, 'united states' => 2840, 'usa' => 2840, 'united kingdom' => 2826, 'canada' => 2124, 'australia' => 2036, 'uae' => 2784, 'germany' => 2276, 'france' => 2250, 'brazil' => 2070, 'japan' => 2392];
+        $locationId = $locationMap[strtolower($country)] ?? 2356;
+        
+        // Map language to Google Ads language constant
+        $langMap = ['en' => '1000', 'hi' => '1001', 'es' => '1003', 'fr' => '1002', 'de' => '1004', 'pt' => '1006', 'ja' => '1005', 'ar' => '1019'];
+        $languageCode = $langMap[$language] ?? '1000';
+        
+        // Step 1: Get fresh access token
+        $tokenResult = GoogleKeywordPlanner::getAccessToken($clientId, $clientSecret, $refreshToken);
+        if (!$tokenResult['success']) {
+            jsonResponse(['success' => false, 'error' => 'OAuth failed: ' . $tokenResult['error']], 400);
+        }
+        $accessToken = $tokenResult['access_token'];
+        
+        // Step 2: Call Google Ads API for keyword ideas
+        $kwResult = GoogleKeywordPlanner::generateKeywordIdeas(
+            $developerToken, $customerId, $loginCustomerId, $accessToken,
+            $seedKeywords, $languageCode, $locationId
+        );
+        
+        if ($kwResult['success']) {
+            jsonResponse($kwResult);
+        }
+        jsonResponse(['success' => false, 'error' => $kwResult['error'] ?? 'Keyword Planner API failed.'], 400);
+    }
+
+    // Test Google Keyword Planner connection
+    if ($uri === '/api/vault/test-keyword-planner' && $method === 'POST') {
+        $developerToken = trim($input['developer_token'] ?? '');
+        $customerId = trim($input['customer_id'] ?? '');
+        $loginCustomerId = trim($input['login_customer_id'] ?? $customerId);
+        
+        if (empty($developerToken) || empty($customerId)) {
+            $gkwVault = SecurityVault::getApiCredentials($userId, 'google_keyword_planner');
+            $developerToken = $developerToken ?: trim($gkwVault['developer_token'] ?? '');
+            $customerId = $customerId ?: trim($gkwVault['customer_id'] ?? '');
+            $loginCustomerId = trim($gkwVault['login_customer_id'] ?? $customerId);
+        }
+        
+        if (empty($developerToken) || empty($customerId)) {
+            jsonResponse(['success' => false, 'error' => 'Developer Token and Customer ID are required.'], 400);
+        }
+        
+        // Get OAuth credentials
+        $bloggerVault = SecurityVault::getApiCredentials($userId, 'blogger_api');
+        $gkwVault = SecurityVault::getApiCredentials($userId, 'google_keyword_planner');
+        $clientId = trim($gkwVault['client_id'] ?? $bloggerVault['client_id'] ?? '');
+        $clientSecret = trim($gkwVault['client_secret'] ?? $bloggerVault['client_secret'] ?? '');
+        $refreshToken = trim($gkwVault['refresh_token'] ?? $bloggerVault['refresh_token'] ?? '');
+        
+        if (empty($clientId) || empty($clientSecret) || empty($refreshToken)) {
+            jsonResponse(['success' => false, 'error' => 'OAuth credentials required. Save them in Blogger vault first.'], 400);
+        }
+        
+        // Test with a simple keyword
+        $tokenResult = GoogleKeywordPlanner::getAccessToken($clientId, $clientSecret, $refreshToken);
+        if (!$tokenResult['success']) {
+            jsonResponse(['success' => false, 'error' => 'OAuth failed: ' . $tokenResult['error']], 400);
+        }
+        
+        $kwResult = GoogleKeywordPlanner::generateKeywordIdeas(
+            $developerToken, $customerId, $loginCustomerId, $tokenResult['access_token'],
+            ['digital marketing'], '1000', 2356
+        );
+        
+        if ($kwResult['success'] && !empty($kwResult['keywords'])) {
+            jsonResponse(['success' => true, 'message' => '✅ Google Keyword Planner connected! Found ' . $kwResult['count'] . ' keyword ideas for test query.', 'sample_count' => $kwResult['count']]);
+        }
+        jsonResponse(['success' => false, 'error' => $kwResult['error'] ?? 'No keywords returned. Check your Developer Token and Customer ID.'], 400);
     }
 
     // Test Blogger — uses OAuth (refresh token → access token → Bearer header)
@@ -1135,9 +1239,36 @@ function handleApiRoute($uri) {
                 } else {
                 $articleKeywords = array_slice(array_merge(array_slice($base, $idx % count($base)), array_slice($base, 0, $idx % count($base))), 0, 8);
 
+                // Try Google Keyword Planner for REAL keyword volumes
                 $kws = [];
-                foreach ($articleKeywords as $j => $k) {
-                    $kws[] = ['keyword' => $k, 'volume' => 'Demo estimate: ' . max(90, 1200 - $j * 130), 'difficulty' => ['Low', 'Medium', 'High'][$j % 3], 'intent' => $j % 2 ? 'Commercial' : 'Informational'];
+                $gkwVaultDemo = SecurityVault::getApiCredentials($userId, 'google_keyword_planner');
+                $gkwDevToken = trim($gkwVaultDemo['developer_token'] ?? '');
+                $gkwCustomerId = trim($gkwVaultDemo['customer_id'] ?? '');
+                if (!empty($gkwDevToken) && !empty($gkwCustomerId)) {
+                    $bloggerVaultKw = SecurityVault::getApiCredentials($userId, 'blogger_api');
+                    $gkwClientId = trim($gkwVaultDemo['client_id'] ?? $bloggerVaultKw['client_id'] ?? '');
+                    $gkwClientSecret = trim($gkwVaultDemo['client_secret'] ?? $bloggerVaultKw['client_secret'] ?? '');
+                    $gkwRefreshToken = trim($gkwVaultDemo['refresh_token'] ?? $bloggerVaultKw['refresh_token'] ?? '');
+                    if (!empty($gkwClientId) && !empty($gkwRefreshToken)) {
+                        $gkwTokenRes = GoogleKeywordPlanner::getAccessToken($gkwClientId, $gkwClientSecret, $gkwRefreshToken);
+                        if ($gkwTokenRes['success']) {
+                            $gkwLocationMap = ['india' => 2356, 'united states' => 2840, 'usa' => 2840, 'united kingdom' => 2826, 'canada' => 2124, 'australia' => 2036, 'uae' => 2784];
+                            $gkwLocId = $gkwLocationMap[strtolower($country)] ?? 2356;
+                            $gkwLangMap = ['en' => '1000', 'hi' => '1001', 'es' => '1003', 'fr' => '1002'];
+                            $gkwLangCode = $gkwLangMap[$language] ?? '1000';
+                            $gkwResult = GoogleKeywordPlanner::generateKeywordIdeas($gkwDevToken, $gkwCustomerId, trim($gkwVaultDemo['login_customer_id'] ?? $gkwCustomerId), $gkwTokenRes['access_token'], [$kw], $gkwLangCode, $gkwLocId);
+                            if ($gkwResult['success'] && !empty($gkwResult['keywords'])) {
+                                $kws = array_slice($gkwResult['keywords'], 0, 8);
+                                error_log("[Demo Campaign] Used Google Keyword Planner for '$kw' - got " . count($kws) . " keywords with real volumes");
+                            }
+                        }
+                    }
+                }
+                // Fallback to demo estimates if Keyword Planner not available or failed
+                if (empty($kws)) {
+                    foreach ($articleKeywords as $j => $k) {
+                        $kws[] = ['keyword' => $k, 'volume' => 'AI estimate', 'difficulty' => ['Low', 'Medium', 'High'][$j % 3], 'intent' => $j % 2 ? 'Commercial' : 'Informational', 'source' => 'AI'];
+                    }
                 }
                 $headings = ['H1' => ucwords($kw), 'H2' => ['Overview and practical use', 'What competitors miss', 'How to choose the right option', 'Frequently Asked Questions'], 'H3' => ['Costs and examples', 'Common mistakes', 'Implementation steps'], 'H4' => ['Checklist', 'Useful references']];
                 $relatedPages = [];
