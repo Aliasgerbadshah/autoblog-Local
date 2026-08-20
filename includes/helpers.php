@@ -121,6 +121,11 @@ function validateImageUrl($url, $timeout = 5) {
     // Skip data: URIs (always valid if present)
     if (str_starts_with($url, 'data:image/')) return true;
     
+    // Pollinations URLs are always valid — the image is generated on-the-fly when fetched
+    // Pollinations returns 200 with image content even for HEAD requests
+    // but generation may take 5-15 seconds, so skip validation for these URLs
+    if (str_contains($url, 'pollinations.ai')) return true;
+    
     $ch = curl_init($url);
     curl_setopt_array($ch, [
         CURLOPT_RETURNTRANSFER => true,

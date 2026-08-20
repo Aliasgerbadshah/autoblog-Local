@@ -1139,6 +1139,17 @@
             const imgPollWrap = document.getElementById('pollinations-image-model-wrap');
             if (chatPollWrap) chatPollWrap.style.display = (chat === 'pollinations') ? 'block' : 'none';
             if (imgPollWrap) imgPollWrap.style.display = (image === 'pollinations') ? 'block' : 'none';
+            // For Pollinations image: HIDE the dropdown, show only manual text input
+            const imgModelSelect = document.getElementById('v-image-model');
+            if (imgModelSelect) {
+                if (image === 'pollinations') {
+                    imgModelSelect.style.display = 'none'; // Hide dropdown completely
+                    imgModelSelect.parentElement.querySelector('label') && (imgModelSelect.parentElement.querySelector('label').style.display = 'none');
+                } else {
+                    imgModelSelect.style.display = ''; // Show dropdown
+                    imgModelSelect.parentElement.querySelector('label') && (imgModelSelect.parentElement.querySelector('label').style.display = '');
+                }
+            }
             // Auto-set model ONLY for non-Pollinations providers (Gemini, OpenAI have dropdowns)
             const chatModel={gemini:'gemini-2.5-flash-lite',openai:'gpt-5.4-nano',anthropic:'claude-3-5-sonnet-latest',huggingface:'meta-llama/Llama-3.1-8B-Instruct',openrouter:'openai/gpt-4o-mini',zenmux:'moonshotai/kimi-k3',custom:''}[chat]||'';
             const imageModel={huggingface:'black-forest-labs/FLUX.1-schnell',openai:'gpt-image-1-mini',gemini:'gemini-3.1-flash-image-preview',stability:'stable-image-ultra',replicate:'black-forest-labs/flux-schnell',custom:''}[image]||'';

@@ -102,7 +102,13 @@ class AIProviderClient {
     public static function image($credentials, $prompt) {
         $provider = $credentials['provider'] ?? 'custom';
         $key = $credentials['api_key'] ?? '';
-        $model = $credentials['model'] ?? ($provider === 'huggingface' ? 'black-forest-labs/FLUX.1-schnell' : 'gpt-image-1');
+        $model = $credentials['model'] ?? '';
+        // Set provider-specific defaults if model is empty
+        if (empty($model)) {
+            if ($provider === 'pollinations') $model = 'flux';
+            elseif ($provider === 'huggingface') $model = 'black-forest-labs/FLUX.1-schnell';
+            else $model = 'gpt-image-1';
+        }
 
         if (empty($key)) {
             return ['success' => false, 'error' => 'Image API key is missing.'];
@@ -171,8 +177,8 @@ class AIProviderClient {
 
             if ($provider === 'pollinations') {
                 // Pollinations.ai image — GET request with prompt in URL
-                // User types the model name directly (e.g. flux, turbo, gptimage, flux-pro, etc.)
-                // No mapping needed — pass model name as-is to the API
+                // User types the model name directly — NO pre-made models, NO mapping
+                // The model name goes directly to the API as ?model=VALUE
                 $imgModel = $model;
                 if (empty($imgModel)) $imgModel = 'flux';
                 error_log("[Pollinations Image] Model: $imgModel | Provider: $provider | Full credentials model: $model");
@@ -183,7 +189,52 @@ class AIProviderClient {
                 if (!empty($key)) {
                     $imageUrl .= "&key=" . urlencode($key);
                 }
-                return ['success' => true, 'url' => $imageUrl, 'error' => ''];
+                // Pollinations generates image on-the-fly, so we need to actually fetch it
+                // to verify it works. Use a GET request with 30s timeout.
+                $ch = curl_init($imageUrl);
+                curl_setopt_array($ch, [
+                    CURLOPT_RETURNTRANSFER => true,
+                    CURLOPT_TIMEOUT => 30,
+                    CURLOPT_SSL_VERIFYPEER => false,
+                    CURLOPT_FOLLOWLOCATION => true,
+                    CURLOPT_USERAGENT => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/115.0.0.0',
+                ]);
+                $response = curl_exec($ch);
+                $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                $contentType = curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
+                $curlErr = curl_error($ch);
+                curl_close($ch);
+                
+                if ($httpCode === 200 && $response && strlen($response) > 1000) {
+                    // Image was generated successfully — return the URL (not the data)
+                    return ['success' => true, 'url' => $imageUrl, 'error' => ''];
+                }
+                
+                // Image generation failed with user's model — try fallback to 'flux'
+                if ($imgModel !== 'flux') {
+                    error_log("[Pollinations Image] Model '$imgModel' failed (HTTP $httpCode, size " . strlen($response ?? '') . "). Retrying with 'flux'...");
+                    $fallbackUrl = "https://gen.pollinations.ai/image/" . urlencode($prompt) . "?model=flux&width={$width}&height={$height}&seed=" . rand(1000, 9999) . "&nologo=true";
+                    if (!empty($key)) {
+                        $fallbackUrl .= "&key=" . urlencode($key);
+                    }
+                    $ch2 = curl_init($fallbackUrl);
+                    curl_setopt_array($ch2, [
+                        CURLOPT_RETURNTRANSFER => true,
+                        CURLOPT_TIMEOUT => 30,
+                        CURLOPT_SSL_VERIFYPEER => false,
+                        CURLOPT_FOLLOWLOCATION => true,
+                        CURLOPT_USERAGENT => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/115.0.0.0',
+                    ]);
+                    $response2 = curl_exec($ch2);
+                    $httpCode2 = curl_getinfo($ch2, CURLINFO_HTTP_CODE);
+                    curl_close($ch2);
+                    
+                    if ($httpCode2 === 200 && $response2 && strlen($response2) > 1000) {
+                        return ['success' => true, 'url' => $fallbackUrl, 'error' => ''];
+                    }
+                }
+                
+                return ['success' => false, 'error' => "Pollinations image generation failed with model '$imgModel' (HTTP $httpCode). Response size: " . strlen($response ?? '') . " bytes. Try a different model name (flux, turbo, gptimage, flux-pro)."];
             }
 
             // OpenAI-compatible

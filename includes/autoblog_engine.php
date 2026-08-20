@@ -919,7 +919,7 @@ function generateArticleHtmlFromCampaignItem($item, $userId, $activeSlot, $db, $
 
         $nowMonth = date('F');
         $nowYear = date('Y');
-        $prompt = "Write a complete, publication-ready HTML blog article about \"$keyword\".\n\nTITLE: $title\nH1: $h1\nH2 SECTIONS: $h2List\nSUPPORTING KEYWORDS: $kwList\nINTERNAL LINKS (weave naturally into the text):\n$intLinkList\nEXTERNAL REFERENCES (cite naturally — at least 4 required):\n$extLinkList\nIMAGE PROMPTS: " . implode('; ', $prompts) . "\n$angleNote\n\nREQUIREMENTS:\n- 1,800 to 2,200 words of original, researched content\n- Use semantic HTML: proper H1, H2, H3, H4, p, ul, li, table, figure, blockquote tags\n- CRITICAL: Keep paragraphs SHORT — strictly 45 to 50 words per paragraph. Every <p> tag must have between 45 and 50 words. Break long paragraphs into multiple short <p> tags. Readers skim; short paragraphs improve readability and mobile experience.\n- Write in a natural, authoritative human voice - no AI cliches or banned phrases\n- Include a FAQ section at the end with 3 real questions and answers about $keyword\n- Include 1-2 internal links with natural anchor text to the client website pages\n- MANDATORY: Include at least 4 external authority references with REAL working URLs to well-known sites (Wikipedia, official docs, authority blogs like Moz, Ahrefs, Neil Patel, HubSpot, Backlinko, Schema.org, Google support, etc.). Verify the URLs are correct and related to the topic. This is a strict minimum — not optional.\n- Also include up to 2 links to the client website pages listed in internal links\n- Add a comparison data table where relevant\n- Use current year $nowYear throughout the article. NEVER use outdated years like 2023 or older. Do NOT mention the current month ($nowMonth) in the H1 title or any heading. You may use the year in headings where it feels natural.\n- Do NOT include html/head/body tags - only the article content\n- Do NOT invent facts, statistics, or quotes\n- Do NOT make up URLs — only use real, verified external URLs\n- Return ONLY the article HTML, no markdown fences";
+        $prompt = "Write a complete, publication-ready HTML blog article about \"$keyword\".\n\nTITLE: $title\nH1: $h1\nH2 SECTIONS: $h2List\nSUPPORTING KEYWORDS: $kwList\nINTERNAL LINKS (weave naturally into the text — ONLY use these URLs, do NOT make up any):\n$intLinkList\nEXTERNAL REFERENCES (cite naturally — at least 4 required — ONLY use the URLs listed below, do NOT make up any Wikipedia, Moz, or other URLs):\n$extLinkList\nIMAGE PROMPTS: " . implode('; ', $prompts) . "\n$angleNote\n\nREQUIREMENTS:\n- 1,800 to 2,200 words of original, researched content\n- Use semantic HTML: proper H1, H2, H3, H4, p, ul, li, table, figure, blockquote tags\n- CRITICAL: Keep paragraphs SHORT — strictly 45 to 50 words per paragraph. Every <p> tag must have between 45 and 50 words. Break long paragraphs into multiple short <p> tags. Readers skim; short paragraphs improve readability and mobile experience.\n- Write in a natural, authoritative human voice - no AI cliches or banned phrases\n- Include a FAQ section at the end with 3 real questions and answers about $keyword\n- Include 1-2 internal links with natural anchor text to the client website pages listed in INTERNAL LINKS\n- MANDATORY: Include at least 4 external authority references using the URLs provided in EXTERNAL REFERENCES above. Do NOT make up any new URLs. Only use the URLs that are explicitly listed.\n- Also include up to 2 links to the client website pages listed in internal links\n- Add a comparison data table where relevant\n- Use current year $nowYear throughout the article. NEVER use outdated years like 2023 or older. Do NOT mention the current month ($nowMonth) in the H1 title or any heading. You may use the year in headings where it feels natural.\n- Do NOT include html/head/body tags - only the article content\n- Do NOT invent facts, statistics, or quotes\n- Do NOT make up URLs — ONLY use URLs from the INTERNAL LINKS and EXTERNAL REFERENCES lists provided above\n- Return ONLY the article HTML, no markdown fences";
 
         $chatResult = AIProviderClient::chat($chatVault, $prompt);
         if (!empty($chatResult['success']) && !empty($chatResult['content'])) {
@@ -945,10 +945,10 @@ function generateArticleHtmlFromCampaignItem($item, $userId, $activeSlot, $db, $
     }
 
     // Featured THUMBNAIL image via Image API — 9:16 ratio, MANDATORY first image
-    // This is the ONLY image we generate. Retries up to 3 times.
+    // Retry up to 5 times with different seeds. NEVER use gradient placeholder.
     $featuredImgUrl = '';
     if (!empty($imageVault['api_key'])) {
-        for ($imgAttempt = 1; $imgAttempt <= 3; $imgAttempt++) {
+        for ($imgAttempt = 1; $imgAttempt <= 5; $imgAttempt++) {
             $thumbPrompt = "YouTube thumbnail image for a blog about $keyword. Vertical 9:16 aspect ratio, 1080x1920. Eye-catching, professional, bold visual representing the concept. No text, no logos, no watermarks. Clean editorial style.";
             $imgResult = AIProviderClient::image($imageVault, $thumbPrompt);
             if (!empty($imgResult['success']) && !empty($imgResult['url'])) {
@@ -958,6 +958,7 @@ function generateArticleHtmlFromCampaignItem($item, $userId, $activeSlot, $db, $
                 }
                 error_log("[Image Validation] Thumbnail attempt $imgAttempt URL not accessible: " . $imgResult['url']);
             }
+            error_log("[Image Generation] Thumbnail attempt $imgAttempt failed: " . ($imgResult['error'] ?? 'unknown'));
         }
     }
 
@@ -971,23 +972,23 @@ function generateArticleHtmlFromCampaignItem($item, $userId, $activeSlot, $db, $
     $chatContent = stripAndValidateImages($chatContent);
 
     // Insert 9:16 thumbnail RIGHT AFTER the H1 tag in the article content
-    // Build the thumbnail HTML first - NO inline onerror (causes PHP parse errors)
-    // Instead we use class="blog-thumb-img" and add a JS handler at page bottom
+    // Build the thumbnail HTML - NO gradient placeholder, always use real image or simple colored div
     $thumbHtml = '';
     $escKw = escapeHtml($keyword);
     if ($featuredImgUrl) {
         $escImgUrl = escapeHtml($featuredImgUrl);
         $thumbHtml = "<figure class=\"blog-thumbnail\" style=\"margin:0 0 24px 0;border-radius:12px;overflow:hidden;width:100%;\"><img class=\"blog-thumb-img\" data-kw=\"{$escKw}\" src=\"{$escImgUrl}\" alt=\"{$escKw} - Blog Thumbnail\" style=\"width:100%;display:block;object-fit:cover;\" loading=\"eager\"></figure>";
     } else {
-        $thumbHtml = "<figure class=\"blog-thumbnail\" style=\"margin:0 0 24px 0;border-radius:12px;overflow:hidden;width:100%;\"><div style=\"background:linear-gradient(135deg,#1b57f6,#8b5cf6);display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.5rem;font-weight:800;padding:40px;text-align:center;min-height:300px;\">{$escKw}</div></figure>";
+        // No image generated after 5 attempts — use a simple solid color with icon (NOT gradient text)
+        $thumbHtml = "<figure class=\"blog-thumbnail\" style=\"margin:0 0 24px 0;border-radius:12px;overflow:hidden;width:100%;background:#1e293b;display:flex;align-items:center;justify-content:center;min-height:280px;\"><span style=\"font-size:4rem;\">📸</span></figure>";
     }
     $chatContent = insertThumbnailAfterH1($chatContent, $thumbHtml);
 
     // ===== SECOND IMAGE: Content image after the 2nd H2 tag (16:9 landscape) =====
-    // This ensures minimum 2 images per blog (thumbnail + content image)
+    // Retry up to 3 times. Must be different from thumbnail.
     $contentImgUrl = '';
     if (!empty($imageVault['api_key'])) {
-        for ($imgAttempt2 = 1; $imgAttempt2 <= 2; $imgAttempt2++) {
+        for ($imgAttempt2 = 1; $imgAttempt2 <= 3; $imgAttempt2++) {
             $contentImgPrompt = "Wide landscape editorial image for a blog about $keyword. Horizontal 16:9 aspect ratio, 1200x675. Professional, relevant to the topic, no text, no logos, no watermarks. Clean magazine style.";
             $imgResult2 = AIProviderClient::image($imageVault, $contentImgPrompt);
             if (!empty($imgResult2['success']) && !empty($imgResult2['url'])) {

@@ -820,12 +820,7 @@ function handleApiRoute($uri) {
                         'primary_keyword' => $csvTopic,
                         'keywords' => [['keyword' => $csvTopic, 'volume' => 'Custom topic', 'difficulty' => 'Medium', 'intent' => 'Informational']],
                         'internal_links' => [['url' => $domain, 'anchor_text' => 'client website']],
-                        'external_links' => [
-                            ['url' => 'https://en.wikipedia.org/wiki/Search_engine_optimization', 'anchor_text' => 'Wikipedia: SEO'],
-                            ['url' => 'https://developers.google.com/search/docs/fundamentals/seo-starter-guide', 'anchor_text' => 'Google SEO Guide'],
-                            ['url' => 'https://moz.com/beginners-guide-to-seo', 'anchor_text' => 'Moz SEO Guide'],
-                            ['url' => 'https://schema.org/Article', 'anchor_text' => 'Schema.org Article'],
-                        ],
+                        'external_links' => array_slice(array_map(fn($p) => ['url' => $p['page_url'], 'anchor_text' => $p['page_title'] ?: basename($p['page_url'])], $pages), 0, 4) ?: [['url' => $domain, 'anchor_text' => 'Customer Website']],
                         'headings' => ['H1' => $csvTopic, 'H2' => ['Overview', 'Key Insights', 'How to Apply', 'FAQ'], 'H3' => ['Details', 'Common Questions']],
                         'image_prompts' => ["Editorial image for $csvTopic, professional, no text."]
                     ];
@@ -1133,12 +1128,7 @@ function handleApiRoute($uri) {
                     $kws = $csvPlan['keywords'] ?? [['keyword' => $kw, 'volume' => 'Custom', 'difficulty' => 'Medium', 'intent' => 'Informational']];
                     $headings = $csvPlan['headings'] ?? ['H1' => ucwords($kw), 'H2' => ['Overview', 'Key Insights', 'How to Apply', 'FAQ'], 'H3' => ['Details', 'Common Questions']];
                     $internal = $csvPlan['internal_links'] ?? [['url' => $domain, 'anchor_text' => 'client website']];
-                    $external = $csvPlan['external_links'] ?? [
-                        ['url' => 'https://en.wikipedia.org/wiki/Search_engine_optimization', 'anchor_text' => 'Wikipedia: SEO'],
-                        ['url' => 'https://developers.google.com/search/docs/fundamentals/seo-starter-guide', 'anchor_text' => 'Google SEO Guide'],
-                        ['url' => 'https://moz.com/beginners-guide-to-seo', 'anchor_text' => 'Moz SEO Guide'],
-                        ['url' => 'https://schema.org/Article', 'anchor_text' => 'Schema.org Article'],
-                    ];
+                    $external = $csvPlan['external_links'] ?? array_slice(array_map(fn($p) => ['url' => $p['page_url'], 'anchor_text' => $p['page_title'] ?: basename($p['page_url'])], $pages), 0, 4) ?: [['url' => $domain, 'anchor_text' => 'Customer Website']];
                     $prompts = $csvPlan['image_prompts'] ?? ["Editorial image for $kw, professional, no text.", "Practical scene for $kw, authentic style."];
                     $title = $csvPlan['title'] ?? ucwords($kw);
                     $primaryKw = $csvPlan['primary_keyword'] ?? $kw;
@@ -1156,13 +1146,22 @@ function handleApiRoute($uri) {
                     if (!in_array($candidate['page_url'], array_column($relatedPages, 'page_url'))) $relatedPages[] = $candidate;
                 }
                 $internal = array_map(fn($x) => ['url' => $x['page_url'], 'anchor_text' => $x['page_title'] ?: 'related website page'], $relatedPages) ?: [['url' => $domain, 'anchor_text' => 'customer website']];
-                $external = [
-                    ['url' => 'https://en.wikipedia.org/wiki/Search_engine_optimization', 'anchor_text' => 'Wikipedia: Search Engine Optimization'],
-                    ['url' => 'https://developers.google.com/search/docs/fundamentals/seo-starter-guide', 'anchor_text' => 'Google SEO Starter Guide'],
-                    ['url' => 'https://moz.com/beginners-guide-to-seo', 'anchor_text' => 'Moz Beginner Guide to SEO'],
-                    ['url' => 'https://www.nngroup.com/articles/', 'anchor_text' => 'Nielsen Norman Group UX Research'],
-                    ['url' => 'https://schema.org/Article', 'anchor_text' => 'Schema.org Article Structured Data']
-                ];
+                // Use crawled customer website pages as external references (not hardcoded)
+                // Only use pages that actually exist on the customer's website
+                $external = [];
+                $allCrawledUrls = [];
+                foreach ($pages as $cp) {
+                    $cpUrl = $cp['page_url'] ?? '';
+                    $cpTitle = $cp['page_title'] ?? '';
+                    if (!empty($cpUrl) && $cpUrl !== $domain && !in_array($cpUrl, $allCrawledUrls)) {
+                        $allCrawledUrls[] = $cpUrl;
+                        $external[] = ['url' => $cpUrl, 'anchor_text' => $cpTitle ?: basename($cpUrl)];
+                    }
+                }
+                // If not enough customer pages, add the domain itself
+                if (count($external) < 4) {
+                    $external[] = ['url' => $domain, 'anchor_text' => 'Customer Website'];
+                }
                 $prompts = ["Editorial photograph illustrating $kw, natural lighting, no text, no logos, professional magazine style.", "Practical real-world scene related to $kw, authentic people and setting, no text or logos."];
                     $title = ucwords($kw);
                     $primaryKw = $kw;
@@ -2094,12 +2093,8 @@ function handleApiRoute($uri) {
                 $kws = [['keyword' => $kw, 'volume' => 'Custom topic', 'difficulty' => 'Medium', 'intent' => 'Informational']];
                 $headings = ['H1' => ucwords($kw), 'H2' => ['Overview and practical context', 'What research reveals', 'How to apply the insights', 'Frequently Asked Questions'], 'H3' => ['Key findings', 'Common misconceptions', 'Action steps']];
                 $internal = [['url' => $page['page_url'] ?? $domain, 'anchor_text' => $page['page_title'] ?? 'related website page']];
-                $external = [
-                    ['url' => 'https://en.wikipedia.org/wiki/Search_engine_optimization', 'anchor_text' => 'Wikipedia: SEO'],
-                    ['url' => 'https://developers.google.com/search/docs/fundamentals/seo-starter-guide', 'anchor_text' => 'Google SEO Guide'],
-                    ['url' => 'https://moz.com/beginners-guide-to-seo', 'anchor_text' => 'Moz SEO Guide'],
-                    ['url' => 'https://schema.org/Article', 'anchor_text' => 'Schema.org Article'],
-                ];
+                // Use crawled customer pages as external links (not hardcoded)
+                $external = array_slice(array_map(fn($p) => ['url' => $p['page_url'], 'anchor_text' => $p['page_title'] ?: basename($p['page_url'])], $pages), 0, 4) ?: [['url' => $domain, 'anchor_text' => 'Customer Website']];
                 $prompts = ["Editorial image for $kw, professional, no text.", "Practical scene for $kw, authentic style."];
                 
                 $schedDate = (new DateTime($startDate))->modify(($day - 1) . ' days')->format('Y-m-d');
