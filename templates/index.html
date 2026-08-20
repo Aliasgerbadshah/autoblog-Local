@@ -783,6 +783,17 @@
                             <div class="form-group"><label>Customer ID</label><input type="text" id="v-gkw-customer-id" placeholder="e.g. 123-456-7890" required></div>
                             <div class="form-group"><label>Login Customer ID</label><input type="text" id="v-gkw-login-customer-id" placeholder="Same as Customer ID (or MCC ID)"></div>
                         </div>
+                        <div style="background:rgba(5,150,105,0.08); padding:12px 16px; border-radius:8px; border:1px solid rgba(5,150,105,0.2); margin:12px 0;">
+                            <p style="font-size:0.8rem; font-weight:700; color:#065f46; margin-bottom:6px;">🔑 OAuth Refresh Token for Google Ads API:</p>
+                            <p style="font-size:0.75rem; color:#64748b; margin-bottom:8px;">The Keyword Planner needs a refresh token with the <code style="background:#f1f5f9;padding:1px 4px;border-radius:3px;">https://www.googleapis.com/auth/adwords</code> scope. If you already have a Blogger refresh token with BOTH scopes, it will work. Otherwise generate a new one below.</p>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label>Refresh Token</label>
+                                    <input type="password" id="v-gkw-refresh-token" placeholder="1//04... (paste or leave blank to reuse Blogger token)">
+                                    <small style="color:#64748b;font-size:0.75rem;">🔒 If blank, the Blogger vault refresh token is used automatically. Only needed if your Blogger token lacks the adwords scope.</small>
+                                </div>
+                            </div>
+                        </div>
                         <button type="submit" class="btn btn-purple">💾 Save Keyword Planner Credentials</button>
                         <button type="button" class="btn" style="background:#0f172a;" onclick="testKeywordPlanner()">🔍 Test Keyword Planner</button>
                         <div id="gkw-test-status" style="margin-top:10px;font-size:0.85rem;font-weight:700;"></div>
@@ -792,8 +803,9 @@
                             <li>Go to <strong>Tools & Settings → API Center</strong> → Apply for <strong>Developer Token</strong> (Basic Access is free)</li>
                             <li>Copy your <strong>Developer Token</strong> and <strong>Customer ID</strong> (top-right corner, format: 123-456-7890)</li>
                             <li>Go to <a href="https://console.cloud.google.com" target="_blank" style="color:#1b57f6;">Google Cloud Console</a> → APIs & Services → Enable <strong>Google Ads API</strong></li>
-                            <li>Your OAuth credentials (Client ID/Secret) from Blogger vault will be reused automatically</li>
-                            <li>Generate a Refresh Token with scope: <code style="background:#f1f5f9;padding:2px 6px;border-radius:4px;">https://www.googleapis.com/auth/adwords</code> (use OAuth Playground with your own credentials, same as Blogger setup)</li>
+                            <li>Generate a Refresh Token with <strong>BOTH</strong> scopes: <code style="background:#f1f5f9;padding:2px 6px;border-radius:4px;">https://www.googleapis.com/auth/blogger</code> AND <code style="background:#f1f5f9;padding:2px 6px;border-radius:4px;">https://www.googleapis.com/auth/adwords</code></li>
+                            <li>In <a href="https://developers.google.com/oauthplayground" target="_blank" style="color:#1b57f6;">OAuth Playground</a>: click ⚙️ → Use your own credentials → paste Client ID/Secret → In Step 1 paste BOTH scopes (comma-separated) → Authorize → Step 2: Exchange → Copy Refresh Token</li>
+                            <li>Paste the Refresh Token in the field above (or in Blogger vault — it will be reused automatically)</li>
                         </ol></details>
                     </form>
                 </div>
@@ -1113,6 +1125,7 @@
                     if (services.google_keyword_planner.developer_token) document.getElementById('v-gkw-dev-token').value = services.google_keyword_planner.developer_token;
                     if (services.google_keyword_planner.customer_id) document.getElementById('v-gkw-customer-id').value = services.google_keyword_planner.customer_id;
                     if (services.google_keyword_planner.login_customer_id) document.getElementById('v-gkw-login-customer-id').value = services.google_keyword_planner.login_customer_id;
+                    if (services.google_keyword_planner.refresh_token) document.getElementById('v-gkw-refresh-token').value = services.google_keyword_planner.refresh_token;
                 }
 
                 if (services.wordpress_api) {
@@ -1240,7 +1253,8 @@
                 account_alias: 'Google Keyword Planner',
                 developer_token: document.getElementById('v-gkw-dev-token').value,
                 customer_id: document.getElementById('v-gkw-customer-id').value,
-                login_customer_id: document.getElementById('v-gkw-login-customer-id').value || document.getElementById('v-gkw-customer-id').value
+                login_customer_id: document.getElementById('v-gkw-login-customer-id').value || document.getElementById('v-gkw-customer-id').value,
+                refresh_token: document.getElementById('v-gkw-refresh-token').value
             });
             return false;
         }
@@ -1255,7 +1269,8 @@
                     body: JSON.stringify({
                         developer_token: document.getElementById('v-gkw-dev-token').value,
                         customer_id: document.getElementById('v-gkw-customer-id').value,
-                        login_customer_id: document.getElementById('v-gkw-login-customer-id').value
+                        login_customer_id: document.getElementById('v-gkw-login-customer-id').value,
+                        refresh_token: document.getElementById('v-gkw-refresh-token').value
                     })
                 });
                 const data = await res.json();

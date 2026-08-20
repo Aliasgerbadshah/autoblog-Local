@@ -1,7 +1,7 @@
 <?php
 /**
  * Google Keyword Planner API Integration
- * Uses Google Ads API v18 to get real keyword search volumes, competition, and ideas.
+ * Uses Google Ads API v21 to get real keyword search volumes, competition, and ideas.
  * 
  * Requirements:
  * - Google Ads Developer Token (from https://ads.google.com/home/tools/ → API Center)
@@ -18,7 +18,7 @@ require_once __DIR__ . '/helpers.php';
 
 class GoogleKeywordPlanner {
     
-    const API_BASE = 'https://googleads.googleapis.com/v18';
+    const API_BASE = 'https://googleads.googleapis.com/v21';
     
     /**
      * Get fresh OAuth access token for Google Ads API.
@@ -63,20 +63,29 @@ class GoogleKeywordPlanner {
         $cleanCustomerId = str_replace('-', '', $customerId);
         $cleanLoginCustomerId = str_replace('-', '', ($loginCustomerId ?: $customerId));
         
-        $url = self::API_BASE . "/customers/{$cleanCustomerId}/keywordPlanIdeas:generateKeywordIdeas";
+        $url = self::API_BASE . "/customers/{$cleanCustomerId}:generateKeywordIdeas";
         
-        // Build request body
+        // Month number to Google Ads API enum name
+        $monthEnum = [1=>'JANUARY',2=>'FEBRUARY',3=>'MARCH',4=>'APRIL',5=>'MAY',6=>'JUNE',
+                      7=>'JULY',8=>'AUGUST',9=>'SEPTEMBER',10=>'OCTOBER',11=>'NOVEMBER',12=>'DECEMBER'];
+        $currentMonth = intval(date('n'));
+        $currentYear = intval(date('Y'));
+        $startMonth = max(1, $currentMonth - 6);
+        $startYear = $currentYear;
+        if ($currentMonth - 6 < 1) { $startYear--; $startMonth = $currentMonth + 6; }
+        
+        // Build request body (REST format)
         $body = [
             'keywordSeed' => [
                 'keywords' => array_slice($seedKeywords, 0, 10)
             ],
-            'languageConstants' => ["languageConstants/{$languageCode}"],
+            'language' => "languageConstants/{$languageCode}",
             'geoTargetConstants' => ["geoTargetConstants/{$locationId}"],
             'pageSize' => 100,
             'historicalMetricsOptions' => [
                 'yearMonthRange' => [
-                    'start' => ['year' => intval(date('Y')), 'month' => max(1, intval(date('n')) - 6)],
-                    'end' => ['year' => intval(date('Y')), 'month' => intval(date('n'))]
+                    'start' => ['year' => $startYear, 'month' => $monthEnum[$startMonth]],
+                    'end' => ['year' => $currentYear, 'month' => $monthEnum[$currentMonth]]
                 ]
             ]
         ];
@@ -91,6 +100,13 @@ class GoogleKeywordPlanner {
         error_log("[Google Keyword Planner] Requesting ideas for: " . implode(', ', $seedKeywords));
         
         $result = curlPost($url, $body, $headers, 30);
+        
+        // Handle non-JSON responses (e.g. Google HTML error pages like 404)
+        if (!is_array($result['data'])) {
+            $rawPreview = substr($result['raw'] ?? '', 0, 200);
+            error_log("[Google Keyword Planner] Non-JSON response HTTP {$result['http_code']}: $rawPreview");
+            return ['success' => false, 'error' => "Google Ads API returned non-JSON response (HTTP {$result['http_code']}). This usually means the endpoint URL is wrong or the API version is sunset. URL: $url"];
+        }
         
         if ($result['http_code'] >= 400) {
             $error = $result['data']['error']['message'] ?? ($result['raw'] ?? 'Unknown error');
@@ -108,31 +124,41 @@ class GoogleKeywordPlanner {
             return ['success' => false, 'error' => "Google Ads API Error (HTTP {$result['http_code']}): $error"];
         }
         
-        // Parse response
+        // Parse response — REST API wraps results differently
         $keywords = [];
         $results = $result['data'] ?? [];
         
-        $ideas = $results['keywordIdeas'] ?? [];
-        if (empty($ideas)) {
-            $ideas = $results['results'] ?? [];
-        }
+        // REST API returns results at top level, not nested under 'keywordIdeas'
+        $ideas = $results['results'] ?? $results['keywordIdeas'] ?? [];
         
         foreach ($ideas as $idea) {
+            // REST format: text is in keywordPlanAdGroupKeyword or directly
             $text = $idea['text'] ?? '';
+            if (empty($text)) {
+                $text = $idea['keywordPlanAdGroupKeyword']['text'] ?? '';
+            }
             if (empty($text)) continue;
             
+            // Metrics can be nested under keywordPlanAdGroupKeywordHistoricalMetrics or directly
             $metrics = $idea['keywordPlanAdGroupKeywordHistoricalMetrics'] ?? [];
+            if (empty($metrics)) {
+                $metrics = $idea['historicalMetrics'] ?? [];
+            }
             
             // Monthly search volumes
             $monthlySearchVolumes = $metrics['monthlySearchVolumes'] ?? [];
             $avgMonthlySearches = $metrics['avgMonthlySearches'] ?? null;
             
             // Get average monthly searches
+            // REST API wraps Int64 values in {"value": N} objects
             $volume = 0;
             if ($avgMonthlySearches !== null) {
-                $volume = intval($avgMonthlySearches);
+                $volume = is_array($avgMonthlySearches) ? intval($avgMonthlySearches['value'] ?? 0) : intval($avgMonthlySearches);
             } elseif (!empty($monthlySearchVolumes)) {
-                $volumes = array_map(function($m) { return intval($m['monthlySearches'] ?? 0); }, $monthlySearchVolumes);
+                $volumes = array_map(function($m) { 
+                    $ms = $m['monthlySearches'] ?? 0;
+                    return is_array($ms) ? intval($ms['value'] ?? 0) : intval($ms);
+                }, $monthlySearchVolumes);
                 $volume = intval(array_sum($volumes) / count($volumes));
             }
             
@@ -143,9 +169,11 @@ class GoogleKeywordPlanner {
             
             // Competition index (0-100)
             $compIndex = $metrics['competitionIndex'] ?? null;
+            if (is_array($compIndex)) $compIndex = $compIndex['value'] ?? null;
             
-            // CPC (in micros → dollars)
+            // CPC (in micros → dollars) — REST API wraps Int64 in {"value": N}
             $cpcMicros = $metrics['lowTopOfPageBidMicros'] ?? null;
+            if (is_array($cpcMicros)) $cpcMicros = $cpcMicros['value'] ?? null;
             $cpc = $cpcMicros ? round(intval($cpcMicros) / 1000000, 2) : null;
             
             $keywords[] = [
@@ -157,10 +185,11 @@ class GoogleKeywordPlanner {
                 'intent' => self::determineIntent($text),
                 'source' => 'Google Keyword Planner',
                 'monthly_data' => array_map(function($m) {
+                    $ms = $m['monthlySearches'] ?? 0;
                     return [
                         'year' => $m['year'] ?? '',
                         'month' => $m['month'] ?? '',
-                        'volume' => intval($m['monthlySearches'] ?? 0)
+                        'volume' => is_array($ms) ? intval($ms['value'] ?? 0) : intval($ms)
                     ];
                 }, $monthlySearchVolumes)
             ];
