@@ -12,7 +12,7 @@ return [
     'site_name'        => 'ColorFiind Blog',
     'site_tagline'     => 'Insights, Trends & Strategies',
     'site_url'         => 'https://colorfiind.com/blog',
-    'logo_url'         => '/blog/assets/images/logo.png',   // Place your logo here
+    'logo_url'         => '/blog/assets/images/logo.png',
     'favicon_url'      => '/blog/assets/images/favicon.png',
 
     // ═══════════════════════════════════════════
@@ -103,5 +103,7 @@ return [
     // INTEGRATION WITH AUTOBLOG SYSTEM
     // ═══════════════════════════════════════════
     // Path back to autoblog root (for shared DB, AI, images)
-    'autoblog_root'     => dirname(__DIR__),  // Goes up from website_blog/ to sub_apps/
+    // colorfiind.com/blog/ → public_html/blog/
+    // apps.colorfiind.com → public_html/sub_apps/
+    'autoblog_root'     => dirname(__DIR__) . '/sub_apps',
 ];

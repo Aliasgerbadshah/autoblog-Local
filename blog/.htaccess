@@ -1,4 +1,4 @@
-# Website Blog .htaccess
+# Blog .htaccess — lives at colorfiind.com/blog/
 RewriteEngine On
 RewriteBase /blog/
 
