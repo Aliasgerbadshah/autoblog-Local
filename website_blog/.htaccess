@@ -1,0 +1,26 @@
+# Website Blog .htaccess
+RewriteEngine On
+RewriteBase /blog/
+
+# RSS feed
+RewriteRule ^rss\.xml$ rss.xml [L]
+
+# Sitemap
+RewriteRule ^sitemap\.xml$ sitemap.xml [L]
+
+# Category page
+RewriteRule ^category/(.+)/$ index.php?category=$1 [L,QSA]
+
+# Tag page
+RewriteRule ^tag/(.+)/$ index.php?tag=$1 [L,QSA]
+
+# API endpoint for related posts
+RewriteRule ^api/related$ api/related.php [L,QSA]
+
+# Posts directory (static HTML files — already have index.html)
+# /blog/posts/2026/08/slug/ → serves /posts/2026/08/slug/index.html automatically
+
+# Default: index.php
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ index.php [L,QSA]
