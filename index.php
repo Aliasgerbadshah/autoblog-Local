@@ -1440,6 +1440,21 @@ function handleApiRoute($uri) {
         } elseif ($platform === 'wordpress') {
             $vault = SecurityVault::getApiCredentials($userId, 'wordpress_api');
             $result = Publisher::publishWordpress($userId, $vault['wp_site_url'] ?? '', $vault['wp_username'] ?? '', $vault['wp_app_password'] ?? '', $title, $articleContent);
+        } elseif ($platform === 'website') {
+            // Publish to blog/ folder at colorfiind.com/blog/
+            require_once __DIR__ . '/../blog/includes/publisher.php';
+            $wpub = new WebsitePublisher();
+            $slug = slugify($title);
+            $cat = $item['category'] ?? 'General';
+            $kw = $item['primary_keyword'] ?? '';
+            $thumbUrl = '';
+            if (preg_match('#<img[^>]+src=["\']([^"\']+)["\']#i', $articleContent, $m)) { $thumbUrl = $m[1]; }
+            $result = $wpub->publish([
+                'title' => $title, 'slug' => $slug, 'content_html' => $articleContent,
+                'category' => $cat, 'tags' => array_filter([$kw, $cat]),
+                'thumbnail_url' => $thumbUrl, 'author' => 'ColorFiind Team',
+                'meta_description' => substr(strip_tags($articleContent), 0, 160), 'meta_keywords' => $kw,
+            ]);
         } else {
             Publisher::publishLocal($userId, $title, slugify($title), $articleContent, 'General', $item['primary_keyword'] ?? '', '');
             $result = ['success' => true, 'url' => '/published_posts/' . slugify($title) . '.html', 'message' => 'Published locally.'];
@@ -1528,6 +1543,22 @@ function handleApiRoute($uri) {
             } elseif ($platform === 'wordpress') {
                 $vault = SecurityVault::getApiCredentials($userId, 'wordpress_api');
                 $result = Publisher::publishWordpress($userId, $vault['wp_site_url'] ?? '', $vault['wp_username'] ?? '', $vault['wp_app_password'] ?? '', $title, $articleContent);
+            } elseif ($platform === 'website') {
+                // Schedule on blog/ at colorfiind.com/blog/
+                require_once __DIR__ . '/../blog/includes/publisher.php';
+                $wpub = new WebsitePublisher();
+                $slug = slugify($title);
+                $cat = $item['category'] ?? 'General';
+                $kw = $item['primary_keyword'] ?? '';
+                $thumbUrl = '';
+                if (preg_match('#<img[^>]+src=["\']([^"\']+)["\']#i', $articleContent, $m)) { $thumbUrl = $m[1]; }
+                $result = $wpub->publish([
+                    'title' => $title, 'slug' => $slug, 'content_html' => $articleContent,
+                    'category' => $cat, 'tags' => array_filter([$kw, $cat]),
+                    'thumbnail_url' => $thumbUrl, 'scheduled_date' => $scheduledStr,
+                    'author' => 'ColorFiind Team',
+                    'meta_description' => substr(strip_tags($articleContent), 0, 160), 'meta_keywords' => $kw,
+                ]);
             } else {
                 Publisher::publishLocal($userId, $title, slugify($title), $articleContent, 'General', $item['primary_keyword'] ?? '', '');
                 $result = ['success' => true, 'url' => '/published_posts/' . slugify($title) . '.html'];
@@ -1588,6 +1619,27 @@ function handleApiRoute($uri) {
                 $stmt = $db->prepare("UPDATE campaign_items SET article_status = 'Published' WHERE id = ?");
                 $stmt->execute([$itemId]);
                 jsonResponse(['success' => true, 'message' => 'Published to WordPress.', 'url' => $schedDirectResult['url'] ?? '']);
+            }
+        } elseif ($platform === 'website') {
+            // Schedule on blog/ at colorfiind.com/blog/
+            require_once __DIR__ . '/../blog/includes/publisher.php';
+            $wpub = new WebsitePublisher();
+            $slug = slugify($schedTitle);
+            $cat = $item['category'] ?? 'General';
+            $kw = $item['primary_keyword'] ?? '';
+            $thumbUrl = '';
+            if (preg_match('#<img[^>]+src=["\']([^"\']+)["\']#i', $schedArticleContent, $m)) { $thumbUrl = $m[1]; }
+            $schedDirectResult = $wpub->publish([
+                'title' => $schedTitle, 'slug' => $slug, 'content_html' => $schedArticleContent,
+                'category' => $cat, 'tags' => array_filter([$kw, $cat]),
+                'thumbnail_url' => $thumbUrl, 'scheduled_date' => $scheduledStr,
+                'author' => 'ColorFiind Team',
+                'meta_description' => substr(strip_tags($schedArticleContent), 0, 160), 'meta_keywords' => $kw,
+            ]);
+            if (!empty($schedDirectResult['success'])) {
+                $stmt = $db->prepare("UPDATE campaign_items SET article_status = ?, scheduled_date = ?, scheduled_time = ? WHERE id = ?");
+                $stmt->execute([$schedDirectResult['status'] === 'scheduled' ? 'Scheduled' : 'Published', $schedDate, $schedTime, $itemId]);
+                jsonResponse(['success' => true, 'message' => $schedDirectResult['message'], 'url' => $schedDirectResult['url'] ?? '']);
             }
         }
         
@@ -2299,7 +2351,18 @@ function handleApiRoute($uri) {
             $schedulerOutput .= ob_get_clean();
         }
         ob_end_clean();
-        jsonResponse(['success' => true, 'timer_output' => $timerOutput, 'scheduler_output' => $schedulerOutput, 'message' => 'Cron executed: approval timer + scheduler ran.']);
+        // Also publish any scheduled website blog posts
+        $websitePubCount = 0;
+        $blogPubPath = dirname(__DIR__) . '/blog/includes/publisher.php';
+        if (file_exists($blogPubPath)) {
+            try {
+                require_once $blogPubPath;
+                $wpub = new WebsitePublisher();
+                $wpRes = $wpub->publishScheduled();
+                $websitePubCount = $wpRes['published'] ?? 0;
+            } catch (Exception $e) {}
+        }
+        jsonResponse(['success' => true, 'timer_output' => $timerOutput, 'scheduler_output' => $schedulerOutput, 'website_published' => $websitePubCount, 'message' => 'Cron executed: approval timer + scheduler ran.' . ($websitePubCount ? " + {$websitePubCount} website blog posts published." : '')]);
     }
 
     // ========== DELETE CAMPAIGN ITEM ==========
