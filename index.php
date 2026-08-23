@@ -59,6 +59,30 @@ try {
 
 startSession();
 
+/**
+ * Get WebsitePublisher instance.
+ * Tries multiple paths: blog/ at public_html/blog/, or blog/ inside sub_apps/.
+ * Returns [publisher, error]. If publisher is null, error has the message.
+ */
+function getBlogPublisher() {
+    $paths = [
+        dirname(__DIR__) . '/blog/includes/publisher.php',  // public_html/blog/
+        __DIR__ . '/blog/includes/publisher.php',            // sub_apps/blog/
+        __DIR__ . '/website_blog/includes/publisher.php',    // legacy folder name
+    ];
+    foreach ($paths as $p) {
+        if (file_exists($p)) {
+            require_once $p;
+            try {
+                return [new WebsitePublisher(), null];
+            } catch (Exception $e) {
+                return [null, 'WebsitePublisher error: ' . $e->getMessage()];
+            }
+        }
+    }
+    return [null, 'Blog publisher not found. Upload blog/ folder to public_html/blog/ or public_html/sub_apps/blog/ and ensure config.php autoblog_root points to sub_apps/.'];
+}
+
 // Parse the request URI
 $requestUri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 $requestUri = rtrim($requestUri, '/');
@@ -1442,8 +1466,8 @@ function handleApiRoute($uri) {
             $result = Publisher::publishWordpress($userId, $vault['wp_site_url'] ?? '', $vault['wp_username'] ?? '', $vault['wp_app_password'] ?? '', $title, $articleContent);
         } elseif ($platform === 'website') {
             // Publish to blog/ folder at colorfiind.com/blog/
-            require_once __DIR__ . '/../blog/includes/publisher.php';
-            $wpub = new WebsitePublisher();
+            // getBlogPublisher() handles path
+            list($wpub, $wpubErr) = getBlogPublisher(); if ($wpubErr) jsonResponse(["success" => false, "error" => $wpubErr], 400);
             $slug = slugify($title);
             $cat = $item['category'] ?? 'General';
             $kw = $item['primary_keyword'] ?? '';
@@ -1545,8 +1569,8 @@ function handleApiRoute($uri) {
                 $result = Publisher::publishWordpress($userId, $vault['wp_site_url'] ?? '', $vault['wp_username'] ?? '', $vault['wp_app_password'] ?? '', $title, $articleContent);
             } elseif ($platform === 'website') {
                 // Schedule on blog/ at colorfiind.com/blog/
-                require_once __DIR__ . '/../blog/includes/publisher.php';
-                $wpub = new WebsitePublisher();
+                // getBlogPublisher() handles path
+                list($wpub, $wpubErr) = getBlogPublisher(); if ($wpubErr) jsonResponse(["success" => false, "error" => $wpubErr], 400);
                 $slug = slugify($title);
                 $cat = $item['category'] ?? 'General';
                 $kw = $item['primary_keyword'] ?? '';
@@ -1622,8 +1646,8 @@ function handleApiRoute($uri) {
             }
         } elseif ($platform === 'website') {
             // Schedule on blog/ at colorfiind.com/blog/
-            require_once __DIR__ . '/../blog/includes/publisher.php';
-            $wpub = new WebsitePublisher();
+            // getBlogPublisher() handles path
+            list($wpub, $wpubErr) = getBlogPublisher(); if ($wpubErr) jsonResponse(["success" => false, "error" => $wpubErr], 400);
             $slug = slugify($schedTitle);
             $cat = $item['category'] ?? 'General';
             $kw = $item['primary_keyword'] ?? '';
@@ -2353,11 +2377,9 @@ function handleApiRoute($uri) {
         ob_end_clean();
         // Also publish any scheduled website blog posts
         $websitePubCount = 0;
-        $blogPubPath = dirname(__DIR__) . '/blog/includes/publisher.php';
-        if (file_exists($blogPubPath)) {
+        list($wpub, $wpubErr) = getBlogPublisher();
+        if (!$wpubErr && $wpub) {
             try {
-                require_once $blogPubPath;
-                $wpub = new WebsitePublisher();
                 $wpRes = $wpub->publishScheduled();
                 $websitePubCount = $wpRes['published'] ?? 0;
             } catch (Exception $e) {}
