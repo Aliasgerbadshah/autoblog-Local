@@ -103,7 +103,8 @@ return [
     // INTEGRATION WITH AUTOBLOG SYSTEM
     // ═══════════════════════════════════════════
     // Path back to autoblog root (for shared DB, AI, images)
-    // colorfiind.com/blog/ → public_html/blog/
-    // apps.colorfiind.com → public_html/sub_apps/
-    'autoblog_root'     => dirname(__DIR__) . '/sub_apps',
+    // Auto-detects: if sub_apps/ is a sibling, use it; otherwise same parent
+    'autoblog_root'     => file_exists(dirname(__DIR__) . '/sub_apps/includes/database.php')
+        ? dirname(__DIR__) . '/sub_apps'        // blog/ is at public_html/blog/
+        : dirname(__DIR__),                      // blog/ is at public_html/sub_apps/blog/
 ];
