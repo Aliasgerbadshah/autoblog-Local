@@ -116,6 +116,23 @@ function resolveCampaignHtmlFile($htmlPath) {
 }
 
 /** Publish/schedule one article to the separate website blog. Always returns an array. */
+function cleanOAuthValue($value) {
+    $value = trim((string)$value);
+    $value = trim($value, " \t\n\r\0\x0B\"'");
+    $value = preg_replace('/\s+/', '', $value);
+    return $value;
+}
+
+/** Keyword Planner OAuth: KP vault first, then Blogger vault. */
+function resolveKeywordPlannerOAuth($userId, $input = []) {
+    $gkw = SecurityVault::getApiCredentials($userId, 'google_keyword_planner') ?: [];
+    $blog = SecurityVault::getApiCredentials($userId, 'blogger_api') ?: [];
+    $clientId = cleanOAuthValue($input['client_id'] ?? '') ?: cleanOAuthValue($gkw['client_id'] ?? '') ?: cleanOAuthValue($blog['client_id'] ?? '');
+    $clientSecret = cleanOAuthValue($input['client_secret'] ?? '') ?: cleanOAuthValue($gkw['client_secret'] ?? '') ?: cleanOAuthValue($blog['client_secret'] ?? '');
+    $refreshToken = cleanOAuthValue($input['refresh_token'] ?? '') ?: cleanOAuthValue($gkw['refresh_token'] ?? '') ?: cleanOAuthValue($blog['refresh_token'] ?? '');
+    return [$clientId, $clientSecret, $refreshToken];
+}
+
 function publishToWebsiteBlog($item, $title, $articleContent, $scheduledStr = null) {
     try {
         list($wpub, $wpubErr) = getBlogPublisher();
@@ -455,15 +472,12 @@ function handleApiRoute($uri) {
             jsonResponse(['success' => false, 'error' => 'Google Ads Developer Token and Customer ID are required. Save them in the Keyword Planner vault section. Get Developer Token at: Google Ads → Tools & Settings → API Center'], 400);
         }
         
-        // Get OAuth credentials (use KP-specific refresh token first, then fall back to Blogger's)
-        $bloggerVault = SecurityVault::getApiCredentials($userId, 'blogger_api');
-        $clientId = trim($bloggerVault['client_id'] ?? '');
-        $clientSecret = trim($bloggerVault['client_secret'] ?? '');
-        // Refresh token: KP vault > Blogger vault
-        $refreshToken = trim($gkwVault['refresh_token'] ?? '') ?: trim($bloggerVault['refresh_token'] ?? '');
-        
+        list($clientId, $clientSecret, $refreshToken) = resolveKeywordPlannerOAuth($userId, $input);
         if (empty($clientId) || empty($clientSecret) || empty($refreshToken)) {
-            jsonResponse(['success' => false, 'error' => 'OAuth credentials required. Save Client ID, Client Secret, and Refresh Token in Blogger vault or Keyword Planner vault. The refresh token needs scope: https://www.googleapis.com/auth/adwords'], 400);
+            jsonResponse(['success' => false, 'error' => 'OAuth Client ID, Client Secret, and Refresh Token are required. Save them in the Keyword Planner vault (or Blogger vault). Client ID must end with .apps.googleusercontent.com — not a Google Ads account number.'], 400);
+        }
+        if (strpos($clientId, '.apps.googleusercontent.com') === false) {
+            jsonResponse(['success' => false, 'error' => 'That Client ID is not a Google Cloud OAuth Client ID. It must look like xxx.apps.googleusercontent.com. You probably pasted a Google Ads customer/manager ID.'], 400);
         }
         
         // Map country to location ID
@@ -498,7 +512,6 @@ function handleApiRoute($uri) {
         $developerToken = trim($input['developer_token'] ?? '');
         $customerId = trim($input['customer_id'] ?? '');
         $loginCustomerId = trim($input['login_customer_id'] ?? $customerId);
-        $inputRefreshToken = trim($input['refresh_token'] ?? '');
         
         if (empty($developerToken) || empty($customerId)) {
             $gkwVault = SecurityVault::getApiCredentials($userId, 'google_keyword_planner');
@@ -511,16 +524,12 @@ function handleApiRoute($uri) {
             jsonResponse(['success' => false, 'error' => 'Developer Token and Customer ID are required.'], 400);
         }
         
-        // Get OAuth credentials — use KP-specific refresh token first, then fall back to Blogger's
-        $bloggerVault = SecurityVault::getApiCredentials($userId, 'blogger_api');
-        $gkwVault = SecurityVault::getApiCredentials($userId, 'google_keyword_planner');
-        $clientId = trim($bloggerVault['client_id'] ?? '');
-        $clientSecret = trim($bloggerVault['client_secret'] ?? '');
-        // Refresh token: input > KP vault > Blogger vault
-        $refreshToken = $inputRefreshToken ?: trim($gkwVault['refresh_token'] ?? '') ?: trim($bloggerVault['refresh_token'] ?? '');
-        
+        list($clientId, $clientSecret, $refreshToken) = resolveKeywordPlannerOAuth($userId, $input);
         if (empty($clientId) || empty($clientSecret) || empty($refreshToken)) {
-            jsonResponse(['success' => false, 'error' => 'OAuth credentials required. Save them in Blogger vault first.'], 400);
+            jsonResponse(['success' => false, 'error' => 'OAuth Client ID, Client Secret, and Refresh Token are required. Paste them in the Keyword Planner vault (same Google Cloud Web app that created the refresh token).'], 400);
+        }
+        if (strpos($clientId, '.apps.googleusercontent.com') === false) {
+            jsonResponse(['success' => false, 'error' => 'That Client ID is not a Google Cloud OAuth Client ID. It must end with .apps.googleusercontent.com. Do not paste a Google Ads customer/manager ID there.'], 400);
         }
         
         // Test with a simple keyword

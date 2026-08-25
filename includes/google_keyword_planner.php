@@ -43,7 +43,14 @@ class GoogleKeywordPlanner {
         
         $errData = $result['data'] ?? [];
         $errMsg = $errData['error'] ?? '';
-        return ['success' => false, 'error' => "OAuth failed: $errMsg (HTTP {$result['http_code']})"];
+        $errDesc = $errData['error_description'] ?? '';
+        if ($errMsg === 'invalid_client') {
+            return ['success' => false, 'error' => 'OAuth invalid_client (HTTP 401): Google rejected the OAuth Client ID / Client Secret pair. Use the Google Cloud Web application credentials that created this refresh token (ends with .apps.googleusercontent.com). Do NOT paste a Google Ads customer/manager ID here. Client ID and Secret must be from the same OAuth app.'];
+        }
+        if ($errMsg === 'unauthorized_client') {
+            return ['success' => false, 'error' => 'OAuth unauthorized_client: this Refresh Token was created with a DIFFERENT Client ID/Secret. Generate a new refresh token in OAuth Playground using the same Client ID + Secret you saved.'];
+        }
+        return ['success' => false, 'error' => "OAuth failed: $errMsg" . ($errDesc ? " — $errDesc" : '') . " (HTTP {$result['http_code']})"];
     }
     
     /**

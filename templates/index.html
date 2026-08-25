@@ -785,13 +785,21 @@
                             <div class="form-group"><label>Login Customer ID</label><input type="text" id="v-gkw-login-customer-id" placeholder="Same as Customer ID (or MCC ID)"></div>
                         </div>
                         <div style="background:rgba(5,150,105,0.08); padding:12px 16px; border-radius:8px; border:1px solid rgba(5,150,105,0.2); margin:12px 0;">
-                            <p style="font-size:0.8rem; font-weight:700; color:#065f46; margin-bottom:6px;">🔑 OAuth Refresh Token for Google Ads API:</p>
-                            <p style="font-size:0.75rem; color:#64748b; margin-bottom:8px;">The Keyword Planner needs a refresh token with the <code style="background:#f1f5f9;padding:1px 4px;border-radius:3px;">https://www.googleapis.com/auth/adwords</code> scope. If you already have a Blogger refresh token with BOTH scopes, it will work. Otherwise generate a new one below.</p>
+                            <p style="font-size:0.8rem; font-weight:700; color:#065f46; margin-bottom:6px;">🔑 Google Cloud OAuth (required — this is what invalid_client means)</p>
+                            <p style="font-size:0.75rem; color:#64748b; margin-bottom:8px;">These are <strong>not</strong> Google Ads IDs. Use the same <strong>Web application</strong> Client ID + Secret from Google Cloud that you used in OAuth Playground. Client ID must end with <code>.apps.googleusercontent.com</code>. Refresh token needs scope <code>https://www.googleapis.com/auth/adwords</code>.</p>
                             <div class="form-grid">
                                 <div class="form-group">
+                                    <label>OAuth Client ID (Google Cloud)</label>
+                                    <input type="text" id="v-gkw-cid" placeholder="xxxx.apps.googleusercontent.com">
+                                </div>
+                                <div class="form-group">
+                                    <label>OAuth Client Secret</label>
+                                    <input type="password" id="v-gkw-secret" placeholder="GOCSPX-...">
+                                </div>
+                                <div class="form-group">
                                     <label>Refresh Token</label>
-                                    <input type="password" id="v-gkw-refresh-token" placeholder="1//04... (paste or leave blank to reuse Blogger token)">
-                                    <small style="color:#64748b;font-size:0.75rem;">🔒 If blank, the Blogger vault refresh token is used automatically. Only needed if your Blogger token lacks the adwords scope.</small>
+                                    <input type="password" id="v-gkw-refresh-token" placeholder="1//04...">
+                                    <small style="color:#64748b;font-size:0.75rem;">Must be created with THIS Client ID + Secret. If blank, Blogger vault values are reused.</small>
                                 </div>
                             </div>
                         </div>
@@ -1126,6 +1134,8 @@
                     if (services.google_keyword_planner.developer_token) document.getElementById('v-gkw-dev-token').value = services.google_keyword_planner.developer_token;
                     if (services.google_keyword_planner.customer_id) document.getElementById('v-gkw-customer-id').value = services.google_keyword_planner.customer_id;
                     if (services.google_keyword_planner.login_customer_id) document.getElementById('v-gkw-login-customer-id').value = services.google_keyword_planner.login_customer_id;
+                    if (services.google_keyword_planner.client_id) document.getElementById('v-gkw-cid').value = services.google_keyword_planner.client_id;
+                    if (services.google_keyword_planner.client_secret) document.getElementById('v-gkw-secret').value = services.google_keyword_planner.client_secret;
                     if (services.google_keyword_planner.refresh_token) document.getElementById('v-gkw-refresh-token').value = services.google_keyword_planner.refresh_token;
                 }
 
@@ -1271,6 +1281,8 @@
                         developer_token: document.getElementById('v-gkw-dev-token').value,
                         customer_id: document.getElementById('v-gkw-customer-id').value,
                         login_customer_id: document.getElementById('v-gkw-login-customer-id').value,
+                        client_id: document.getElementById('v-gkw-cid').value,
+                        client_secret: document.getElementById('v-gkw-secret').value,
                         refresh_token: document.getElementById('v-gkw-refresh-token').value
                     })
                 });
@@ -1811,31 +1823,6 @@
                 const data = await res.json();
                 alert(data.success ? '✅ ' + data.message : '🔴 ' + (data.error||'Failed'));
                 document.getElementById('custom-topics-count').innerText = topics.length;
-            } catch(e) { alert('Error: ' + e.message); }
-        }
-        async function clearCustomTopics() {
-            if (!confirm('Clear ALL custom topics?')) return;
-            try {
-                const res = await fetch('/api/custom-topics/upload', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({topics:[]})});
-                const data = await res.json();
-                document.getElementById('custom-topics-input').value = '';
-                document.getElementById('custom-topics-count').innerText = '0';
-                alert('Cleared!');
-            } catch(e) { alert('Error: ' + e.message); }
-        }
-        // ===== AUTO-REFRESH DASHBOARD EVERY 12 SECONDS =====
-        let _dashRefreshTimer = null;
-        function startDashRefresh() {
-            if (_dashRefreshTimer) clearInterval(_dashRefreshTimer);
-            _dashRefreshTimer = setInterval(() => {
-                loadDemoProgress();
-                loadStats(); // loadStats now also fetches custom topics count
-            }, 12000);
-        }
-        startDashRefresh();
-    </script>
-</body>
-</html> = topics.length;
             } catch(e) { alert('Error: ' + e.message); }
         }
         async function clearCustomTopics() {
