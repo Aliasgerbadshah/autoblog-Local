@@ -1,24 +1,22 @@
 <?php
 /**
  * Google Keyword Planner API Integration
- * Uses Google Ads API v21 to get real keyword search volumes, competition, and ideas.
- * 
+ * Uses current Google Ads API versions (v21 sunset 5 Aug 2026).
+ *
  * Requirements:
  * - Google Ads Developer Token (from https://ads.google.com/home/tools/ → API Center)
  * - Google Ads Customer ID (10-digit format: 123-456-7890)
- * - OAuth2 credentials (reuse Blogger's Client ID/Secret + Refresh Token)
- * 
+ * - OAuth2 credentials (Google Cloud Web Client ID/Secret + Refresh Token)
+ *
  * OAuth scope needed: https://www.googleapis.com/auth/adwords
- * Generate refresh token with BOTH scopes:
- *   https://www.googleapis.com/auth/blogger
- *   https://www.googleapis.com/auth/adwords
  */
 
 require_once __DIR__ . '/helpers.php';
 
 class GoogleKeywordPlanner {
-    
-    const API_BASE = 'https://googleads.googleapis.com/v21';
+
+    // Newest first. v21 sunset 5 Aug 2026 and now returns HTML 404.
+    const API_VERSIONS = ['v25', 'v24', 'v23', 'v22'];
     
     /**
      * Get fresh OAuth access token for Google Ads API.
