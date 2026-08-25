@@ -124,6 +124,56 @@ function cleanOAuthValue($value) {
 }
 
 /** Keyword Planner OAuth: KP vault first, then Blogger vault. */
+function keywordPlannerLocationAndLanguage($country = 'India', $language = 'en') {
+    $locationMap = ['india' => 2356, 'united states' => 2840, 'usa' => 2840, 'united kingdom' => 2826, 'canada' => 2124, 'australia' => 2036, 'uae' => 2784, 'germany' => 2276, 'france' => 2250, 'brazil' => 2070, 'japan' => 2392];
+    $langMap = ['en' => '1000', 'hi' => '1001', 'es' => '1003', 'fr' => '1002', 'de' => '1004', 'pt' => '1006', 'ja' => '1005', 'ar' => '1019'];
+    return [
+        $locationMap[strtolower((string)$country)] ?? 2356,
+        $langMap[$language] ?? '1000',
+    ];
+}
+
+/** Call saved Keyword Planner credentials for seed keywords. */
+function fetchKeywordPlannerKeywords($userId, $seedKeywords, $country = 'India', $language = 'en') {
+    $gkw = SecurityVault::getApiCredentials($userId, 'google_keyword_planner') ?: [];
+    $developerToken = trim($gkw['developer_token'] ?? '');
+    $customerId = trim($gkw['customer_id'] ?? '');
+    $loginCustomerId = trim($gkw['login_customer_id'] ?? $customerId);
+    if ($developerToken === '' || $customerId === '') {
+        return ['success' => false, 'error' => 'Keyword Planner is not saved. Save Developer Token + TEST Customer ID in API Vault first.'];
+    }
+    list($clientId, $clientSecret, $refreshToken) = resolveKeywordPlannerOAuth($userId);
+    if ($clientId === '' || $clientSecret === '' || $refreshToken === '') {
+        return ['success' => false, 'error' => 'Keyword Planner OAuth is missing. Save Client ID, Client Secret, and Refresh Token in the Keyword Planner vault.'];
+    }
+    $tokenResult = GoogleKeywordPlanner::getAccessToken($clientId, $clientSecret, $refreshToken);
+    if (empty($tokenResult['success'])) {
+        return ['success' => false, 'error' => 'Keyword Planner OAuth failed: ' . ($tokenResult['error'] ?? 'unknown')];
+    }
+    list($locationId, $languageCode) = keywordPlannerLocationAndLanguage($country, $language);
+    $seeds = array_values(array_filter(array_map('trim', (array)$seedKeywords)));
+    if (empty($seeds)) $seeds = ['digital marketing'];
+    return GoogleKeywordPlanner::generateKeywordIdeas(
+        $developerToken, $customerId, $loginCustomerId, $tokenResult['access_token'],
+        $seeds, $languageCode, $locationId
+    );
+}
+
+function plannerRowsToKeywordData($rows) {
+    $out = [];
+    foreach ((array)$rows as $row) {
+        $out[] = [
+            'keyword' => $row['keyword'] ?? '',
+            'volume' => $row['volume'] ?? 0,
+            'difficulty' => $row['difficulty'] ?? 'Unknown',
+            'intent' => $row['intent'] ?? 'Informational',
+            'source' => 'Google Keyword Planner',
+            'cpc' => $row['cpc'] ?? null,
+        ];
+    }
+    return $out;
+}
+
 function resolveKeywordPlannerOAuth($userId, $input = []) {
     $gkw = SecurityVault::getApiCredentials($userId, 'google_keyword_planner') ?: [];
     $blog = SecurityVault::getApiCredentials($userId, 'blogger_api') ?: [];
@@ -1079,6 +1129,23 @@ function handleApiRoute($uri) {
             }
         }
         if (empty($plans)) jsonResponse(['error' => 'ALL proposed topics are duplicates of existing blogs. The software has covered this niche extensively. Try a different website or industry angle.', 'dedup_stats' => $dedupStats], 400);
+        $keywordSource = (($input['keyword_source'] ?? 'ai') === 'planner') ? 'planner' : 'ai';
+        $plannerUsedCount = 0;
+        if ($keywordSource === 'planner') {
+            foreach ($plans as &$plan) {
+                $seed = $plan['primary_keyword'] ?? $plan['title'] ?? '';
+                $kwRes = fetchKeywordPlannerKeywords($userId, [$seed], $country, $language);
+                if (empty($kwRes['success'])) {
+                    jsonResponse(['error' => 'Keyword Planner selected, but it failed: ' . ($kwRes['error'] ?? 'unknown')], 400);
+                }
+                $plan['keywords'] = plannerRowsToKeywordData($kwRes['keywords'] ?? []);
+                if (!empty($plan['keywords'][0]['keyword'])) {
+                    $plan['primary_keyword'] = $plan['keywords'][0]['keyword'];
+                }
+                $plannerUsedCount++;
+            }
+            unset($plan);
+        }
         // PRESERVE APPROVED ITEMS: Only archive campaigns with NO approved/finalized items
         $db->exec("UPDATE approval_tokens SET decision = 'Expired' WHERE user_id = $userId AND decision IN ('Pending','Provisional') AND campaign_item_id NOT IN (SELECT id FROM campaign_items WHERE plan_status IN ('Approved','Provisional Approved') OR article_status IN ('HTML Ready','Final Article Approved'))");
         $db->exec("UPDATE campaigns SET status = 'Archived' WHERE user_id = $userId AND status = 'Roadmap Review' AND id NOT IN (SELECT DISTINCT campaign_id FROM campaign_items WHERE plan_status IN ('Approved','Provisional Approved') OR article_status IN ('HTML Ready','Final Article Approved'))");
@@ -1112,7 +1179,9 @@ function handleApiRoute($uri) {
             $stmt = $db->prepare('INSERT INTO approval_tokens (user_id, campaign_item_id, approval_type, token, created_at) VALUES (?, ?, ?, ?, ?)');
             $stmt->execute([$userId, $itemId, 'roadmap', $token, $now]);
 
-            $roadmapRows[] = ['plan_id' => $itemId, 'day' => intval($i / $postsPerDay) + 1, 'topic' => $plan['title'] ?? '', 'keyword' => $plan['primary_keyword'] ?? '', 'competition' => 'AI researched', 'target_link' => '', 'target_anchor' => 'See approved research in email'];
+            $firstKw = $kws[0] ?? [];
+            $support = implode(', ', array_slice(array_filter(array_map(fn($x) => $x['keyword'] ?? '', $kws)), 1, 5));
+            $roadmapRows[] = ['plan_id' => $itemId, 'day' => intval($i / $postsPerDay) + 1, 'topic' => $plan['title'] ?? '', 'keyword' => $plan['primary_keyword'] ?? '', 'supporting' => $support, 'competition' => $firstKw['difficulty'] ?? ($keywordSource === 'planner' ? 'Keyword Planner' : 'AI researched'), 'search_volume' => $firstKw['volume'] ?? '', 'difficulty' => $firstKw['difficulty'] ?? '', 'keyword_source' => $keywordSource === 'planner' ? 'Google Keyword Planner' : 'AI', 'target_link' => '', 'target_anchor' => 'See approved research in email'];
             
             // Record topic to persistent JSON + CSV for dedup
             addTopicToJsonFile($plan['title'] ?? 'Untitled', $plan['primary_keyword'] ?? '', $domain, 'pending', $campaignId);
@@ -1147,7 +1216,8 @@ function handleApiRoute($uri) {
         }
         
         $csvMsg = $csvCount > 0 ? " ($csvCount from Custom Topics CSV, $researchCount from AI Research)" : '';
-        jsonResponse(['success' => true, 'campaign_id' => $campaignId, 'articles' => count($roadmapRows), 'email_sent' => $sent, 'from_csv' => $csvCount, 'from_research' => $researchCount, 'suggested_roadmap' => $roadmapRows, 'message' => ($sent ? 'Roadmap created and approval email sent.' : 'Roadmap created. Brevo email not sent.') . $csvMsg]);
+        $srcMsg = $keywordSource === 'planner' ? " Used Google Keyword Planner on {$plannerUsedCount} topics." : ' Used normal AI keyword estimates.';
+        jsonResponse(['success' => true, 'campaign_id' => $campaignId, 'articles' => count($roadmapRows), 'email_sent' => $sent, 'from_csv' => $csvCount, 'from_research' => $researchCount, 'keyword_source' => $keywordSource, 'suggested_roadmap' => $roadmapRows, 'message' => ($sent ? 'Roadmap created and approval email sent.' : 'Roadmap created. Brevo email not sent.') . $csvMsg . $srcMsg]);
     }
 
     // SEO Research
@@ -1312,6 +1382,7 @@ function handleApiRoute($uri) {
         $startDate = $input['start_date'] ?? date('Y-m-d');
         $postingTimes = $input['posting_times'] ?? ['10:00'];
         $targetPlatform = $input['target_platform'] ?? 'blogger';
+        $keywordSource = (($input['keyword_source'] ?? 'ai') === 'planner') ? 'planner' : 'ai';
 
         $stmt = $db->prepare('INSERT INTO campaigns (user_id, slot_number, domain_url, target_country, language_code, days, posts_per_day, status, start_date, posting_times, target_platform, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
         $stmt->execute([$userId, $activeSlot, $domain, $country, $language, $days, $perDay, 'Roadmap Review', $startDate, json_encode($postingTimes), $targetPlatform, $now]);
@@ -1342,30 +1413,14 @@ function handleApiRoute($uri) {
                 } else {
                 $articleKeywords = array_slice(array_merge(array_slice($base, $idx % count($base)), array_slice($base, 0, $idx % count($base))), 0, 8);
 
-                // Try Google Keyword Planner for REAL keyword volumes
                 $kws = [];
-                $gkwVaultDemo = SecurityVault::getApiCredentials($userId, 'google_keyword_planner');
-                $gkwDevToken = trim($gkwVaultDemo['developer_token'] ?? '');
-                $gkwCustomerId = trim($gkwVaultDemo['customer_id'] ?? '');
-                if (!empty($gkwDevToken) && !empty($gkwCustomerId)) {
-                    $bloggerVaultKw = SecurityVault::getApiCredentials($userId, 'blogger_api');
-                    $gkwClientId = trim($gkwVaultDemo['client_id'] ?? $bloggerVaultKw['client_id'] ?? '');
-                    $gkwClientSecret = trim($gkwVaultDemo['client_secret'] ?? $bloggerVaultKw['client_secret'] ?? '');
-                    $gkwRefreshToken = trim($gkwVaultDemo['refresh_token'] ?? $bloggerVaultKw['refresh_token'] ?? '');
-                    if (!empty($gkwClientId) && !empty($gkwRefreshToken)) {
-                        $gkwTokenRes = GoogleKeywordPlanner::getAccessToken($gkwClientId, $gkwClientSecret, $gkwRefreshToken);
-                        if ($gkwTokenRes['success']) {
-                            $gkwLocationMap = ['india' => 2356, 'united states' => 2840, 'usa' => 2840, 'united kingdom' => 2826, 'canada' => 2124, 'australia' => 2036, 'uae' => 2784];
-                            $gkwLocId = $gkwLocationMap[strtolower($country)] ?? 2356;
-                            $gkwLangMap = ['en' => '1000', 'hi' => '1001', 'es' => '1003', 'fr' => '1002'];
-                            $gkwLangCode = $gkwLangMap[$language] ?? '1000';
-                            $gkwResult = GoogleKeywordPlanner::generateKeywordIdeas($gkwDevToken, $gkwCustomerId, trim($gkwVaultDemo['login_customer_id'] ?? $gkwCustomerId), $gkwTokenRes['access_token'], [$kw], $gkwLangCode, $gkwLocId);
-                            if ($gkwResult['success'] && !empty($gkwResult['keywords'])) {
-                                $kws = array_slice($gkwResult['keywords'], 0, 8);
-                                error_log("[Demo Campaign] Used Google Keyword Planner for '$kw' - got " . count($kws) . " keywords with real volumes");
-                            }
-                        }
+                if ($keywordSource === 'planner') {
+                    $gkwResult = fetchKeywordPlannerKeywords($userId, [$kw], $country, $language);
+                    if (empty($gkwResult['success'])) {
+                        jsonResponse(['error' => 'Keyword Planner selected, but it failed: ' . ($gkwResult['error'] ?? 'unknown')], 400);
                     }
+                    $kws = array_slice(plannerRowsToKeywordData($gkwResult['keywords'] ?? []), 0, 8);
+                    error_log("[Demo Campaign] Used Google Keyword Planner for '$kw' - got " . count($kws) . " keywords");
                 }
                 // Fallback to demo estimates if Keyword Planner not available or failed
                 if (empty($kws)) {
@@ -1445,7 +1500,8 @@ function handleApiRoute($uri) {
         }
         
         $csvMsg = $csvCount > 0 ? " ($csvCount from Custom Topics CSV, " . ($days * $perDay - $csvCount) . " from Demo)" : '';
-        jsonResponse(['success' => true, 'campaign_id' => $campaignId, 'items' => $days * $perDay, 'email_sent' => $sent, 'from_csv' => $csvCount, 'base_url' => APP_BASE_URL, 'message' => ($sent ? 'Roadmap created and approval email sent.' : 'Roadmap created locally.') . $csvMsg]);
+        $srcMsg = $keywordSource === 'planner' ? ' Used Google Keyword Planner volumes.' : ' Used normal AI keyword estimates.';
+        jsonResponse(['success' => true, 'campaign_id' => $campaignId, 'items' => $days * $perDay, 'email_sent' => $sent, 'from_csv' => $csvCount, 'keyword_source' => $keywordSource, 'base_url' => APP_BASE_URL, 'message' => ($sent ? 'Roadmap created and approval email sent.' : 'Roadmap created locally.') . $csvMsg . $srcMsg]);
     }
 
     // Demo campaign status
