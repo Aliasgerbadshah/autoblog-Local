@@ -26,9 +26,13 @@ $posts = $publisher->getPosts($page, $cfg['posts_per_page'], $category ?: null, 
 $categories = [];
 $dbFile = $cfg['autoblog_root'] . '/includes/database.php';
 if (file_exists($dbFile)) {
-    require_once $dbFile;
-    $db = Database::getInstance();
-    $categories = $db->fetchAll("SELECT * FROM website_blog_categories WHERE post_count > 0 ORDER BY name ASC") ?: [];
+    try {
+        require_once $dbFile;
+        $db = Database::getInstance();
+        $categories = $db->fetchAll("SELECT * FROM website_blog_categories WHERE post_count > 0 ORDER BY name ASC") ?: [];
+    } catch (Throwable $e) {
+        $categories = [];
+    }
 }
 ?>
 <!DOCTYPE html>

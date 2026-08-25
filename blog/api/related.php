@@ -17,30 +17,33 @@ if (!file_exists($dbFile)) {
     exit;
 }
 
-require_once $dbFile;
-$db = Database::getInstance();
+try {
+    require_once $dbFile;
+    $db = Database::getInstance();
 
-$limit = $cfg['related_posts_count'] ?? 3;
+    $limit = $cfg['related_posts_count'] ?? 3;
 
-if (!empty($category)) {
-    $posts = $db->fetchAll(
-        "SELECT title, url, published_date, reading_time, thumbnail_url FROM website_blog_posts 
-         WHERE status = 'published' AND category = ? AND slug != ? 
-         ORDER BY published_date DESC LIMIT ?",
-        [$category, $exclude, $limit]
-    );
-} else {
-    $posts = $db->fetchAll(
-        "SELECT title, url, published_date, reading_time, thumbnail_url FROM website_blog_posts 
-         WHERE status = 'published' AND slug != ? 
-         ORDER BY published_date DESC LIMIT ?",
-        [$exclude, $limit]
-    );
+    if (!empty($category)) {
+        $posts = $db->fetchAll(
+            "SELECT title, url, published_date, reading_time, thumbnail_url FROM website_blog_posts 
+             WHERE status = 'published' AND category = ? AND slug != ? 
+             ORDER BY published_date DESC LIMIT ?",
+            [$category, $exclude, $limit]
+        );
+    } else {
+        $posts = $db->fetchAll(
+            "SELECT title, url, published_date, reading_time, thumbnail_url FROM website_blog_posts 
+             WHERE status = 'published' AND slug != ? 
+             ORDER BY published_date DESC LIMIT ?",
+            [$exclude, $limit]
+        );
+    }
+
+    foreach ($posts as &$p) {
+        $p['published_date'] = date('F j, Y', strtotime($p['published_date']));
+    }
+
+    echo json_encode(['posts' => $posts ?: []]);
+} catch (Throwable $e) {
+    echo json_encode(['posts' => []]);
 }
-
-// Format dates
-foreach ($posts as &$p) {
-    $p['published_date'] = date('F j, Y', strtotime($p['published_date']));
-}
-
-echo json_encode(['posts' => $posts ?: []]);

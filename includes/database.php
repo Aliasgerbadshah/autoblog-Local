@@ -308,3 +308,44 @@ try {
     // If database init fails, log but don't crash
     error_log('AutoBlog DB Init Error: ' . $e->getMessage());
 }
+
+/**
+ * Lightweight wrapper used by the website blog publisher.
+ * Existing code uses getDB() (PDO). The blog folder was written against
+ * Database::getInstance() with exec/fetchOne/fetchAll + bound params.
+ */
+if (!class_exists('Database')) {
+    class Database {
+        public static function getInstance() {
+            static $instance = null;
+            if ($instance === null) {
+                $instance = new self();
+            }
+            return $instance;
+        }
+
+        public function exec($sql, $params = []) {
+            $pdo = getDB();
+            if ($params === [] || $params === null) {
+                return $pdo->exec($sql);
+            }
+            $stmt = $pdo->prepare($sql);
+            return $stmt->execute(array_values($params));
+        }
+
+        public function fetchOne($sql, $params = []) {
+            $pdo = getDB();
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute(array_values($params));
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            return $row ?: null;
+        }
+
+        public function fetchAll($sql, $params = []) {
+            $pdo = getDB();
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute(array_values($params));
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        }
+    }
+}

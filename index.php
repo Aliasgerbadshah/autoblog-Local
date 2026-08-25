@@ -30,12 +30,22 @@ ini_set('display_errors', '0');
 ini_set('log_errors', '1');
 ini_set('error_log', __DIR__ . '/data/php_error.log');
 
-// Catch any fatal errors and display them
+// Catch any fatal errors. API routes MUST return JSON (never HTML),
+// otherwise the dashboard shows: Unexpected token '<', "<h1>PHP Er"...
 register_shutdown_function(function() {
     $error = error_get_last();
     if ($error && in_array($error['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR])) {
+        $uri = $_SERVER['REQUEST_URI'] ?? '';
+        $isApi = (strpos($uri, '/api/') !== false);
         http_response_code(500);
-        echo '<h1>PHP Error</h1><pre>' . htmlspecialchars(print_r($error, true)) . '</pre>';
+        $msg = ($error['message'] ?? 'Fatal error') . ' in ' . basename($error['file'] ?? '') . ':' . ($error['line'] ?? 0);
+        error_log('[FATAL] ' . $msg);
+        if ($isApi) {
+            if (!headers_sent()) header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['success' => false, 'error' => 'PHP Error: ' . $msg], JSON_UNESCAPED_UNICODE);
+        } else {
+            echo '<h1>PHP Error</h1><pre>' . htmlspecialchars(print_r($error, true)) . '</pre>';
+        }
     }
 });
 
@@ -70,17 +80,74 @@ function getBlogPublisher() {
         __DIR__ . '/blog/includes/publisher.php',            // sub_apps/blog/
         __DIR__ . '/website_blog/includes/publisher.php',    // legacy folder name
     ];
+    $tried = [];
     foreach ($paths as $p) {
+        $tried[] = $p;
         if (file_exists($p)) {
             require_once $p;
             try {
                 return [new WebsitePublisher(), null];
-            } catch (Exception $e) {
+            } catch (Throwable $e) {
                 return [null, 'WebsitePublisher error: ' . $e->getMessage()];
             }
         }
     }
-    return [null, 'Blog publisher not found. Upload blog/ folder to public_html/blog/ or public_html/sub_apps/blog/ and ensure config.php autoblog_root points to sub_apps/.'];
+    return [null, 'Blog publisher not found. Upload blog/ to public_html/blog/ (for colorfiind.com/blog/) or public_html/sub_apps/blog/. Tried: ' . implode(' | ', $tried)];
+}
+
+/** Resolve generated campaign HTML on disk (sub_apps vs public_html). */
+function resolveCampaignHtmlFile($htmlPath) {
+    if (empty($htmlPath)) return null;
+    $base = basename($htmlPath);
+    $rel = ltrim(str_replace('\\', '/', $htmlPath), '/');
+    $outDir = defined('OUTPUT_DIR') ? rtrim(OUTPUT_DIR, '/') : (__DIR__ . '/published_posts');
+    $candidates = [
+        __DIR__ . '/' . $rel,
+        $outDir . '/' . $base,
+        $outDir . '/demo/' . $base,
+        __DIR__ . '/published_posts/demo/' . $base,
+        __DIR__ . '/published_posts/' . $base,
+        dirname(__DIR__) . '/' . $rel,
+    ];
+    foreach ($candidates as $p) {
+        if ($p && @is_file($p)) return $p;
+    }
+    return null;
+}
+
+/** Publish/schedule one article to the separate website blog. Always returns an array. */
+function publishToWebsiteBlog($item, $title, $articleContent, $scheduledStr = null) {
+    try {
+        list($wpub, $wpubErr) = getBlogPublisher();
+        if ($wpubErr || !$wpub) {
+            return ['success' => false, 'error' => $wpubErr ?: 'Website publisher unavailable'];
+        }
+        $slug = function_exists('slugify') ? slugify($title) : preg_replace('/[^a-z0-9]+/', '-', strtolower($title));
+        $cat = $item['category'] ?? 'General';
+        $kw = $item['primary_keyword'] ?? '';
+        $thumbUrl = '';
+        if (preg_match('#<img[^>]+src=["\']([^"\']+)["\']#i', $articleContent, $m)) {
+            $thumbUrl = $m[1];
+        }
+        $payload = [
+            'title' => $title,
+            'slug' => $slug,
+            'content_html' => $articleContent,
+            'category' => $cat,
+            'tags' => array_values(array_filter([$kw, $cat])),
+            'thumbnail_url' => $thumbUrl,
+            'author' => 'ColorFiind Team',
+            'meta_description' => substr(strip_tags($articleContent), 0, 160),
+            'meta_keywords' => $kw,
+        ];
+        if (!empty($scheduledStr)) {
+            $payload['scheduled_date'] = $scheduledStr;
+        }
+        return $wpub->publish($payload);
+    } catch (Throwable $e) {
+        error_log('[Website Blog] Publish error: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
+        return ['success' => false, 'error' => 'Website blog publish failed: ' . $e->getMessage()];
+    }
 }
 
 // Parse the request URI
@@ -1420,18 +1487,7 @@ function handleApiRoute($uri) {
         $platform = $input['platform'] ?? ($item['target_platform'] ?? ($camp['target_platform'] ?? 'blogger'));
         
         // Load the HTML file
-        $htmlFilePath = null;
-        if (!empty($item['html_path'])) {
-            $pathPatterns = [
-                dirname(__DIR__) . ltrim($item['html_path'], '/'),
-                OUTPUT_DIR . '/../' . ltrim($item['html_path'], '/'),
-                OUTPUT_DIR . '/demo/' . basename($item['html_path']),
-                dirname(__DIR__) . '/published_posts/demo/' . basename($item['html_path']),
-            ];
-            foreach ($pathPatterns as $p) {
-                if (file_exists($p)) { $htmlFilePath = $p; break; }
-            }
-        }
+        $htmlFilePath = resolveCampaignHtmlFile($item['html_path'] ?? '');
         
         $articleContent = '';
         if ($htmlFilePath) {
@@ -1465,20 +1521,7 @@ function handleApiRoute($uri) {
             $vault = SecurityVault::getApiCredentials($userId, 'wordpress_api');
             $result = Publisher::publishWordpress($userId, $vault['wp_site_url'] ?? '', $vault['wp_username'] ?? '', $vault['wp_app_password'] ?? '', $title, $articleContent);
         } elseif ($platform === 'website') {
-            // Publish to blog/ folder at colorfiind.com/blog/
-            // getBlogPublisher() handles path
-            list($wpub, $wpubErr) = getBlogPublisher(); if ($wpubErr) jsonResponse(["success" => false, "error" => $wpubErr], 400);
-            $slug = slugify($title);
-            $cat = $item['category'] ?? 'General';
-            $kw = $item['primary_keyword'] ?? '';
-            $thumbUrl = '';
-            if (preg_match('#<img[^>]+src=["\']([^"\']+)["\']#i', $articleContent, $m)) { $thumbUrl = $m[1]; }
-            $result = $wpub->publish([
-                'title' => $title, 'slug' => $slug, 'content_html' => $articleContent,
-                'category' => $cat, 'tags' => array_filter([$kw, $cat]),
-                'thumbnail_url' => $thumbUrl, 'author' => 'ColorFiind Team',
-                'meta_description' => substr(strip_tags($articleContent), 0, 160), 'meta_keywords' => $kw,
-            ]);
+            $result = publishToWebsiteBlog($item, $title, $articleContent);
         } else {
             Publisher::publishLocal($userId, $title, slugify($title), $articleContent, 'General', $item['primary_keyword'] ?? '', '');
             $result = ['success' => true, 'url' => '/published_posts/' . slugify($title) . '.html', 'message' => 'Published locally.'];
@@ -1535,16 +1578,7 @@ function handleApiRoute($uri) {
         
         if ($publishNow) {
             // Time is now or past — publish immediately
-            $htmlFilePath = null;
-            if (!empty($item['html_path'])) {
-                $pathPatterns = [
-                    dirname(__DIR__) . ltrim($item['html_path'], '/'),
-                    OUTPUT_DIR . '/../' . ltrim($item['html_path'], '/'),
-                    OUTPUT_DIR . '/demo/' . basename($item['html_path']),
-                    dirname(__DIR__) . '/published_posts/demo/' . basename($item['html_path']),
-                ];
-                foreach ($pathPatterns as $p) { if (file_exists($p)) { $htmlFilePath = $p; break; } }
-            }
+            $htmlFilePath = resolveCampaignHtmlFile($item['html_path'] ?? '');
             $articleContent = '';
             if ($htmlFilePath) {
                 $fullHtml = file_get_contents($htmlFilePath);
@@ -1568,21 +1602,7 @@ function handleApiRoute($uri) {
                 $vault = SecurityVault::getApiCredentials($userId, 'wordpress_api');
                 $result = Publisher::publishWordpress($userId, $vault['wp_site_url'] ?? '', $vault['wp_username'] ?? '', $vault['wp_app_password'] ?? '', $title, $articleContent);
             } elseif ($platform === 'website') {
-                // Schedule on blog/ at colorfiind.com/blog/
-                // getBlogPublisher() handles path
-                list($wpub, $wpubErr) = getBlogPublisher(); if ($wpubErr) jsonResponse(["success" => false, "error" => $wpubErr], 400);
-                $slug = slugify($title);
-                $cat = $item['category'] ?? 'General';
-                $kw = $item['primary_keyword'] ?? '';
-                $thumbUrl = '';
-                if (preg_match('#<img[^>]+src=["\']([^"\']+)["\']#i', $articleContent, $m)) { $thumbUrl = $m[1]; }
-                $result = $wpub->publish([
-                    'title' => $title, 'slug' => $slug, 'content_html' => $articleContent,
-                    'category' => $cat, 'tags' => array_filter([$kw, $cat]),
-                    'thumbnail_url' => $thumbUrl, 'scheduled_date' => $scheduledStr,
-                    'author' => 'ColorFiind Team',
-                    'meta_description' => substr(strip_tags($articleContent), 0, 160), 'meta_keywords' => $kw,
-                ]);
+                $result = publishToWebsiteBlog($item, $title, $articleContent, $scheduledStr);
             } else {
                 Publisher::publishLocal($userId, $title, slugify($title), $articleContent, 'General', $item['primary_keyword'] ?? '', '');
                 $result = ['success' => true, 'url' => '/published_posts/' . slugify($title) . '.html'];
@@ -1645,21 +1665,7 @@ function handleApiRoute($uri) {
                 jsonResponse(['success' => true, 'message' => 'Published to WordPress.', 'url' => $schedDirectResult['url'] ?? '']);
             }
         } elseif ($platform === 'website') {
-            // Schedule on blog/ at colorfiind.com/blog/
-            // getBlogPublisher() handles path
-            list($wpub, $wpubErr) = getBlogPublisher(); if ($wpubErr) jsonResponse(["success" => false, "error" => $wpubErr], 400);
-            $slug = slugify($schedTitle);
-            $cat = $item['category'] ?? 'General';
-            $kw = $item['primary_keyword'] ?? '';
-            $thumbUrl = '';
-            if (preg_match('#<img[^>]+src=["\']([^"\']+)["\']#i', $schedArticleContent, $m)) { $thumbUrl = $m[1]; }
-            $schedDirectResult = $wpub->publish([
-                'title' => $schedTitle, 'slug' => $slug, 'content_html' => $schedArticleContent,
-                'category' => $cat, 'tags' => array_filter([$kw, $cat]),
-                'thumbnail_url' => $thumbUrl, 'scheduled_date' => $scheduledStr,
-                'author' => 'ColorFiind Team',
-                'meta_description' => substr(strip_tags($schedArticleContent), 0, 160), 'meta_keywords' => $kw,
-            ]);
+            $schedDirectResult = publishToWebsiteBlog($item, $schedTitle, $schedArticleContent, $scheduledStr);
             if (!empty($schedDirectResult['success'])) {
                 $stmt = $db->prepare("UPDATE campaign_items SET article_status = ?, scheduled_date = ?, scheduled_time = ? WHERE id = ?");
                 $stmt->execute([$schedDirectResult['status'] === 'scheduled' ? 'Scheduled' : 'Published', $schedDate, $schedTime, $itemId]);
@@ -2382,7 +2388,9 @@ function handleApiRoute($uri) {
             try {
                 $wpRes = $wpub->publishScheduled();
                 $websitePubCount = $wpRes['published'] ?? 0;
-            } catch (Exception $e) {}
+            } catch (Throwable $e) {
+                error_log('[Website Blog] Scheduled publish error: ' . $e->getMessage());
+            }
         }
         jsonResponse(['success' => true, 'timer_output' => $timerOutput, 'scheduler_output' => $schedulerOutput, 'website_published' => $websitePubCount, 'message' => 'Cron executed: approval timer + scheduler ran.' . ($websitePubCount ? " + {$websitePubCount} website blog posts published." : '')]);
     }
@@ -2479,6 +2487,45 @@ function handleApiRoute($uri) {
         header('Content-Length: ' . filesize($htmlFilePath));
         readfile($htmlFilePath);
         exit;
+    }
+
+    // ========== WEBSITE BLOG DIAGNOSTIC (JSON) ==========
+    if ($uri === '/api/website-blog/test') {
+        $paths = [
+            'public_html/blog' => dirname(__DIR__) . '/blog/includes/publisher.php',
+            'sub_apps/blog' => __DIR__ . '/blog/includes/publisher.php',
+            'legacy website_blog' => __DIR__ . '/website_blog/includes/publisher.php',
+        ];
+        $checked = [];
+        $found = null;
+        foreach ($paths as $label => $p) {
+            $exists = file_exists($p);
+            $checked[] = ['label' => $label, 'path' => $p, 'exists' => $exists];
+            if ($exists && !$found) $found = $p;
+        }
+        $cfg = null;
+        $cfgPath = null;
+        if ($found) {
+            $cfgPath = dirname(dirname($found)) . '/config.php';
+            if (file_exists($cfgPath)) $cfg = require $cfgPath;
+        }
+        $autoblogRoot = is_array($cfg) ? ($cfg['autoblog_root'] ?? '') : '';
+        $dbFile = $autoblogRoot ? ($autoblogRoot . '/includes/database.php') : '';
+        $postsDir = $found ? (dirname(dirname($found)) . '/posts') : '';
+        jsonResponse([
+            'success' => true,
+            'publisher_found' => (bool)$found,
+            'publisher_path' => $found,
+            'paths_checked' => $checked,
+            'config_path' => $cfgPath,
+            'autoblog_root' => $autoblogRoot,
+            'database_file_exists' => $dbFile ? file_exists($dbFile) : false,
+            'database_class_exists' => class_exists('Database'),
+            'getDB_exists' => function_exists('getDB'),
+            'blog_url' => is_array($cfg) ? ($cfg['site_url'] ?? '') : '',
+            'posts_dir' => $postsDir,
+            'posts_dir_writable' => $postsDir ? (is_dir($postsDir) ? is_writable($postsDir) : is_writable(dirname($postsDir))) : false,
+        ]);
     }
 
     // 404 for unmatched API routes

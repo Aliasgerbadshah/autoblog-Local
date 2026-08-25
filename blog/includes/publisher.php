@@ -77,27 +77,34 @@ class WebsitePublisher {
             return ['success' => false, 'error' => "Failed to write file: $filePath"];
         }
         
-        // Save to database for listing/scheduling
-        $this->saveToDatabase([
-            'title' => $title,
-            'slug' => $slug,
-            'category' => $category,
-            'tags' => is_array($tags) ? implode(',', $tags) : $tags,
-            'thumbnail_url' => $thumbnailUrl,
-            'author' => $author,
-            'published_date' => date('Y-m-d H:i:s', $pubDate),
-            'file_path' => $filePath,
-            'url' => "/blog/posts/{$year}/{$month}/{$slug}/",
-            'status' => $isDraft ? 'scheduled' : 'published',
-            'scheduled_date' => $scheduledDate,
-            'meta_description' => $metaDesc,
-            'reading_time' => $this->calculateReadingTime($contentHtml),
-            'content_html' => $contentHtml,
-        ]);
-        
-        // Update RSS and sitemap
-        $this->updateRSS();
-        $this->updateSitemap();
+        // Save to database for listing/scheduling (never fail the file write)
+        try {
+            $this->saveToDatabase([
+                'title' => $title,
+                'slug' => $slug,
+                'category' => $category,
+                'tags' => is_array($tags) ? implode(',', $tags) : $tags,
+                'thumbnail_url' => $thumbnailUrl,
+                'author' => $author,
+                'published_date' => date('Y-m-d H:i:s', $pubDate),
+                'file_path' => $filePath,
+                'url' => "/blog/posts/{$year}/{$month}/{$slug}/",
+                'status' => $isDraft ? 'scheduled' : 'published',
+                'scheduled_date' => $scheduledDate,
+                'meta_description' => $metaDesc,
+                'reading_time' => $this->calculateReadingTime($contentHtml),
+                'content_html' => $contentHtml,
+            ]);
+        } catch (Throwable $e) {
+            error_log('[Website Blog] saveToDatabase: ' . $e->getMessage());
+        }
+
+        try {
+            $this->updateRSS();
+            $this->updateSitemap();
+        } catch (Throwable $e) {
+            error_log('[Website Blog] RSS/sitemap: ' . $e->getMessage());
+        }
         
         $fullUrl = $this->config['site_url'] . "/posts/{$year}/{$month}/{$slug}/";
         
@@ -171,7 +178,7 @@ class WebsitePublisher {
             '{{TITLE}}' => htmlspecialchars($t['title']),
             '{{CATEGORY}}' => htmlspecialchars($t['category']),
             '{{CONTENT_HTML}}' => $t['content_html'],
-            '{{THUMBNAIL_URL}}' => $t['thumbnail_url'],
+            '{{THUMBNAIL_URL}}' => $t['thumbnail_url'] ?: ($cfg['og_image_default'] ?? ''),
             '{{AUTHOR}}' => htmlspecialchars($t['author']),
             '{{PUBLISHED_DATE}}' => $t['published_date'],
             '{{PUBLISHED_DATE_FORMATTED}}' => $t['published_date_formatted'],
@@ -186,6 +193,8 @@ class WebsitePublisher {
             '{{SHARE_BUTTONS}}' => $cfg['show_share_buttons'] ? $this->renderShareButtons($t) : '',
             '{{RELATED_POSTS}}' => $cfg['show_related_posts'] ? $this->renderRelatedPosts($t) : '',
             '{{DRAFT_META}}' => $t['is_draft'] ? '<meta name="robots" content="noindex,nofollow">' : '',
+            '{{META_TITLE_SUFFIX}}' => $cfg['meta_title_suffix'] ?? '',
+            '{{FOOTER_TEXT}}' => $cfg['footer_text'] ?? '',
         ];
         
         foreach ($replacements as $key => $value) {
@@ -397,6 +406,7 @@ class WebsitePublisher {
      * Get posts for listing page.
      */
     public function getPosts($page = 1, $perPage = null, $category = null, $tag = null, $search = null) {
+        try {
         $autoblogRoot = $this->config['autoblog_root'];
         $dbFile = $autoblogRoot . '/includes/database.php';
         if (!file_exists($dbFile)) return [];
@@ -431,6 +441,10 @@ class WebsitePublisher {
             "SELECT * FROM website_blog_posts WHERE {$where} ORDER BY published_date DESC LIMIT ? OFFSET ?",
             $params
         );
+        } catch (Throwable $e) {
+            error_log('[Website Blog] getPosts: ' . $e->getMessage());
+            return [];
+        }
     }
     
     /**
@@ -523,5 +537,10 @@ class WebsitePublisher {
         $this->updateSitemap();
         
         return ['success' => true, 'message' => 'Post deleted'];
+    }
+
+    /** Fallback template if article.html is missing. */
+    private function getDefaultArticleTemplate() {
+        return '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>{{TITLE}}{{META_TITLE_SUFFIX}}</title><meta name="description" content="{{META_DESCRIPTION}}">{{DRAFT_META}}<style>body{font-family:{{FONT_FAMILY}};color:#0f172a;margin:0;padding:0}.wrap{max-width:860px;margin:40px auto;padding:0 24px}h1{font-size:2rem}.article-body p{text-align:justify}</style></head><body>{{HEADER}}<div class="wrap"><p>{{CATEGORY}} · {{PUBLISHED_DATE_FORMATTED}}</p><h1>{{TITLE}}</h1><img src="{{THUMBNAIL_URL}}" alt="{{TITLE}}" style="max-width:100%;height:auto"><article class="article-body">{{CONTENT_HTML}}{{TAGS_HTML}}{{SHARE_BUTTONS}}</article></div>{{RELATED_POSTS}}{{FOOTER}}<footer style="text-align:center;padding:24px;color:#64748b">{{FOOTER_TEXT}}</footer></body></html>';
     }
 }

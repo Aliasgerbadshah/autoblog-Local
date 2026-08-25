@@ -408,6 +408,7 @@
                         <label>Slot Publish Destination</label>
                         <select id="slot-destination-input">
                             <option value="blogger">Google Blogger REST API (Auto-Vault Fetched)</option>
+                            <option value="website">Website Blog (Code) — colorfiind.com/blog</option>
                             <option value="wordpress">WordPress REST API (Auto-Vault Fetched)</option>
                             <option value="local">Local Magazine (HTML Exporter)</option>
                         </select>
@@ -797,11 +798,11 @@
                         <button type="submit" class="btn btn-purple">💾 Save Keyword Planner Credentials</button>
                         <button type="button" class="btn" style="background:#0f172a;" onclick="testKeywordPlanner()">🔍 Test Keyword Planner</button>
                         <div id="gkw-test-status" style="margin-top:10px;font-size:0.85rem;font-weight:700;"></div>
-                        <details style="margin-top:12px;color:var(--text-muted);font-size:0.78rem;"><summary>How to get Google Keyword Planner API credentials</summary>
+                        <details style="margin-top:12px;color:var(--text-muted);font-size:0.78rem;"><summary>How to get Google Keyword Planner API credentials (mixed accounts)</summary>
                         <ol style="padding-left:18px;line-height:1.8;">
-                            <li>Go to <a href="https://ads.google.com" target="_blank" style="color:#1b57f6;">ads.google.com</a> and create a Google Ads account (free, no campaigns needed)</li>
-                            <li>Go to <strong>Tools & Settings → API Center</strong> → Apply for <strong>Developer Token</strong> (Basic Access is free)</li>
-                            <li>Copy your <strong>Developer Token</strong> and <strong>Customer ID</strong> (top-right corner, format: 123-456-7890)</li>
+                            <li><strong>NORMAL account:</strong> ads.google.com → Tools & Settings → API Center → copy <strong>Developer Token</strong>. A normal account is the only place that issues this token.</li>
+                            <li><strong>TEST manager + TEST client:</strong> create a Google Ads <em>test</em> manager account and a test client under it. Copy the manager ID into <strong>Login Customer ID</strong> and the client ID into <strong>Customer ID</strong>. Test accounts can extract Keyword Planner data; they cannot issue a developer token.</li>
+                            <li>Do <strong>not</strong> put a normal-account customer ID in Customer ID if the token is not approved for production. Use the test client ID instead.</li>
                             <li>Go to <a href="https://console.cloud.google.com" target="_blank" style="color:#1b57f6;">Google Cloud Console</a> → APIs & Services → Enable <strong>Google Ads API</strong></li>
                             <li>Generate a Refresh Token with <strong>BOTH</strong> scopes: <code style="background:#f1f5f9;padding:2px 6px;border-radius:4px;">https://www.googleapis.com/auth/blogger</code> AND <code style="background:#f1f5f9;padding:2px 6px;border-radius:4px;">https://www.googleapis.com/auth/adwords</code></li>
                             <li>In <a href="https://developers.google.com/oauthplayground" target="_blank" style="color:#1b57f6;">OAuth Playground</a>: click ⚙️ → Use your own credentials → paste Client ID/Secret → In Step 1 paste BOTH scopes (comma-separated) → Authorize → Step 2: Exchange → Copy Refresh Token</li>
@@ -1810,6 +1811,31 @@
                 const data = await res.json();
                 alert(data.success ? '✅ ' + data.message : '🔴 ' + (data.error||'Failed'));
                 document.getElementById('custom-topics-count').innerText = topics.length;
+            } catch(e) { alert('Error: ' + e.message); }
+        }
+        async function clearCustomTopics() {
+            if (!confirm('Clear ALL custom topics?')) return;
+            try {
+                const res = await fetch('/api/custom-topics/upload', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({topics:[]})});
+                const data = await res.json();
+                document.getElementById('custom-topics-input').value = '';
+                document.getElementById('custom-topics-count').innerText = '0';
+                alert('Cleared!');
+            } catch(e) { alert('Error: ' + e.message); }
+        }
+        // ===== AUTO-REFRESH DASHBOARD EVERY 12 SECONDS =====
+        let _dashRefreshTimer = null;
+        function startDashRefresh() {
+            if (_dashRefreshTimer) clearInterval(_dashRefreshTimer);
+            _dashRefreshTimer = setInterval(() => {
+                loadDemoProgress();
+                loadStats(); // loadStats now also fetches custom topics count
+            }, 12000);
+        }
+        startDashRefresh();
+    </script>
+</body>
+</html> = topics.length;
             } catch(e) { alert('Error: ' + e.message); }
         }
         async function clearCustomTopics() {
