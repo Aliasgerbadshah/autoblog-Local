@@ -64,11 +64,8 @@ class GoogleKeywordPlanner {
             return ['success' => false, 'error' => 'At least one seed keyword is required.'];
         }
         
-        // Clean customer ID (remove dashes)
-        $cleanCustomerId = str_replace('-', '', $customerId);
-        $cleanLoginCustomerId = str_replace('-', '', ($loginCustomerId ?: $customerId));
-        
-        $url = self::API_BASE . "/customers/{$cleanCustomerId}:generateKeywordIdeas";
+        $cleanCustomerId = preg_replace('/\D+/', '', $customerId);
+        $cleanLoginCustomerId = preg_replace('/\D+/', '', ($loginCustomerId ?: $customerId));
         
         // Month number to Google Ads API enum name
         $monthEnum = [1=>'JANUARY',2=>'FEBRUARY',3=>'MARCH',4=>'APRIL',5=>'MAY',6=>'JUNE',
@@ -103,14 +100,29 @@ class GoogleKeywordPlanner {
         ];
         
         error_log("[Google Keyword Planner] Requesting ideas for: " . implode(', ', $seedKeywords));
-        
-        $result = curlPost($url, $body, $headers, 30);
-        
-        // Handle non-JSON responses (e.g. Google HTML error pages like 404)
-        if (!is_array($result['data'])) {
-            $rawPreview = substr($result['raw'] ?? '', 0, 200);
-            error_log("[Google Keyword Planner] Non-JSON response HTTP {$result['http_code']}: $rawPreview");
-            return ['success' => false, 'error' => "Google Ads API returned non-JSON response (HTTP {$result['http_code']}). This usually means the endpoint URL is wrong or the API version is sunset. URL: $url"];
+
+        $result = null;
+        $url = '';
+        $lastVersionError = '';
+        foreach (self::API_VERSIONS as $version) {
+            $url = "https://googleads.googleapis.com/{$version}/customers/{$cleanCustomerId}:generateKeywordIdeas";
+            $result = curlPost($url, $body, $headers, 30);
+            $http = intval($result['http_code'] ?? 0);
+            $rawPreview = substr($result['raw'] ?? '', 0, 180);
+            error_log("[Google Keyword Planner] {$version} HTTP {$http}: {$rawPreview}");
+
+            $msg = is_array($result['data']) ? (string)($result['data']['error']['message'] ?? '') : '';
+            $isSunset = ($http === 404) || !is_array($result['data'])
+                || ($http === 400 && (stripos($msg, 'UNSUPPORTED_VERSION') !== false || stripos($msg, 'deprecated') !== false || stripos($msg, 'sunset') !== false));
+            if ($isSunset) {
+                $lastVersionError = "{$version} HTTP {$http}";
+                continue;
+            }
+            break;
+        }
+
+        if (!$result || !is_array($result['data'])) {
+            return ['success' => false, 'error' => "Google Ads API v21 is sunset (5 Aug 2026). Tried " . implode(', ', self::API_VERSIONS) . " and still got a non-JSON/404 ({$lastVersionError}). Last URL: {$url}. If this continues, put the TEST client ID in Customer ID and the TEST manager ID in Login Customer ID."];
         }
         
         if ($result['http_code'] >= 400) {
@@ -145,7 +157,10 @@ class GoogleKeywordPlanner {
             if (empty($text)) continue;
             
             // Metrics can be nested under keywordPlanAdGroupKeywordHistoricalMetrics or directly
-            $metrics = $idea['keywordPlanAdGroupKeywordHistoricalMetrics'] ?? [];
+            $metrics = $idea['keywordIdeaMetrics'] ?? [];
+            if (empty($metrics)) {
+                $metrics = $idea['keywordPlanAdGroupKeywordHistoricalMetrics'] ?? [];
+            }
             if (empty($metrics)) {
                 $metrics = $idea['historicalMetrics'] ?? [];
             }
