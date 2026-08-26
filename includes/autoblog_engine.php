@@ -884,6 +884,44 @@ function stripAndValidateImages($content) {
 }
 
 /**
+ * Ask Chat for a short photorealistic prompt that captures this article's core concept.
+ * Used for the thumbnail and in-article image so they match the blog, not a generic keyword shot.
+ */
+function buildCoreConceptImagePrompt($item, $chatVault = [], $articleHtml = '') {
+    $title = trim((string)($item['title'] ?? ''));
+    $keyword = trim((string)($item['primary_keyword'] ?? ''));
+    $headings = json_decode($item['headings'] ?? '{}', true) ?: [];
+    $h2s = $headings['H2'] ?? [];
+    $h2List = implode(', ', array_slice(array_map('strval', is_array($h2s) ? $h2s : []), 0, 4));
+    $plain = trim(preg_replace('/\s+/', ' ', strip_tags((string)$articleHtml)));
+    $excerpt = substr($plain, 0, 500);
+    $fallback = trim("Photorealistic editorial photo of the core idea of \"$title\"" . ($keyword ? " (about $keyword)" : '') . '. Real-world scene, specific subject, natural lighting, no text, no logos.');
+    if (empty($chatVault['api_key']) || !class_exists('AIProviderClient')) {
+        return $fallback;
+    }
+    $ask = "Write ONE image-generation prompt (max 40 words) for a photorealistic photo that shows the CORE CONCEPT of this blog article. Be specific about the scene, people, objects, and setting. No text, no logos, no watermarks, no collage.\nTITLE: $title\nPRIMARY KEYWORD: $keyword\nH2 SECTIONS: $h2List\nARTICLE START: $excerpt\nReturn ONLY the prompt.";
+    try {
+        $res = AIProviderClient::chat($chatVault, $ask);
+        if (!empty($res['success']) && !empty($res['content'])) {
+            $prompt = trim(preg_replace('/\s+/', ' ', strip_tags($res['content'])));
+            $prompt = trim($prompt, "\"'` \t\n\r");
+            if (strlen($prompt) > 40) {
+                $words = preg_split('/\s+/', $prompt);
+                if (is_array($words) && count($words) > 40) {
+                    $prompt = implode(' ', array_slice($words, 0, 40));
+                }
+            }
+            if (strlen($prompt) >= 20) {
+                return $prompt;
+            }
+        }
+    } catch (Throwable $e) {
+        error_log('[Image] core-concept prompt failed: ' . $e->getMessage());
+    }
+    return $fallback;
+}
+
+/**
  * Generate a real HTML article from a campaign item using Chat API + Image API.
  * Returns ['success' => bool, 'html_path' => string, 'used_chat_api' => bool, 'featured_image' => string, 'error' => string]
  */
@@ -1304,32 +1342,6 @@ function publishItemToSelectedPlatform($userId, $item, $platform, $scheduledStr 
         $pubFile = dirname(__DIR__) . '/blog/includes/publisher.php';
         $alt = dirname(__DIR__, 2) . '/blog/includes/publisher.php';
         if (file_exists($alt)) require_once $alt;
-        elseif (file_exists($pubFile)) require_once $pubFile;
-        else return ['success' => false, 'error' => 'Website publisher not found.'];
-        if (!class_exists('WebsitePublisher')) return ['success' => false, 'error' => 'WebsitePublisher class missing.'];
-        try {
-            $wpub = new WebsitePublisher();
-            $thumbUrl = '';
-            if (preg_match('#<img[^>]+src=["\']([^"\']+)["\']#i', $articleContent, $m)) $thumbUrl = $m[1];
-            return $wpub->publish([
-                'title' => $title,
-                'slug' => slugify($title),
-                'content_html' => $articleContent,
-                'category' => $item['category'] ?? 'General',
-                'tags' => array_values(array_filter([$item['primary_keyword'] ?? '', $item['category'] ?? ''])),
-                'thumbnail_url' => $thumbUrl,
-                'author' => 'ColorFiind Team',
-                'meta_description' => substr(strip_tags($articleContent), 0, 160),
-                'meta_keywords' => $item['primary_keyword'] ?? '',
-                'scheduled_date' => $scheduledStr,
-            ]);
-        } catch (Throwable $e) {
-            return ['success' => false, 'error' => 'Website blog publish failed: ' . $e->getMessage()];
-        }
-    }
-    $url = Publisher::publishLocal($userId, $title, slugify($title), $articleContent, 'General', $item['primary_keyword'] ?? '', '');
-    return ['success' => true, 'url' => $url, 'message' => 'Published locally.'];
-}
         elseif (file_exists($pubFile)) require_once $pubFile;
         else return ['success' => false, 'error' => 'Website publisher not found.'];
         if (!class_exists('WebsitePublisher')) return ['success' => false, 'error' => 'WebsitePublisher class missing.'];
