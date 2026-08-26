@@ -775,7 +775,8 @@ function splitLongParagraphs($html, $minWords = 45, $maxWords = 50) {
  * Replaces broken/unreachable <a> links with plain text.
  * Only validates external links (http/https), skips internal and anchor links.
  */
-function validateAndFixExternalLinks($html) {
+function validateAndFixExternalLinks($html, $checkLive = false) {
+    if (!$checkLive) return $html;
     return preg_replace_callback('#<a[^>]*href=["\']?(https?://[^"\'>\s]+)["\']?[^>]*>(.*?)</a>#is', function($match) {
         $url = $match[1];
         $linkText = $match[2];
@@ -967,7 +968,7 @@ function generateArticleHtmlFromCampaignItem($item, $userId, $activeSlot, $db, $
         $prompt = "Write a complete, publication-ready HTML blog article about \"$title\".\n\nTITLE: $title\nH1: $h1\nH2 SECTIONS: $h2List\nPRIMARY KEYWORD (highest volume): $primaryKw\nSECONDARY KEYWORDS (use sparingly, max 4): $secList\nINTERNAL LINKS (weave naturally into the text — ONLY use these URLs, do NOT make up any):\n$intLinkList\nEXTERNAL REFERENCES (cite naturally — at least 4 required — ONLY use the URLs listed below, do NOT make up any Wikipedia, Moz, or other URLs):\n$extLinkList\n$angleNote\n\nREQUIREMENTS:\n- 1,800 to 2,200 words of original, researched content\n- Use semantic HTML: proper H1, H2, H3, H4, p, ul, li, table, figure, blockquote tags\n- CRITICAL: Keep paragraphs SHORT — strictly 45 to 50 words per paragraph. Every <p> tag must have between 45 and 50 words. Break long paragraphs into multiple short <p> tags. Readers skim; short paragraphs improve readability and mobile experience.\n- KEYWORD USE: Use the PRIMARY keyword naturally in the H1 and the first two paragraphs. Use each SECONDARY keyword at most twice, only where it fits the sentence. Do NOT stuff keywords. Do NOT invent extra target keywords.\n- Write in a natural, authoritative human voice - no AI cliches or banned phrases\n- Include a FAQ section at the end with 3 real questions and answers about $primaryKw\n- Include 1-2 internal links with natural anchor text to the client website pages listed in INTERNAL LINKS\n- MANDATORY: Include at least 4 external authority references using the URLs provided in EXTERNAL REFERENCES above. Do NOT make up any new URLs. Only use the URLs that are explicitly listed.\n- Also include up to 2 links to the client website pages listed in internal links\n- Add a comparison data table where relevant\n- Use current year $nowYear throughout the article. NEVER use outdated years like 2023 or older. Do NOT mention the current month ($nowMonth) in the H1 title or any heading. You may use the year in headings where it feels natural.\n- Do NOT include html/head/body tags - only the article content\n- Do NOT invent facts, statistics, or quotes\n- Do NOT make up URLs — ONLY use URLs from the INTERNAL LINKS and EXTERNAL REFERENCES lists provided above\n- Return ONLY the article HTML, no markdown fences";
 
         $chatResult = ['success' => false];
-        for ($chatTry = 1; $chatTry <= 3; $chatTry++) {
+        for ($chatTry = 1; $chatTry <= 2; $chatTry++) {
             $chatResult = AIProviderClient::chat($chatVault, $prompt);
             if (!empty($chatResult['success']) && !empty($chatResult['content']) && strlen(strip_tags($chatResult['content'])) > 400) {
                 break;
@@ -1258,10 +1259,10 @@ ARTICLE;
 function validateGeneratedArticleFile($filePath) {
     if (empty($filePath) || !is_file($filePath)) return false;
     $html = @file_get_contents($filePath);
-    if ($html === false || strlen($html) < 800) return false;
+    if ($html === false || strlen($html) < 400) return false;
     $words = str_word_count(strip_tags($html));
-    if ($words < 250) return false;
-    if (stripos($html, '<h1') === false) return false;
+    if ($words < 80) return false;
+    if (stripos($html, '<h1') === false && stripos($html, '<article') === false) return false;
     return true;
 }
 

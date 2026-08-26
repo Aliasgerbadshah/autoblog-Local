@@ -537,16 +537,13 @@
                         <div class="form-group"><label>Target Country</label><select id="project-country" required><option value="India">India</option><option value="United States">United States</option><option value="United Kingdom">United Kingdom</option><option value="Canada">Canada</option><option value="Australia">Australia</option><option value="United Arab Emirates">United Arab Emirates</option><option value="Saudi Arabia">Saudi Arabia</option><option value="Singapore">Singapore</option><option value="Germany">Germany</option><option value="France">France</option><option value="Italy">Italy</option><option value="Spain">Spain</option><option value="Netherlands">Netherlands</option><option value="South Africa">South Africa</option><option value="New Zealand">New Zealand</option><option value="Malaysia">Malaysia</option><option value="Japan">Japan</option><option value="Other">Other</option></select></div>
                         <div class="form-group"><label>Language</label><select id="project-language"><option value="en">English</option><option value="hi">Hindi</option></select></div>
                         <div class="form-group"><label>Destination</label><select id="project-platform" onchange="updateCalendarDates()"><option value="blogger">Google Blogger</option><option value="website">Website Blog (Code)</option><option value="local">HTML / Local Magazine</option><option value="wordpress">WordPress</option></select></div>
-                        <div class="form-group"><label>Campaign Days</label><select id="project-days" onchange="updateCalendarDates()"><option value="7">7 days</option><option value="10">10 days</option><option value="15">15 days</option><option value="25">25 days</option><option value="30">30 days</option></select></div>
+                        <div class="form-group"><label>Campaign Days</label><select id="project-days" onchange="updateCalendarDates()"><option value="1">1 day</option><option value="2">2 days</option><option value="3">3 days</option><option value="5">5 days</option><option value="7" selected>7 days</option><option value="10">10 days</option><option value="15">15 days</option><option value="25">25 days</option><option value="30">30 days</option></select></div>
                         <div class="form-group"><label>Articles Per Day</label><select id="project-posts-per-day" onchange="updateCalendarDates()"><option value="1">1 article</option><option value="2">2 articles</option><option value="3">3 articles</option></select></div>
                         <div class="form-group"><label>Start Date</label><input type="date" id="project-start-date" onchange="updateCalendarDates()"></div>
                         <div class="form-group">
-                            <label>Keyword Source</label>
-                            <select id="project-keyword-source">
-                                <option value="ai">Normal AI keyword search</option>
-                                <option value="planner">Google Keyword Planner (real volumes)</option>
-                            </select>
-                            <small style="color:var(--text-muted);font-size:0.75rem;">Planner picks the highest-volume / lowest-competition keyword as primary. Others become secondary.</small>
+                            <label>Keywords</label>
+                            <input type="hidden" id="project-keyword-source" value="planner">
+                            <div style="padding:11px 14px;background:var(--inner-bg);border:1px solid var(--border-light);border-radius:10px;font-size:0.85rem;font-weight:600;">Google Keyword Planner only — exact volume + difficulty. AI cannot invent keywords.</div>
                         </div>
                         <div class="form-group" style="display:none">
                             <label>Workflow</label>
@@ -584,13 +581,13 @@
                         <span id="custom-topics-available-banner" style="font-weight:800;color:var(--accent-purple);font-size:0.95rem;margin-left:12px;"></span>
                     </div>
                 </div>
-                <table><thead><tr><th>Day/Slot</th><th>Blog</th><th>Roadmap Status</th><th>Article Status</th><th>Schedule Date</th><th>Time</th><th>Platform</th><th>HTML</th><th>Action</th></tr></thead><tbody id="demo-progress-tbody"><tr><td colspan="9">No campaign loaded.</td></tr></tbody></table>
+                <table><thead><tr><th>Day/Slot</th><th>Blog</th><th>Keywords (volume / difficulty)</th><th>Roadmap Status</th><th>Article Status</th><th>Schedule Date</th><th>Time</th><th>Platform</th><th>HTML</th><th>Action</th></tr></thead><tbody id="demo-progress-tbody"><tr><td colspan="10">No campaign loaded.</td></tr></tbody></table>
             </div>
             <!-- APPROVED & SCHEDULED ITEMS (separate from pending) -->
             <div class="card" id="approved-scheduled-card" style="display:none; border-top:4px solid #10b981;">
                 <div class="card-header"><h2 class="card-title">✅ Approved & Scheduled Blogs</h2></div>
                 <p style="color:var(--text-muted); font-size:0.85rem;">These approved blogs are locked and scheduled for posting. They will NOT be removed when you create new campaigns.</p>
-                <table><thead><tr><th>Day</th><th>Title</th><th>Schedule Date</th><th>Time</th><th>Platform</th><th>Article Status</th><th>HTML</th><th>Action</th></tr></thead><tbody id="approved-scheduled-tbody"><tr><td colspan="8">No approved items.</td></tr></tbody></table>
+                <table><thead><tr><th>Day</th><th>Title</th><th>Keywords (volume / difficulty)</th><th>Schedule Date</th><th>Time</th><th>Platform</th><th>Article Status</th><th>HTML</th><th>Action</th></tr></thead><tbody id="approved-scheduled-tbody"><tr><td colspan="9">No approved items.</td></tr></tbody></table>
             </div>
             <div id="legacy-writer-card" class="card" style="display:none">
                 <div class="card-header">
@@ -655,14 +652,14 @@
         <div id="tab-auto-blog" class="tab-content">
             <div class="card" style="border-top:4px solid #8b5cf6;">
                 <div class="card-header"><h2 class="card-title">🤖 Auto Blog — Daily Create, Check, Post</h2></div>
-                <p style="color:var(--text-muted);margin-bottom:12px;">This page is not part of Human Article Writer. You pick start date, posts per day, destination, keyword source, and models. The software then researches topics, auto-approves them, writes HTML, checks content + real image, retries up to 8 times, and posts. Blogger uses Blogger scheduling (publishDate), not a live cron push at 10:00.</p>
+                <p style="color:var(--text-muted);margin-bottom:12px;">This is not Human Article Writer. Pick start date, optional end date (or No end date), posts per day, and destination. While <strong>Active</strong> it creates one day of posts from Custom Topics, gets keywords from Keyword Planner only, writes HTML, then uses Blogger scheduling. It does not stop until you set Inactive or the end date.</p>
                 <div style="background:var(--inner-bg);border:1px solid var(--border-light);border-radius:12px;padding:14px 16px;margin-bottom:16px;font-size:0.85rem;line-height:1.6;">
-                    <strong>How to know cron is working (this is not the same as Approve):</strong>
+                    <strong>How it runs:</strong>
                     <ul style="margin:8px 0 0 18px;color:var(--text-muted);">
-                        <li><strong>Generate HTML Now</strong> writes HTML from each approved draft. This is the last draft step. Cron does not write HTML.</li>
-                        <li><strong>Human Article → Approve</strong> also writes HTML in that same click.</li>
-                        <li><strong>Run Auto Cron</strong> only schedules ready HTML to Blogger (publishDate). It will skip drafts that still have no HTML.</li>
-                        <li>If <strong>Last cron run</strong> updates after you click Run Auto Cron, scheduling cron is working.</li>
+                        <li><strong>Start Auto Blog</strong> saves the job as Active and writes the first draft HTML immediately.</li>
+                        <li>Cron / <strong>Run Auto Cron</strong> creates the next daily draft, writes HTML (one article per run), then schedules ready HTML on Blogger.</li>
+                        <li><strong>Generate HTML Now</strong> writes any missing HTML one article at a time.</li>
+                        <li><strong>Inactive</strong> stops new daily posts. Existing HTML can still be scheduled.</li>
                     </ul>
                 </div>
                 <form onsubmit="startAutoBlogCampaign(event)">
@@ -671,16 +668,15 @@
                         <div class="form-group"><label>Target Country</label><select id="auto-project-country" required><option value="India">India</option><option value="United States">United States</option><option value="United Kingdom">United Kingdom</option><option value="Canada">Canada</option><option value="Australia">Australia</option><option value="United Arab Emirates">United Arab Emirates</option><option value="Saudi Arabia">Saudi Arabia</option><option value="Singapore">Singapore</option><option value="Germany">Germany</option><option value="Other">Other</option></select></div>
                         <div class="form-group"><label>Language</label><select id="auto-project-language"><option value="en">English</option><option value="hi">Hindi</option></select></div>
                         <div class="form-group"><label>Destination</label><select id="auto-project-platform" onchange="updateAutoCalendarDates()"><option value="blogger">Google Blogger</option><option value="website">Website Blog (Code)</option><option value="local">HTML / Local Magazine</option><option value="wordpress">WordPress</option></select></div>
-                        <div class="form-group"><label>Campaign Days</label><select id="auto-project-days" onchange="updateAutoCalendarDates()"><option value="7">7 days</option><option value="10">10 days</option><option value="15">15 days</option><option value="25">25 days</option><option value="30">30 days</option></select></div>
                         <div class="form-group"><label>Number of Posts Per Day</label><select id="auto-project-posts-per-day" onchange="updateAutoCalendarDates()"><option value="1">1 article</option><option value="2">2 articles</option><option value="3">3 articles</option></select></div>
                         <div class="form-group"><label>Start Date</label><input type="date" id="auto-project-start-date" onchange="updateAutoCalendarDates()"></div>
+                        <div class="form-group"><label>End Date</label><input type="date" id="auto-project-end-date" onchange="updateAutoCalendarDates()"><label style="margin-top:8px;font-weight:600;"><input type="checkbox" id="auto-project-no-end" checked onchange="document.getElementById('auto-project-end-date').disabled=this.checked;updateAutoCalendarDates();"> No end date (run daily until Inactive)</label></div>
                         <div class="form-group">
-                            <label>Keyword Source</label>
-                            <select id="auto-project-keyword-source">
-                                <option value="planner">Google Keyword Planner (real volumes)</option>
-                                <option value="ai">Normal AI keyword search</option>
-                            </select>
+                            <label>Keywords</label>
+                            <input type="hidden" id="auto-project-keyword-source" value="planner">
+                            <div style="padding:11px 14px;background:var(--inner-bg);border:1px solid var(--border-light);border-radius:10px;font-size:0.85rem;font-weight:600;">Google Keyword Planner only — exact volume + difficulty.</div>
                         </div>
+                        <div class="form-group"><label>Job status</label><div id="auto-job-toggle-wrap" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;"><span id="auto-job-state" class="badge badge-warning">Not started</span><button type="button" class="btn btn-accent" onclick="toggleAutoBlog(true)">Set Active</button><button type="button" class="btn btn-danger" onclick="toggleAutoBlog(false)">Set Inactive</button></div></div>
                     </div>
                     <div class="form-grid">
                         <div class="form-group"><label>Chat Model</label><select id="auto-project-chat-account"><option>Loading saved Chat models...</option></select></div>
@@ -695,7 +691,7 @@
                     </div>
                     <button type="submit" class="btn btn-purple" style="margin-top:14px;">🚀 Start Auto Blog Campaign</button>
                     <button type="button" class="btn btn-accent" style="margin-left:8px" onclick="generateAutoHtmlNow()">⚡ Generate HTML Now</button>
-                    <button type="button" class="btn" style="background:#0f172a;margin-left:8px" onclick="runAutoCronNow()">⏱️ Run Auto Cron (schedule only)</button>
+                    <button type="button" class="btn" style="background:#0f172a;margin-left:8px" onclick="runAutoCronNow()">⏱️ Run Auto Cron</button>
                 </form>
                 <div id="auto-project-status" style="margin-top:12px;font-weight:700;"></div>
             </div>
@@ -709,7 +705,7 @@
                     <button class="btn" style="background:#0f172a;" onclick="loadAutoBlogStatus()">🔄 Refresh</button>
                 </div>
                 <table>
-                    <thead><tr><th>Day/Slot</th><th>Blog</th><th>Article Status</th><th>Schedule</th><th>HTML</th><th>Tries</th><th>Last check / error</th></tr></thead>
+                    <thead><tr><th>Day/Slot</th><th>Blog</th><th>Keywords (volume / difficulty)</th><th>Article Status</th><th>Schedule</th><th>HTML</th><th>Tries</th><th>Last check / error</th></tr></thead>
                     <tbody id="auto-progress-tbody"><tr><td colspan="7">No Auto Blog campaign yet. Fill the form above and start one.</td></tr></tbody>
                 </table>
             </div>
@@ -1526,10 +1522,18 @@
                 const statusRes = await fetch('/api/demo/campaign-status');
                 const statusData = await statusRes.json();
                 if (!statusData.campaign) { alert('No active campaign found.'); btn.innerText='⚡ Generate All HTML'; btn.disabled=false; return; }
-                const res = await fetch('/api/demo/generate-html/' + statusData.campaign.id, {method:'POST'});
-                const data = await res.json();
-                alert(res.ok ? '✅ ' + data.message : '🔴 ' + (data.error || 'Generation failed.'));
-                loadDemoProgress(); loadStats();
+                const items = (statusData.items||[]).filter(x => !x.html_path || x.article_status==='Not Created' || x.article_status==='Regenerating HTML');
+                if (!items.length) { alert('All approved drafts already have HTML.'); btn.innerText='⚡ Generate All HTML'; btn.disabled=false; loadDemoProgress(); return; }
+                let ok=0, fail=0, lastErr='';
+                for (const item of items) {
+                    btn.innerText = '⏳ HTML: ' + (item.title||'').slice(0,40);
+                    const res = await fetch('/api/campaign-item/generate-html/' + item.id, {method:'POST'});
+                    const data = await res.json();
+                    if (res.ok && data.success) ok++; else { fail++; lastErr = data.error||'failed'; }
+                    loadDemoProgress();
+                }
+                alert('HTML created: ' + ok + '. Failed: ' + fail + (lastErr? '\nLast error: '+lastErr:''));
+                loadStats();
             } catch(e) { alert('Error: ' + e.message); }
             btn.innerText = '⚡ Generate All HTML'; btn.disabled = false;
         }
@@ -1589,8 +1593,8 @@
         async function loadDemoProgress() { try { const data=await (await fetch('/api/demo/campaign-status')).json(); const body=document.getElementById('demo-progress-tbody'); const approvedBody=document.getElementById('approved-scheduled-tbody'); const approvedCard=document.getElementById('approved-scheduled-card'); if(!data.items||!data.items.length){body.innerHTML='<tr><td colspan="9">No campaign loaded.</td></tr>';approvedCard.style.display='none';return;} 
             const pendingItems=[];const approvedItems=[];
             data.items.forEach(x=>{if(x.plan_status==='Approved'||x.plan_status==='Provisional Approved'||x.article_status==='HTML Ready'||x.article_status==='Final Article Approved'){approvedItems.push(x);}else{pendingItems.push(x);}});
-            body.innerHTML=pendingItems.length?pendingItems.map(x=>`<tr><td>Day ${x.day_number} / Slot ${x.post_number}</td><td>${escapeHtml(x.title)}</td><td><span class="badge badge-purple">${x.plan_status}</span></td><td><span class="badge badge-purple">${x.article_status}</span></td><td>${x.scheduled_date||'—'}</td><td>${x.scheduled_time||'—'}</td><td><span class="badge badge-success">${(x.target_platform||'local').toUpperCase()}</span></td><td>${x.html_path?`<a href="${x.html_path}" target="_blank">View</a> <button class="btn btn-danger" style="font-size:0.7rem;padding:3px 8px;" onclick="downloadItemHtml(${x.id})">⬇</button>`:'—'}</td><td style="white-space:nowrap;">${x.approval_token?`<button class="btn btn-purple" style="font-size:0.75rem;padding:4px 10px;" onclick="dashboardDecision('${x.approval_token}','approve')">Approve</button> <button class="btn btn-danger" style="font-size:0.75rem;padding:4px 10px;" onclick="dashboardDecision('${x.approval_token}','reject')">Disapprove</button>`:''}${x.html_approval_token?` <button class="btn btn-accent" style="font-size:0.75rem;padding:4px 10px;" onclick="htmlDecision('${x.html_approval_token}','approve')">✅ Approve HTML</button> <button class="btn btn-danger" style="font-size:0.75rem;padding:4px 10px;" onclick="htmlDecision('${x.html_approval_token}','reject')">🔄 Rewrite</button>`:''}${x.article_status!=='Published'?` <button class="btn btn-danger" style="font-size:0.7rem;padding:3px 8px;" onclick="deleteCampaignItem(${x.id})">🗑️</button> <button class="btn" style="font-size:0.7rem;padding:3px 8px;background:#8b5cf6;color:#fff;" onclick="resendToTopicList(${x.id})">📝 Resend</button>`:''}${(!x.approval_token&&!x.html_approval_token&&x.article_status!=='Published')?'—':''}</td></tr>`).join(''):'<tr><td colspan="9" style="text-align:center;color:var(--accent-green);font-weight:700;">✅ All items approved! Check Approved & Scheduled section below.</td></tr>';
-            if(approvedItems.length){approvedCard.style.display='block';approvedBody.innerHTML=approvedItems.map(x=>`<tr><td>Day ${x.day_number}</td><td><strong>${escapeHtml(x.title)}</strong></td><td>${x.scheduled_date||'—'}</td><td>${x.scheduled_time||'—'}</td><td><span class="badge badge-success">${(x.target_platform||'local').toUpperCase()}</span></td><td><span class="badge badge-success">${x.article_status}</span></td><td>${x.html_path?`<a href="${x.html_path}" target="_blank">View</a> <button class="btn btn-danger" style="font-size:0.7rem;padding:3px 8px;" onclick="downloadItemHtml(${x.id})">⬇</button>`:'—'}</td><td style="white-space:nowrap;">${x.article_status!=='Published'?`<button class="btn btn-accent" style="font-size:0.8rem;padding:6px 12px;" onclick="publishNow(${x.id},'${x.target_platform||'blogger'}')">🚀 Publish Now</button> <button class="btn btn-purple" style="font-size:0.8rem;padding:6px 12px;" onclick="showScheduleModal(${x.id},'${x.scheduled_date||''}','${x.scheduled_time||''}','${x.target_platform||'blogger'}')">📅 Schedule</button> <button class="btn btn-danger" style="font-size:0.7rem;padding:4px 8px;" onclick="deleteCampaignItem(${x.id})">🗑️</button> <button class="btn" style="font-size:0.7rem;padding:4px 8px;background:#8b5cf6;color:#fff;" onclick="resendToTopicList(${x.id})">📝 Resend</button>`:'<span style="color:#10b981;font-weight:700;">✅ Published</span>'}</td></tr>`).join('');}else{approvedCard.style.display='none';}
+            body.innerHTML=pendingItems.length?pendingItems.map(x=>`<tr><td>Day ${x.day_number} / Slot ${x.post_number}</td><td>${escapeHtml(x.title)}</td><td>${formatPlannerKeywords(x)}</td><td><span class="badge badge-purple">${x.plan_status}</span></td><td><span class="badge badge-purple">${x.article_status}</span></td><td>${x.scheduled_date||'—'}</td><td>${x.scheduled_time||'—'}</td><td><span class="badge badge-success">${(x.target_platform||'local').toUpperCase()}</span></td><td>${x.html_path?`<a href="${x.html_path}" target="_blank">View</a> <button class="btn btn-danger" style="font-size:0.7rem;padding:3px 8px;" onclick="downloadItemHtml(${x.id})">⬇</button>`:'—'}</td><td style="white-space:nowrap;">${x.approval_token?`<button class="btn btn-purple" style="font-size:0.75rem;padding:4px 10px;" onclick="dashboardDecision('${x.approval_token}','approve')">Approve</button> <button class="btn btn-danger" style="font-size:0.75rem;padding:4px 10px;" onclick="dashboardDecision('${x.approval_token}','reject')">Disapprove</button>`:''}${x.html_approval_token?` <button class="btn btn-accent" style="font-size:0.75rem;padding:4px 10px;" onclick="htmlDecision('${x.html_approval_token}','approve')">✅ Approve HTML</button> <button class="btn btn-danger" style="font-size:0.75rem;padding:4px 10px;" onclick="htmlDecision('${x.html_approval_token}','reject')">🔄 Rewrite</button>`:''}${x.article_status!=='Published'?` <button class="btn btn-danger" style="font-size:0.7rem;padding:3px 8px;" onclick="deleteCampaignItem(${x.id})">🗑️</button> <button class="btn" style="font-size:0.7rem;padding:3px 8px;background:#8b5cf6;color:#fff;" onclick="resendToTopicList(${x.id})">📝 Resend</button>`:''}${(!x.approval_token&&!x.html_approval_token&&x.article_status!=='Published')?'—':''}</td></tr>`).join(''):'<tr><td colspan="9" style="text-align:center;color:var(--accent-green);font-weight:700;">✅ All items approved! Check Approved & Scheduled section below.</td></tr>';
+            if(approvedItems.length){approvedCard.style.display='block';approvedBody.innerHTML=approvedItems.map(x=>`<tr><td>Day ${x.day_number}</td><td><strong>${escapeHtml(x.title)}</strong></td><td>${formatPlannerKeywords(x)}</td><td>${x.scheduled_date||'—'}</td><td>${x.scheduled_time||'—'}</td><td><span class="badge badge-success">${(x.target_platform||'local').toUpperCase()}</span></td><td><span class="badge badge-success">${x.article_status}</span></td><td>${x.html_path?`<a href="${x.html_path}" target="_blank">View</a> <button class="btn btn-danger" style="font-size:0.7rem;padding:3px 8px;" onclick="downloadItemHtml(${x.id})">⬇</button>`:'—'}</td><td style="white-space:nowrap;">${x.article_status!=='Published'?`<button class="btn btn-accent" style="font-size:0.8rem;padding:6px 12px;" onclick="publishNow(${x.id},'${x.target_platform||'blogger'}')">🚀 Publish Now</button> <button class="btn btn-purple" style="font-size:0.8rem;padding:6px 12px;" onclick="showScheduleModal(${x.id},'${x.scheduled_date||''}','${x.scheduled_time||''}','${x.target_platform||'blogger'}')">📅 Schedule</button> <button class="btn btn-danger" style="font-size:0.7rem;padding:4px 8px;" onclick="deleteCampaignItem(${x.id})">🗑️</button> <button class="btn" style="font-size:0.7rem;padding:4px 8px;background:#8b5cf6;color:#fff;" onclick="resendToTopicList(${x.id})">📝 Resend</button>`:'<span style="color:#10b981;font-weight:700;">✅ Published</span>'}</td></tr>`).join('');}else{approvedCard.style.display='none';}
         } catch(e){} }
         async function createDemoCampaign() {
             const status=document.getElementById('project-research-status'); status.innerText='Creating local demo roadmap without paid SEO, Chat, or Image requests...';
@@ -1837,6 +1841,19 @@
             loadBacklinks();
         }
 
+
+        function formatPlannerKeywords(x) {
+            let rows = [];
+            try { rows = typeof x.keyword_data === 'string' ? JSON.parse(x.keyword_data||'[]') : (x.keyword_data||[]); } catch(e) { rows = []; }
+            if (!rows.length && x.primary_keyword) return escapeHtml(x.primary_keyword);
+            return rows.slice(0,5).map((r,i) => {
+                const role = i===0 ? 'P' : 'S';
+                const vol = (r.volume===0 || r.volume) ? r.volume : '—';
+                const diff = r.difficulty || '';
+                return `<div style="font-size:0.75rem;line-height:1.35;"><strong>${role}:</strong> ${escapeHtml(r.keyword||'')} <span style="color:var(--text-muted);">vol ${escapeHtml(String(vol))}${diff?' · '+escapeHtml(String(diff)):''}</span></div>`;
+            }).join('');
+        }
+
         function escapeHtml(text) {
             return (text || '').replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
         }
@@ -1929,26 +1946,26 @@
         }
 
         function updateAutoCalendarDates() {
-            const daysEl = document.getElementById('auto-project-days');
-            if (!daysEl) return;
-            const days = Number(daysEl.value);
-            const perDay = Number(document.getElementById('auto-project-posts-per-day').value);
+            const perDayEl = document.getElementById('auto-project-posts-per-day');
+            if (!perDayEl) return;
+            const perDay = Number(perDayEl.value);
             const startDate = document.getElementById('auto-project-start-date').value || new Date().toISOString().split('T')[0];
             if (!document.getElementById('auto-project-start-date').value) document.getElementById('auto-project-start-date').value = startDate;
+            const noEnd = document.getElementById('auto-project-no-end') ? document.getElementById('auto-project-no-end').checked : true;
+            if (document.getElementById('auto-project-end-date')) document.getElementById('auto-project-end-date').disabled = noEnd;
             const timesGrid = document.getElementById('auto-posting-times-grid');
             timesGrid.innerHTML = Array.from({length: perDay}, (_, i) => `<div class="form-group"><label>Post ${i+1} Time</label><input type="time" class="auto-project-posting-time" value="${['10:00','18:00','20:30'][i]||'10:00'}"></div>`).join('');
             const calDisplay = document.getElementById('auto-calendar-dates-display');
-            const startDateObj = new Date(startDate + 'T00:00:00');
-            let calHtml = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin-top:8px;">';
-            for (let d = 0; d < days; d++) {
-                const date = new Date(startDateObj); date.setDate(date.getDate() + d);
-                const dateStr = date.toLocaleDateString('en-IN', {weekday:'short', month:'short', day:'numeric'});
-                const timeInputs = Array.from({length: perDay}, (_, p) => `<span style="font-size:0.75rem;color:var(--text-muted);">Post ${p+1}: ${['10:00','18:00','20:30'][p]||'10:00'}</span>`).join('<br>');
-                calHtml += `<div style="background:var(--card-bg);border:1px solid var(--border-light);border-radius:8px;padding:8px 12px;font-size:0.8rem;"><div style="font-weight:700;color:var(--primary-blue);">Day ${d+1}</div><div style="color:var(--text-dark);">${dateStr}</div>${timeInputs}</div>`;
-            }
-            calHtml += '</div>';
-            calHtml += `<p style="margin-top:8px;font-size:0.82rem;color:var(--text-muted);">Total: <strong>${days * perDay} blogs</strong> across <strong>${days} days</strong> on <strong>${document.getElementById('auto-project-platform').value.toUpperCase()}</strong></p>`;
-            calDisplay.innerHTML = calHtml;
+            calDisplay.innerHTML = `<p style="margin-top:8px;font-size:0.82rem;color:var(--text-muted);"><strong>${perDay}</strong> post(s) per day starting <strong>${startDate}</strong> · ${noEnd ? 'No end date — runs until Inactive' : ('ends ' + (document.getElementById('auto-project-end-date').value || '—'))} · Keywords: <strong>Keyword Planner only</strong> · ${document.getElementById('auto-project-platform').value.toUpperCase()}</p>`;
+        }
+        async function toggleAutoBlog(enabled) {
+            const status=document.getElementById('auto-project-status');
+            try {
+                const res = await fetch('/api/auto-blog/toggle', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({enabled: enabled?1:0})});
+                const data = await res.json();
+                status.innerText = res.ok ? '🟢 ' + (data.message||'') : '🔴 ' + (data.error||'Toggle failed');
+                loadAutoBlogStatus();
+            } catch(e) { status.innerText = '🔴 ' + e.message; }
         }
         async function startAutoBlogCampaign(e) {
             e.preventDefault();
@@ -1958,12 +1975,13 @@
             await fetch('/api/projects/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(settings)});
             const postingTimes=[...document.querySelectorAll('.auto-project-posting-time')].map(x=>x.value);
             const startDate=document.getElementById('auto-project-start-date').value||new Date().toISOString().split('T')[0];
-            const res=await fetch('/api/research/ai-roadmap',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({domain_url:settings.domain_url,country:settings.target_country,language_code:settings.target_language,days:Number(document.getElementById('auto-project-days').value),posts_per_day:Number(document.getElementById('auto-project-posts-per-day').value),start_date:startDate,posting_times:postingTimes,target_platform:document.getElementById('auto-project-platform').value,keyword_source:document.getElementById('auto-project-keyword-source').value,workflow_mode:'auto'})});
+            const noEnd = document.getElementById('auto-project-no-end').checked;
+            const res=await fetch('/api/auto-blog/start',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({domain_url:settings.domain_url,country:settings.target_country,language_code:settings.target_language,posts_per_day:Number(document.getElementById('auto-project-posts-per-day').value),start_date:startDate,end_date:document.getElementById('auto-project-end-date').value||null,no_end:noEnd?1:0,posting_times:postingTimes,target_platform:document.getElementById('auto-project-platform').value,keyword_source:'planner'})});
             const data=await res.json();
             if(!res.ok){status.innerText='🔴 '+(data.error||'Auto Blog start failed.');return;}
-            status.innerText='🟢 Auto campaign created from Custom Topics + ranked keywords. Writing HTML now (last step, not cron)...';
+            status.innerText='🟢 '+(data.message||'Auto Blog is Active.');
             loadAutoBlogStatus();
-            await generateAutoHtmlNow();
+            if (!data.html) await generateAutoHtmlNow();
         }
         async function generateAutoHtmlNow() {
             const status=document.getElementById('auto-project-status');
@@ -2006,6 +2024,11 @@
                 const cron = data.cron || {};
                 const working = cron.cron_is_working;
                 const last = cron.last_run_at || 'never';
+                const job = data.job || {};
+                const jobOn = Number(job.enabled||0)===1;
+                const st = document.getElementById('auto-job-state');
+                if (st) { st.className = 'badge ' + (jobOn?'badge-success':'badge-warning'); st.innerText = jobOn ? 'Active' : (job.id ? 'Inactive' : 'Not started'); }
+
                 health.innerHTML = `<p><strong>Last cron run:</strong> ${escapeHtml(String(last))} ${working ? '<span class="badge badge-success">Working (ran in last 15 min)</span>' : '<span class="badge badge-warning">Not seen recently — click Run Auto Cron Now</span>'}</p>
                     <p>Source: ${escapeHtml(cron.last_source||'—')} · HTML created last run: ${cron.last_html||0} · Scheduled: ${cron.last_scheduled||0} · Published: ${cron.last_published||0} · Failures: ${cron.last_failed||0}</p>
                     <p style="margin-top:8px;">Approve in Human Article Writer writes HTML in that click. This timestamp only changes when cron / Run Cron Now runs.</p>`;
@@ -2014,6 +2037,7 @@
                 body.innerHTML = items.map(x => `<tr>
                     <td>Day ${x.day_number} / Slot ${x.post_number}</td>
                     <td><strong>${escapeHtml(x.title||'')}</strong></td>
+                    <td>${formatPlannerKeywords(x)}</td>
                     <td><span class="badge ${x.article_status==='Published'||x.article_status==='HTML Ready'||x.article_status==='Scheduled'?'badge-success':'badge-warning'}">${escapeHtml(x.article_status||'Not Created')}</span></td>
                     <td>${escapeHtml(x.scheduled_date||'—')} ${escapeHtml(x.scheduled_time||'')}</td>
                     <td>${x.html_path?`<a href="${x.html_path}" target="_blank">View</a>`:'—'}</td>

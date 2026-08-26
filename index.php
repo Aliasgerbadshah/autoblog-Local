@@ -61,6 +61,7 @@ try {
     require_once __DIR__ . '/includes/research_agent.php';
     require_once __DIR__ . '/includes/mailer.php';
     require_once __DIR__ . '/includes/google_keyword_planner.php';
+    require_once __DIR__ . '/includes/keyword_flow.php';
     require_once __DIR__ . '/includes/auto_daily.php';
 } catch (Exception $e) {
     http_response_code(500);
@@ -114,144 +115,6 @@ function resolveCampaignHtmlFile($htmlPath) {
         if ($p && @is_file($p)) return $p;
     }
     return null;
-}
-
-/** Publish/schedule one article to the separate website blog. Always returns an array. */
-function cleanOAuthValue($value) {
-    $value = trim((string)$value);
-    $value = trim($value, " \t\n\r\0\x0B\"'");
-    $value = preg_replace('/\s+/', '', $value);
-    return $value;
-}
-
-/** Keyword Planner OAuth: KP vault first, then Blogger vault. */
-function keywordPlannerLocationAndLanguage($country = 'India', $language = 'en') {
-    $locationMap = ['india' => 2356, 'united states' => 2840, 'usa' => 2840, 'united kingdom' => 2826, 'canada' => 2124, 'australia' => 2036, 'uae' => 2784, 'germany' => 2276, 'france' => 2250, 'brazil' => 2070, 'japan' => 2392];
-    $langMap = ['en' => '1000', 'hi' => '1001', 'es' => '1003', 'fr' => '1002', 'de' => '1004', 'pt' => '1006', 'ja' => '1005', 'ar' => '1019'];
-    return [
-        $locationMap[strtolower((string)$country)] ?? 2356,
-        $langMap[$language] ?? '1000',
-    ];
-}
-
-/** Call saved Keyword Planner credentials for seed keywords. */
-function fetchKeywordPlannerKeywords($userId, $seedKeywords, $country = 'India', $language = 'en') {
-    $gkw = SecurityVault::getApiCredentials($userId, 'google_keyword_planner') ?: [];
-    $developerToken = trim($gkw['developer_token'] ?? '');
-    $customerId = trim($gkw['customer_id'] ?? '');
-    $loginCustomerId = trim($gkw['login_customer_id'] ?? $customerId);
-    if ($developerToken === '' || $customerId === '') {
-        return ['success' => false, 'error' => 'Keyword Planner is not saved. Save Developer Token + TEST Customer ID in API Vault first.'];
-    }
-    list($clientId, $clientSecret, $refreshToken) = resolveKeywordPlannerOAuth($userId);
-    if ($clientId === '' || $clientSecret === '' || $refreshToken === '') {
-        return ['success' => false, 'error' => 'Keyword Planner OAuth is missing. Save Client ID, Client Secret, and Refresh Token in the Keyword Planner vault.'];
-    }
-    $tokenResult = GoogleKeywordPlanner::getAccessToken($clientId, $clientSecret, $refreshToken);
-    if (empty($tokenResult['success'])) {
-        return ['success' => false, 'error' => 'Keyword Planner OAuth failed: ' . ($tokenResult['error'] ?? 'unknown')];
-    }
-    list($locationId, $languageCode) = keywordPlannerLocationAndLanguage($country, $language);
-    $seeds = array_values(array_filter(array_map('trim', (array)$seedKeywords)));
-    if (empty($seeds)) $seeds = ['digital marketing'];
-    $topic = $seeds[0];
-    $seeds = GoogleKeywordPlanner::expandSeedKeywords($topic, $seeds[0]);
-    $result = GoogleKeywordPlanner::generateKeywordIdeas(
-        $developerToken, $customerId, $loginCustomerId, $tokenResult['access_token'],
-        $seeds, $languageCode, $locationId
-    );
-    if (!empty($result['success'])) {
-        $result['keywords'] = GoogleKeywordPlanner::selectBestTargetKeywords($result['keywords'] ?? [], $topic);
-        $result['count'] = count($result['keywords']);
-        $result['primary_keyword'] = $result['keywords'][0]['keyword'] ?? $topic;
-    }
-    return $result;
-}
-
-function plannerRowsToKeywordData($rows) {
-    $out = [];
-    foreach ((array)$rows as $i => $row) {
-        $out[] = [
-            'keyword' => $row['keyword'] ?? '',
-            'volume' => $row['volume'] ?? 0,
-            'difficulty' => $row['difficulty'] ?? 'Unknown',
-            'intent' => $row['intent'] ?? 'Informational',
-            'source' => 'Google Keyword Planner',
-            'cpc' => $row['cpc'] ?? null,
-            'competition_index' => $row['competition_index'] ?? null,
-            'role' => $row['role'] ?? ($i === 0 ? 'primary' : 'secondary'),
-        ];
-    }
-    return $out;
-}
-
-function customTopicsCsvPath() {
-    $cands = [
-        __DIR__ . '/data/custom_topics.csv',
-        dirname(__DIR__) . '/data/custom_topics.csv',
-    ];
-    foreach ($cands as $p) {
-        if (file_exists($p)) return $p;
-    }
-    $dir = __DIR__ . '/data';
-    if (!is_dir($dir)) @mkdir($dir, 0755, true);
-    return $dir . '/custom_topics.csv';
-}
-
-function limitPlanKeywords($keywords, $max = 5) {
-    $rows = array_values(array_filter((array)$keywords, fn($x) => !empty($x['keyword'])));
-    $rows = array_slice($rows, 0, $max);
-    foreach ($rows as $i => &$r) {
-        $r['role'] = $i === 0 ? 'primary' : 'secondary';
-    }
-    unset($r);
-    return $rows;
-}
-
-/** Apply ranked Keyword Planner keywords onto an article plan (primary = highest volume / lowest competition). */
-function applyPlannerKeywordsToPlan(&$plan, $userId, $country, $language, $keepTitle = false) {
-    $topic = $plan['title'] ?? $plan['primary_keyword'] ?? '';
-    $seed = $plan['primary_keyword'] ?? $topic;
-    $kwRes = fetchKeywordPlannerKeywords($userId, [$seed, $topic], $country, $language);
-    if (empty($kwRes['success'])) {
-        return $kwRes;
-    }
-    $rows = array_slice($kwRes['keywords'] ?? [], 0, 5);
-    if (empty($rows)) {
-        return ['success' => false, 'error' => 'Keyword Planner returned no keyword ideas for: ' . $topic];
-    }
-    $plan['keywords'] = limitPlanKeywords(plannerRowsToKeywordData($rows), 5);
-    $primary = $rows[0]['keyword'] ?? $seed;
-    $plan['primary_keyword'] = $primary;
-    if (!$keepTitle) {
-        $title = $plan['title'] ?? $topic;
-        if ($primary && stripos($title, $primary) === false) {
-            $plan['title'] = ucwords($primary);
-            $heads = $plan['headings'] ?? [];
-            if (!is_array($heads)) $heads = [];
-            $heads['H1'] = ucwords($primary);
-            $plan['headings'] = $heads;
-        }
-    }
-    return ['success' => true, 'primary_keyword' => $primary, 'count' => count($rows)];
-}
-
-function saveAutoBlogJob($userId, $slot, $campaignId, $domain, $country, $language, $days, $perDay, $startDate, $postingTimes, $platform, $keywordSource) {
-    $db = getDB();
-    $now = nowString();
-    $db->prepare('INSERT INTO auto_blog_jobs (user_id, slot_number, enabled, campaign_id, domain_url, country, language_code, days, posts_per_day, start_date, posting_times, target_platform, keyword_source, created_at) VALUES (?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ON CONFLICT(user_id, slot_number) DO UPDATE SET enabled=1, campaign_id=excluded.campaign_id, domain_url=excluded.domain_url, country=excluded.country, language_code=excluded.language_code, days=excluded.days, posts_per_day=excluded.posts_per_day, start_date=excluded.start_date, posting_times=excluded.posting_times, target_platform=excluded.target_platform, keyword_source=excluded.keyword_source, last_error=NULL')->execute([
-        $userId, $slot, $campaignId, $domain, $country, $language, $days, $perDay, $startDate, json_encode($postingTimes), $platform, $keywordSource, $now
-    ]);
-}
-
-function resolveKeywordPlannerOAuth($userId, $input = []) {
-    $gkw = SecurityVault::getApiCredentials($userId, 'google_keyword_planner') ?: [];
-    $blog = SecurityVault::getApiCredentials($userId, 'blogger_api') ?: [];
-    $clientId = cleanOAuthValue($input['client_id'] ?? '') ?: cleanOAuthValue($gkw['client_id'] ?? '') ?: cleanOAuthValue($blog['client_id'] ?? '');
-    $clientSecret = cleanOAuthValue($input['client_secret'] ?? '') ?: cleanOAuthValue($gkw['client_secret'] ?? '') ?: cleanOAuthValue($blog['client_secret'] ?? '');
-    $refreshToken = cleanOAuthValue($input['refresh_token'] ?? '') ?: cleanOAuthValue($gkw['refresh_token'] ?? '') ?: cleanOAuthValue($blog['refresh_token'] ?? '');
-    return [$clientId, $clientSecret, $refreshToken];
 }
 
 function publishToWebsiteBlog($item, $title, $articleContent, $scheduledStr = null) {
@@ -1200,24 +1063,20 @@ function handleApiRoute($uri) {
             }
         }
         if (empty($plans)) jsonResponse(['error' => 'ALL proposed topics are duplicates of existing blogs. The software has covered this niche extensively. Try a different website or industry angle.', 'dedup_stats' => $dedupStats], 400);
-        $keywordSource = (($input['keyword_source'] ?? 'ai') === 'planner') ? 'planner' : 'ai';
+        $keywordSource = 'planner';
         $plannerUsedCount = 0;
         $csvTitleSet = array_fill_keys(array_map('strtolower', $selectedCsvTopics), true);
         foreach ($plans as &$plan) {
             $isCustom = !empty($csvTitleSet[strtolower(trim($plan['title'] ?? ''))]);
-            $needPlanner = ($keywordSource === 'planner') || $isCustom;
-            if ($needPlanner) {
-                $kwRes = applyPlannerKeywordsToPlan($plan, $userId, $country, $language, $isCustom);
-                if (empty($kwRes['success'])) {
-                    if ($keywordSource === 'planner') {
-                        jsonResponse(['error' => 'Keyword Planner selected, but it failed: ' . ($kwRes['error'] ?? 'unknown')], 400);
-                    }
-                } else {
-                    $plannerUsedCount++;
-                }
+            $kwRes = requirePlannerKeywordsOnPlan($plan, $userId, $country, $language, true);
+            if (empty($kwRes['success'])) {
+                jsonResponse(['error' => 'Keyword Planner is required. It failed: ' . ($kwRes['error'] ?? 'unknown')], 400);
             }
-            $plan['keywords'] = limitPlanKeywords($plan['keywords'] ?? [['keyword' => ($plan['primary_keyword'] ?? $plan['title'] ?? 'topic')]], 5);
-            if (!empty($plan['keywords'][0]['keyword'])) $plan['primary_keyword'] = $plan['keywords'][0]['keyword'];
+            $plannerUsedCount++;
+            if (empty($plan['keywords'][0]['keyword'])) {
+                jsonResponse(['error' => 'Keyword Planner returned empty keywords for: ' . ($plan['title'] ?? '')], 400);
+            }
+            $plan['primary_keyword'] = $plan['keywords'][0]['keyword'];
         }
         unset($plan);
         // PRESERVE APPROVED ITEMS: Only archive campaigns with NO approved/finalized items
@@ -1300,7 +1159,7 @@ function handleApiRoute($uri) {
         }
         
         $csvMsg = $csvCount > 0 ? " ($csvCount from Custom Topics CSV, $researchCount from AI Research)" : '';
-        $srcMsg = $keywordSource === 'planner' ? " Used Google Keyword Planner on {$plannerUsedCount} topics." : ' Used normal AI keyword estimates.';
+        $srcMsg = " Keywords are Google Keyword Planner only (exact volume + difficulty). AI did not invent keywords.";
         jsonResponse(['success' => true, 'campaign_id' => $campaignId, 'articles' => count($roadmapRows), 'email_sent' => $sent, 'from_csv' => $csvCount, 'from_research' => $researchCount, 'keyword_source' => $keywordSource, 'suggested_roadmap' => $roadmapRows, 'message' => ($sent ? 'Roadmap created and approval email sent.' : 'Roadmap created. Brevo email not sent.') . $csvMsg . $srcMsg]);
     }
 
@@ -1466,7 +1325,7 @@ function handleApiRoute($uri) {
         $startDate = $input['start_date'] ?? date('Y-m-d');
         $postingTimes = $input['posting_times'] ?? ['10:00'];
         $targetPlatform = $input['target_platform'] ?? 'blogger';
-        $keywordSource = (($input['keyword_source'] ?? 'ai') === 'planner') ? 'planner' : 'ai';
+        $keywordSource = 'planner';
         $workflowMode = (($input['workflow_mode'] ?? 'manual') === 'auto') ? 'auto' : 'manual';
 
         $stmt = $db->prepare('INSERT INTO campaigns (user_id, slot_number, domain_url, target_country, language_code, days, posts_per_day, status, start_date, posting_times, target_platform, created_at, workflow_mode, keyword_source) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
@@ -1491,37 +1350,39 @@ function handleApiRoute($uri) {
                 
                 // If we have AI-researched plan for this CSV topic, use its rich data
                 if (!empty($csvPlan)) {
-                    $kws = $csvPlan['keywords'] ?? [['keyword' => $kw, 'volume' => 'Custom', 'difficulty' => 'Medium', 'intent' => 'Informational']];
                     $headings = $csvPlan['headings'] ?? ['H1' => ucwords($kw), 'H2' => ['Overview', 'Key Insights', 'How to Apply', 'FAQ'], 'H3' => ['Details', 'Common Questions']];
                     $internal = $csvPlan['internal_links'] ?? [['url' => $domain, 'anchor_text' => 'client website']];
                     $external = $csvPlan['external_links'] ?? array_slice(array_map(fn($p) => ['url' => $p['page_url'], 'anchor_text' => $p['page_title'] ?: basename($p['page_url'])], $pages), 0, 4) ?: [['url' => $domain, 'anchor_text' => 'Customer Website']];
                     $prompts = $csvPlan['image_prompts'] ?? ["Editorial image for $kw, professional, no text.", "Practical scene for $kw, authentic style."];
                     $title = $csvPlan['title'] ?? ucwords($kw);
-                    $primaryKw = $csvPlan['primary_keyword'] ?? $kw;
+                    $primaryKw = $kw;
+                    $kws = [];
+                    $gkwCsv = fetchKeywordPlannerKeywords($userId, [$kw, $title], $country, $language);
+                    if (empty($gkwCsv['success'])) {
+                        jsonResponse(['error' => 'Keyword Planner is required. It failed: ' . ($gkwCsv['error'] ?? 'unknown')], 400);
+                    }
+                    $kws = array_slice(plannerRowsToKeywordData($gkwCsv['keywords'] ?? []), 0, 5);
+                    if (empty($kws[0]['keyword'])) {
+                        jsonResponse(['error' => 'Keyword Planner returned no keywords for: ' . $kw], 400);
+                    }
+                    $primaryKw = $kws[0]['keyword'];
                 } else {
                 $title = '';
                 $primaryKw = '';
                 $articleKeywords = array_slice(array_merge(array_slice($base, $idx % count($base)), array_slice($base, 0, $idx % count($base))), 0, 8);
 
                 $kws = [];
-                if ($keywordSource === 'planner') {
-                    $gkwResult = fetchKeywordPlannerKeywords($userId, [$kw], $country, $language);
+                $gkwResult = fetchKeywordPlannerKeywords($userId, [$kw, $title ?: $kw], $country, $language);
                     if (empty($gkwResult['success'])) {
-                        jsonResponse(['error' => 'Keyword Planner selected, but it failed: ' . ($gkwResult['error'] ?? 'unknown')], 400);
+                        jsonResponse(['error' => 'Keyword Planner is required. It failed: ' . ($gkwResult['error'] ?? 'unknown')], 400);
                     }
-                    $kws = array_slice(plannerRowsToKeywordData($gkwResult['keywords'] ?? []), 0, 8);
-                    if (!empty($kws[0]['keyword'])) {
-                        $primaryKw = $kws[0]['keyword'];
-                        $title = ucwords($primaryKw);
+                    $kws = array_slice(plannerRowsToKeywordData($gkwResult['keywords'] ?? []), 0, 5);
+                    if (empty($kws[0]['keyword'])) {
+                        jsonResponse(['error' => 'Keyword Planner returned no keywords for: ' . $kw], 400);
                     }
-                    error_log("[Demo Campaign] Used Google Keyword Planner for '$kw' - primary=" . ($kws[0]['keyword'] ?? '') . " vol=" . ($kws[0]['volume'] ?? ''));
-                }
-                // Fallback to demo estimates if Keyword Planner not available or failed
-                if (empty($kws)) {
-                    foreach ($articleKeywords as $j => $k) {
-                        $kws[] = ['keyword' => $k, 'volume' => 'AI estimate', 'difficulty' => ['Low', 'Medium', 'High'][$j % 3], 'intent' => $j % 2 ? 'Commercial' : 'Informational', 'source' => 'AI'];
-                    }
-                }
+                    $primaryKw = $kws[0]['keyword'];
+                    if ($title === '') $title = ucwords($kw);
+                    error_log("[Demo Campaign] Keyword Planner for '$kw' primary=" . $primaryKw . " vol=" . ($kws[0]['volume'] ?? 0));
                 $headings = ['H1' => ucwords($kw), 'H2' => ['Overview and practical use', 'What competitors miss', 'How to choose the right option', 'Frequently Asked Questions'], 'H3' => ['Costs and examples', 'Common mistakes', 'Implementation steps'], 'H4' => ['Checklist', 'Useful references']];
                 $relatedPages = [];
                 for ($offset = 0; $offset < min(3, count($pages)); $offset++) {
@@ -1599,7 +1460,7 @@ function handleApiRoute($uri) {
         }
         
         $csvMsg = $csvCount > 0 ? " ($csvCount from Custom Topics CSV, " . ($days * $perDay - $csvCount) . " from Demo)" : '';
-        $srcMsg = $keywordSource === 'planner' ? ' Used Google Keyword Planner volumes.' : ' Used normal AI keyword estimates.';
+        $srcMsg = ' Keywords are Google Keyword Planner only (exact volume + difficulty).';
         jsonResponse(['success' => true, 'campaign_id' => $campaignId, 'items' => $days * $perDay, 'email_sent' => $sent, 'from_csv' => $csvCount, 'keyword_source' => $keywordSource, 'base_url' => APP_BASE_URL, 'message' => ($sent ? 'Roadmap created and approval email sent.' : 'Roadmap created locally.') . $csvMsg . $srcMsg]);
     }
 
@@ -1611,7 +1472,7 @@ function handleApiRoute($uri) {
         $campaign = $stmt->fetch();
         if (!$campaign) jsonResponse(['campaign' => null, 'items' => []]);
 
-        $stmt = $db->prepare('SELECT id, day_number, post_number, title, primary_keyword, plan_status, article_status, html_path, scheduled_date, scheduled_time, target_platform, last_error, html_retry_count FROM campaign_items WHERE campaign_id = ? ORDER BY day_number, post_number');
+        $stmt = $db->prepare('SELECT id, day_number, post_number, title, primary_keyword, keyword_data, plan_status, article_status, html_path, scheduled_date, scheduled_time, target_platform, last_error, html_retry_count FROM campaign_items WHERE campaign_id = ? ORDER BY day_number, post_number');
         $stmt->execute([$campaign['id']]);
         $rows = $stmt->fetchAll();
         foreach ($rows as &$row) {
@@ -2247,7 +2108,7 @@ function handleApiRoute($uri) {
     if (preg_match('#^/api/demo/generate-html/(\d+)$#', $uri, $m) && $method === 'POST') {
         $campaignId = $m[1];
         $db = getDB();
-        $stmt = $db->prepare('SELECT * FROM campaign_items WHERE campaign_id = ? AND plan_status = "Approved" AND (article_status IS NULL OR article_status = "" OR article_status = "Not Created" OR article_status = "Regenerating HTML" OR article_status = "HTML Ready")');
+        $stmt = $db->prepare('SELECT * FROM campaign_items WHERE campaign_id = ? AND plan_status IN ("Approved","Provisional Approved") AND (html_path IS NULL OR html_path = "" OR article_status IS NULL OR article_status = "" OR article_status = "Not Created" OR article_status = "Regenerating HTML") LIMIT 1');
         $stmt->execute([$campaignId]);
         $items = $stmt->fetchAll();
         $generated = [];
@@ -2568,7 +2429,7 @@ function handleApiRoute($uri) {
         $autoRes = ['html' => 0, 'published' => 0, 'scheduled' => 0, 'processed' => 0, 'errors' => [], 'message' => ''];
         if (function_exists('processAutoBlogCampaigns')) {
             try {
-                $autoRes = processAutoBlogCampaigns(8, 5);
+                $autoRes = processAutoBlogCampaigns(1, 3);
                 $autoOutput = json_encode($autoRes);
                 if (function_exists('recordAutoCronRun')) {
                     recordAutoCronRun('run_cron_now', $autoRes, $userId);
@@ -2604,6 +2465,61 @@ function handleApiRoute($uri) {
     }
 
     // ========== AUTO BLOG — isolated from Human Article Writer ==========
+    if ($uri === '/api/auto-blog/start' && $method === 'POST') {
+        $domain = trim($input['domain_url'] ?? '');
+        if ($domain === '') jsonResponse(['error' => 'Website URL is required.'], 400);
+        $country = $input['country'] ?? 'India';
+        $language = $input['language_code'] ?? 'en';
+        $perDay = intval($input['posts_per_day'] ?? 1);
+        if (!in_array($perDay, [1, 2, 3], true)) $perDay = 1;
+        $startDate = $input['start_date'] ?? date('Y-m-d');
+        $noEnd = !empty($input['no_end']) ? 1 : 0;
+        $endDate = $noEnd ? null : ($input['end_date'] ?? null);
+        $postingTimes = $input['posting_times'] ?? ['10:00'];
+        $targetPlatform = $input['target_platform'] ?? 'blogger';
+        $now = nowString();
+        $db = getDB();
+        $stmt = $db->prepare('INSERT INTO campaigns (user_id, slot_number, domain_url, target_country, language_code, days, posts_per_day, status, start_date, end_date, no_end, posting_times, target_platform, created_at, workflow_mode, keyword_source) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+        $stmt->execute([$userId, $activeSlot, $domain, $country, $language, 0, $perDay, 'Auto Running', $startDate, $endDate, $noEnd, json_encode($postingTimes), $targetPlatform, $now, 'auto', 'planner']);
+        $campaignId = $db->lastInsertId();
+        saveAutoBlogJob($userId, $activeSlot, $campaignId, $domain, $country, $language, 0, $perDay, $startDate, $postingTimes, $targetPlatform, 'planner', $endDate, $noEnd, 1);
+        $created = 0;
+        $htmlMade = 0;
+        $errors = [];
+        if (function_exists('createNextAutoBlogDraft')) {
+            $camp = $db->query('SELECT * FROM campaigns WHERE id = ' . intval($campaignId))->fetch();
+            $jobRow = $db->prepare('SELECT * FROM auto_blog_jobs WHERE user_id = ? AND slot_number = ?');
+            $jobRow->execute([$userId, $activeSlot]);
+            $job = $jobRow->fetch();
+            if ($camp && $job) {
+                $made = createNextAutoBlogDraft($job, $camp);
+                if (!empty($made['created'])) {
+                    $created = 1;
+                    $it = $db->prepare('SELECT * FROM campaign_items WHERE id = ?');
+                    $it->execute([$made['item_id']]);
+                    $item = $it->fetch();
+                    if ($item && function_exists('generateHtmlForCampaignItem')) {
+                        $hr = generateHtmlForCampaignItem($item, $userId, $activeSlot, $db);
+                        if (!empty($hr['success'])) $htmlMade = 1;
+                        else $errors[] = $hr['error'] ?? 'HTML failed';
+                    }
+                } elseif (!empty($made['error'])) {
+                    $errors[] = $made['error'];
+                }
+            }
+        }
+        jsonResponse(['success' => true, 'campaign_id' => $campaignId, 'created' => $created, 'html' => $htmlMade, 'errors' => $errors, 'keyword_source' => 'planner', 'message' => ($htmlMade ? 'Auto Blog is Active. First draft HTML was written from Keyword Planner.' : ('Auto Blog is Active. ' . (implode(' ', $errors) ?: 'Cron will create the next daily post from Custom Topics + Keyword Planner.')))]);
+    }
+
+    if ($uri === '/api/auto-blog/toggle' && $method === 'POST') {
+        $enabled = !empty($input['enabled']) ? 1 : 0;
+        $db = getDB();
+        $db->prepare('UPDATE auto_blog_jobs SET enabled = ? WHERE user_id = ? AND slot_number = ?')->execute([$enabled, $userId, $activeSlot]);
+        $status = $enabled ? 'Auto Running' : 'Paused';
+        $db->prepare("UPDATE campaigns SET status = ? WHERE user_id = ? AND workflow_mode = 'auto' AND id IN (SELECT campaign_id FROM auto_blog_jobs WHERE user_id = ? AND slot_number = ?)")->execute([$status, $userId, $userId, $activeSlot]);
+        jsonResponse(['success' => true, 'enabled' => $enabled, 'message' => $enabled ? 'Auto Blog is Active.' : 'Auto Blog is Inactive. Daily posting stopped.']);
+    }
+
     if ($uri === '/api/auto-blog/status' && $method === 'GET') {
         $db = getDB();
         $stmt = $db->prepare("SELECT * FROM campaigns WHERE user_id = ? AND workflow_mode = 'auto' ORDER BY id DESC LIMIT 1");
@@ -2611,7 +2527,7 @@ function handleApiRoute($uri) {
         $campaign = $stmt->fetch();
         $items = [];
         if ($campaign) {
-            $stmt = $db->prepare('SELECT id, day_number, post_number, title, primary_keyword, plan_status, article_status, html_path, scheduled_date, scheduled_time, target_platform, last_error, html_retry_count FROM campaign_items WHERE campaign_id = ? ORDER BY day_number, post_number');
+            $stmt = $db->prepare('SELECT id, day_number, post_number, title, primary_keyword, keyword_data, plan_status, article_status, html_path, scheduled_date, scheduled_time, target_platform, last_error, html_retry_count FROM campaign_items WHERE campaign_id = ? ORDER BY day_number, post_number');
             $stmt->execute([$campaign['id']]);
             $items = $stmt->fetchAll();
         }

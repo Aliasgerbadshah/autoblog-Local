@@ -16,10 +16,11 @@ require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/autoblog_engine.php';
 require_once __DIR__ . '/../includes/ai_provider.php';
 require_once __DIR__ . '/../includes/google_keyword_planner.php';
+require_once __DIR__ . '/../includes/keyword_flow.php';
 require_once __DIR__ . '/../includes/auto_daily.php';
 
 @set_time_limit(180);
-$res = processAutoBlogCampaigns(8, 5);
+$res = processAutoBlogCampaigns(1, 3);
 if (function_exists('recordAutoCronRun')) {
     recordAutoCronRun('hostinger_cron', $res);
 }

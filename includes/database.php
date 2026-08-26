@@ -128,7 +128,9 @@ function initAutoblogDB() {
     try { $db->exec('ALTER TABLE campaign_items ADD COLUMN scheduled_date TEXT'); } catch (Exception $e) {}
     try { $db->exec('ALTER TABLE campaign_items ADD COLUMN target_platform TEXT DEFAULT \'local\''); } catch (Exception $e) {}
     try { $db->exec('ALTER TABLE campaigns ADD COLUMN workflow_mode TEXT DEFAULT \'manual\''); } catch (Exception $e) {}
-    try { $db->exec('ALTER TABLE campaigns ADD COLUMN keyword_source TEXT DEFAULT \'ai\''); } catch (Exception $e) {}
+    try { $db->exec('ALTER TABLE campaigns ADD COLUMN keyword_source TEXT DEFAULT \'planner\''); } catch (Exception $e) {}
+    try { $db->exec('ALTER TABLE campaigns ADD COLUMN end_date TEXT'); } catch (Exception $e) {}
+    try { $db->exec('ALTER TABLE campaigns ADD COLUMN no_end INTEGER DEFAULT 0'); } catch (Exception $e) {}
     try { $db->exec('ALTER TABLE campaign_items ADD COLUMN html_retry_count INTEGER DEFAULT 0'); } catch (Exception $e) {}
     try { $db->exec('ALTER TABLE campaign_items ADD COLUMN last_error TEXT'); } catch (Exception $e) {}
     try { $db->exec('ALTER TABLE scheduled_queue ADD COLUMN retry_count INTEGER DEFAULT 0'); } catch (Exception $e) {}
@@ -168,6 +170,8 @@ function initAutoblogDB() {
         created_at TEXT NOT NULL,
         UNIQUE(user_id, slot_number)
     )');
+    try { $db->exec('ALTER TABLE auto_blog_jobs ADD COLUMN end_date TEXT'); } catch (Exception $e) {}
+    try { $db->exec('ALTER TABLE auto_blog_jobs ADD COLUMN no_end INTEGER DEFAULT 1'); } catch (Exception $e) {}
 
     // Created blog topics tracking (for dedup across campaigns)
     $db->exec('CREATE TABLE IF NOT EXISTS created_blog_topics (
