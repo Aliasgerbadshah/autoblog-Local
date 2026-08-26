@@ -1570,15 +1570,15 @@ function handleApiRoute($uri) {
         jsonResponse(['success' => true, 'campaign_id' => $campaignId, 'items' => $days * $perDay, 'email_sent' => $sent, 'from_csv' => $csvCount, 'keyword_source' => $keywordSource, 'base_url' => APP_BASE_URL, 'message' => ($sent ? 'Roadmap created and approval email sent.' : 'Roadmap created locally.') . $csvMsg . $srcMsg]);
     }
 
-    // Demo campaign status
+    // Demo campaign status — Human Article Writer only (manual campaigns)
     if ($uri === '/api/demo/campaign-status') {
         $db = getDB();
-        $stmt = $db->prepare('SELECT id FROM campaigns WHERE user_id = ? ORDER BY id DESC LIMIT 1');
+        $stmt = $db->prepare("SELECT id FROM campaigns WHERE user_id = ? AND (workflow_mode IS NULL OR workflow_mode = 'manual') ORDER BY id DESC LIMIT 1");
         $stmt->execute([$userId]);
         $campaign = $stmt->fetch();
         if (!$campaign) jsonResponse(['campaign' => null, 'items' => []]);
 
-        $stmt = $db->prepare('SELECT id, day_number, post_number, title, primary_keyword, plan_status, article_status, html_path, scheduled_date, scheduled_time, target_platform FROM campaign_items WHERE campaign_id = ? ORDER BY day_number, post_number');
+        $stmt = $db->prepare('SELECT id, day_number, post_number, title, primary_keyword, plan_status, article_status, html_path, scheduled_date, scheduled_time, target_platform, last_error, html_retry_count FROM campaign_items WHERE campaign_id = ? ORDER BY day_number, post_number');
         $stmt->execute([$campaign['id']]);
         $rows = $stmt->fetchAll();
         foreach ($rows as &$row) {
@@ -1941,13 +1941,16 @@ function handleApiRoute($uri) {
                 $freshItem = $stmt->fetch();
                 $htmlResult = generateArticleHtmlReliable($freshItem, $tok['user_id'], $activeSlot, $db);
                 if (!empty($htmlResult['success'])) {
-                    $stmt = $db->prepare("UPDATE campaign_items SET article_status = 'HTML Ready', html_path = ? WHERE id = ?");
+                    $stmt = $db->prepare("UPDATE campaign_items SET article_status = 'HTML Ready', html_path = ?, last_error = NULL WHERE id = ?");
                     $stmt->execute([$htmlResult['html_path'], $item['id']]);
                     $htmlToken = generateToken();
                     $stmt = $db->prepare('INSERT INTO approval_tokens (user_id, campaign_item_id, approval_type, token, created_at) VALUES (?, ?, ?, ?, ?)');
                     $stmt->execute([$tok['user_id'], $item['id'], 'html', $htmlToken, $now]);
                     $previewEmailHtml = buildHtmlPreviewEmailHtml($freshItem, $htmlResult['html_path'], $htmlToken, $htmlResult['used_chat_api']);
                     sendApprovalEmail($tok['user_id'], 'Blog HTML Preview - ' . escapeHtml($freshItem['title']), $previewEmailHtml);
+                } else {
+                    $stmt = $db->prepare("UPDATE campaign_items SET last_error = ?, html_retry_count = COALESCE(html_retry_count,0)+1 WHERE id = ?");
+                    $stmt->execute([$htmlResult['error'] ?? 'HTML generation failed after approve', $item['id']]);
                 }
                 header('Location: ' . APP_BASE_URL . '/api/demo/approval-result?status=approved');
             } else {
@@ -2216,10 +2219,11 @@ function handleApiRoute($uri) {
         $items = $stmt->fetchAll();
         $generated = [];
 
+        $failed = [];
         foreach ($items as $item) {
             $htmlResult = generateArticleHtmlReliable($item, $userId, $activeSlot, $db);
             if (!empty($htmlResult['success'])) {
-                $stmt = $db->prepare("UPDATE campaign_items SET article_status = 'HTML Ready', html_path = ? WHERE id = ?");
+                $stmt = $db->prepare("UPDATE campaign_items SET article_status = 'HTML Ready', html_path = ?, last_error = NULL WHERE id = ?");
                 $stmt->execute([$htmlResult['html_path'], $item['id']]);
                 $htmlToken = generateToken();
                 $nowG = nowString();
@@ -2228,9 +2232,14 @@ function handleApiRoute($uri) {
                 $previewEmailHtml = buildHtmlPreviewEmailHtml($item, $htmlResult['html_path'], $htmlToken, $htmlResult['used_chat_api']);
                 sendApprovalEmail($userId, 'Blog HTML Preview - ' . escapeHtml($item['title']), $previewEmailHtml);
                 $generated[] = ['id' => $item['id'], 'url' => $htmlResult['html_path'], 'title' => $item['title']];
+            } else {
+                $err = $htmlResult['error'] ?? 'HTML generation failed';
+                $stmt = $db->prepare("UPDATE campaign_items SET last_error = ?, html_retry_count = COALESCE(html_retry_count,0)+1 WHERE id = ?");
+                $stmt->execute([$err, $item['id']]);
+                $failed[] = ['id' => $item['id'], 'title' => $item['title'], 'error' => $err];
             }
         }
-        jsonResponse(['success' => true, 'articles' => $generated, 'message' => count($generated) . ' articles generated with preview emails sent.']);
+        jsonResponse(['success' => true, 'articles' => $generated, 'failed' => $failed, 'message' => count($generated) . ' articles generated. ' . count($failed) . ' failed.']);
     }
 
     // Content plans
@@ -2518,12 +2527,17 @@ function handleApiRoute($uri) {
             $schedulerOutput .= ob_get_clean();
         }
         $autoOutput = '';
+        $autoRes = ['html' => 0, 'published' => 0, 'scheduled' => 0, 'processed' => 0, 'errors' => [], 'message' => ''];
         if (function_exists('processAutoBlogCampaigns')) {
             try {
-                $autoRes = processAutoBlogCampaigns(3);
+                $autoRes = processAutoBlogCampaigns(8, 5);
                 $autoOutput = json_encode($autoRes);
+                if (function_exists('recordAutoCronRun')) {
+                    recordAutoCronRun('run_cron_now', $autoRes, $userId);
+                }
             } catch (Throwable $e) {
                 $autoOutput = 'Auto daily error: ' . $e->getMessage();
+                $autoRes['errors'][] = $e->getMessage();
             }
         }
         ob_end_clean();
@@ -2538,10 +2552,54 @@ function handleApiRoute($uri) {
                 error_log('[Website Blog] Scheduled publish error: ' . $e->getMessage());
             }
         }
-        jsonResponse(['success' => true, 'timer_output' => $timerOutput, 'scheduler_output' => $schedulerOutput, 'website_published' => $websitePubCount, 'message' => 'Cron executed: approval timer + scheduler ran.' . ($websitePubCount ? " + {$websitePubCount} website blog posts published." : '')]);
+        $autoMsg = $autoRes['message'] ?? '';
+        jsonResponse([
+            'success' => true,
+            'timer_output' => $timerOutput,
+            'scheduler_output' => $schedulerOutput,
+            'auto' => $autoRes,
+            'auto_output' => $autoOutput,
+            'website_published' => $websitePubCount,
+            'last_run_at' => date('Y-m-d H:i:s'),
+            'message' => 'Cron ran at ' . date('Y-m-d H:i:s') . '. Auto: ' . $autoMsg . ' Human approval timer + due-queue scheduler also ran.' . ($websitePubCount ? " + {$websitePubCount} website posts." : ''),
+        ]);
     }
 
-    // ========== DELETE CAMPAIGN ITEM ==========
+    // ========== AUTO BLOG — isolated from Human Article Writer ==========
+    if ($uri === '/api/auto-blog/status' && $method === 'GET') {
+        $db = getDB();
+        $stmt = $db->prepare("SELECT * FROM campaigns WHERE user_id = ? AND workflow_mode = 'auto' ORDER BY id DESC LIMIT 1");
+        $stmt->execute([$userId]);
+        $campaign = $stmt->fetch();
+        $items = [];
+        if ($campaign) {
+            $stmt = $db->prepare('SELECT id, day_number, post_number, title, primary_keyword, plan_status, article_status, html_path, scheduled_date, scheduled_time, target_platform, last_error, html_retry_count FROM campaign_items WHERE campaign_id = ? ORDER BY day_number, post_number');
+            $stmt->execute([$campaign['id']]);
+            $items = $stmt->fetchAll();
+        }
+        $cron = function_exists('getLatestAutoCronStatus') ? getLatestAutoCronStatus($userId) : [];
+        $job = null;
+        try {
+            $stmt = $db->prepare('SELECT * FROM auto_blog_jobs WHERE user_id = ? AND slot_number = ?');
+            $stmt->execute([$userId, $activeSlot]);
+            $job = $stmt->fetch() ?: null;
+        } catch (Throwable $e) {}
+        jsonResponse(['campaign' => $campaign, 'items' => $items, 'cron' => $cron, 'job' => $job]);
+    }
+
+    if ($uri === '/api/auto-blog/run' && $method === 'POST') {
+        @set_time_limit(180);
+        if (!function_exists('processAutoBlogCampaigns')) {
+            jsonResponse(['success' => false, 'error' => 'Auto daily engine missing.'], 500);
+        }
+        $autoRes = processAutoBlogCampaigns(8, 5);
+        if (function_exists('recordAutoCronRun')) {
+            recordAutoCronRun('auto_blog_page', $autoRes, $userId);
+        }
+        jsonResponse(['success' => true, 'auto' => $autoRes, 'last_run_at' => date('Y-m-d H:i:s'), 'message' => $autoRes['message'] ?? 'Auto cron finished.']);
+    }
+
+    // ========== DELETE CAMPAIGN ITEM =========="
     if (preg_match('#^/api/campaign-item/delete/(\d+)$#', $uri, $m) && $method === 'POST') {
         $itemId = $m[1];
         $db = getDB();
@@ -2637,6 +2695,46 @@ function handleApiRoute($uri) {
 
     // ========== WEBSITE BLOG DIAGNOSTIC (JSON) ==========
     if ($uri === '/api/website-blog/test') {
+        $paths = [
+            'public_html/blog' => dirname(__DIR__) . '/blog/includes/publisher.php',
+            'sub_apps/blog' => __DIR__ . '/blog/includes/publisher.php',
+            'legacy website_blog' => __DIR__ . '/website_blog/includes/publisher.php',
+        ];
+        $checked = [];
+        $found = null;
+        foreach ($paths as $label => $p) {
+            $exists = file_exists($p);
+            $checked[] = ['label' => $label, 'path' => $p, 'exists' => $exists];
+            if ($exists && !$found) $found = $p;
+        }
+        $cfg = null;
+        $cfgPath = null;
+        if ($found) {
+            $cfgPath = dirname(dirname($found)) . '/config.php';
+            if (file_exists($cfgPath)) $cfg = require $cfgPath;
+        }
+        $autoblogRoot = is_array($cfg) ? ($cfg['autoblog_root'] ?? '') : '';
+        $dbFile = $autoblogRoot ? ($autoblogRoot . '/includes/database.php') : '';
+        $postsDir = $found ? (dirname(dirname($found)) . '/posts') : '';
+        jsonResponse([
+            'success' => true,
+            'publisher_found' => (bool)$found,
+            'publisher_path' => $found,
+            'paths_checked' => $checked,
+            'config_path' => $cfgPath,
+            'autoblog_root' => $autoblogRoot,
+            'database_file_exists' => $dbFile ? file_exists($dbFile) : false,
+            'database_class_exists' => class_exists('Database'),
+            'getDB_exists' => function_exists('getDB'),
+            'blog_url' => is_array($cfg) ? ($cfg['site_url'] ?? '') : '',
+            'posts_dir' => $postsDir,
+            'posts_dir_writable' => $postsDir ? (is_dir($postsDir) ? is_writable($postsDir) : is_writable(dirname($postsDir))) : false,
+        ]);
+    }
+
+    // 404 for unmatched API routes
+    jsonResponse(['error' => 'API endpoint not found'], 404);
+}pi/website-blog/test') {
         $paths = [
             'public_html/blog' => dirname(__DIR__) . '/blog/includes/publisher.php',
             'sub_apps/blog' => __DIR__ . '/blog/includes/publisher.php',

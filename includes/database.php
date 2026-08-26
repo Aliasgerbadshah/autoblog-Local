@@ -134,6 +134,20 @@ function initAutoblogDB() {
     try { $db->exec('ALTER TABLE scheduled_queue ADD COLUMN retry_count INTEGER DEFAULT 0'); } catch (Exception $e) {}
     try { $db->exec('ALTER TABLE scheduled_queue ADD COLUMN campaign_item_id INTEGER'); } catch (Exception $e) {}
 
+    $db->exec('CREATE TABLE IF NOT EXISTS auto_cron_log (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER,
+        source TEXT DEFAULT \'cron\',
+        ran_at TEXT NOT NULL,
+        html_created INTEGER DEFAULT 0,
+        published INTEGER DEFAULT 0,
+        scheduled INTEGER DEFAULT 0,
+        processed INTEGER DEFAULT 0,
+        failed INTEGER DEFAULT 0,
+        details TEXT,
+        created_at TEXT NOT NULL
+    )');
+
     $db->exec('CREATE TABLE IF NOT EXISTS auto_blog_jobs (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER NOT NULL,

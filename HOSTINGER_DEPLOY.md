@@ -75,19 +75,26 @@ chmod 777 public_html/published_posts/
 ### Step 4: Set Up Cron Jobs
 
 1. Go to **Hostinger hPanel** → **Advanced** → **Cron Jobs**
-2. Add these two cron jobs:
+2. Add these cron jobs (dashboard lives in `public_html/sub_apps/`):
 
-**Scheduler (runs every 5 minutes):**
+**Auto Blog daily worker (writes HTML + hands posts to Blogger scheduler):**
 ```
-*/5 * * * * php /home/yourusername/public_html/cron/scheduler.php
-```
-
-**Approval Timer (runs every 5 minutes):**
-```
-*/5 * * * * php /home/yourusername/public_html/cron/approval_timer.php
+*/5 * * * * php /home/yourusername/public_html/sub_apps/cron/daily_autoblog.php
 ```
 
-Replace `yourusername` with your actual Hostinger username (find it in hPanel → Advanced → Cron Jobs).
+**Scheduler (due queue + website scheduled posts):**
+```
+*/5 * * * * php /home/yourusername/public_html/sub_apps/cron/scheduler.php
+```
+
+**Approval Timer (Human Article Writer only — emails + HTML after approve):**
+```
+*/5 * * * * php /home/yourusername/public_html/sub_apps/cron/approval_timer.php
+```
+
+Replace `yourusername` with your actual Hostinger username.
+
+**How to check cron is working:** open the **Auto Blog** tab. Click **Run Auto Cron Now**. **Last cron run** must change to the current time. Approve in Human Article Writer is a different path — that writes HTML in the same click and does not update Last cron run.
 
 ### Step 5: Access Your Application
 

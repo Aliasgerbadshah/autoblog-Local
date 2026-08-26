@@ -423,6 +423,7 @@
             <button class="tab-btn active" onclick="switchTab('dashboard')">Dashboard Content</button>
             <button class="tab-btn" onclick="switchTab('auditor')">🔍 Domain Auditor & SerpAPI</button>
             <button class="tab-btn" onclick="switchTab('autoblog')">Human Article Writer</button>
+            <button class="tab-btn" onclick="switchTab('auto-blog')">🤖 Auto Blog</button>
             <button class="tab-btn" onclick="switchTab('vault')">🔑 API Vault & Integrations</button>
             <button class="tab-btn" onclick="switchTab('social')">Social Auto-Poster</button>
             <button class="tab-btn" onclick="switchTab('backlinks')">🌐 Backlink Watchdog</button>
@@ -547,13 +548,9 @@
                             </select>
                             <small style="color:var(--text-muted);font-size:0.75rem;">Planner picks the highest-volume / lowest-competition keyword as primary. Others become secondary.</small>
                         </div>
-                        <div class="form-group">
+                        <div class="form-group" style="display:none">
                             <label>Workflow</label>
-                            <select id="project-workflow-mode">
-                                <option value="manual">Manual — email me drafts, I approve, then HTML</option>
-                                <option value="auto">Automated — create, check HTML, and post daily by itself</option>
-                            </select>
-                            <small style="color:var(--text-muted);font-size:0.75rem;">Manual keeps the current email/approve flow. Automated uses the same destination, times, and keyword source, but skips inbox approval and retries until content + image are valid.</small>
+                            <select id="project-workflow-mode"><option value="manual" selected>Manual</option></select>
                         </div>
                     </div>
                     <div class="form-grid">
@@ -651,6 +648,69 @@
                 </form>
                 <div id="schedule-status" style="margin-top:12px;font-weight:700;"></div>
                 <table style="margin-top:18px;"><thead><tr><th>Title</th><th>Keyword</th><th>Scheduled For</th><th>Status</th><th>Action</th></tr></thead><tbody id="schedule-queue-tbody"><tr><td colspan="5">Loading queue...</td></tr></tbody></table>
+            </div>
+        </div>
+
+        <!-- TAB: AUTO BLOG (separate from Human Article Writer) -->
+        <div id="tab-auto-blog" class="tab-content">
+            <div class="card" style="border-top:4px solid #8b5cf6;">
+                <div class="card-header"><h2 class="card-title">🤖 Auto Blog — Daily Create, Check, Post</h2></div>
+                <p style="color:var(--text-muted);margin-bottom:12px;">This page is not part of Human Article Writer. You pick start date, posts per day, destination, keyword source, and models. The software then researches topics, auto-approves them, writes HTML, checks content + real image, retries up to 8 times, and posts. Blogger uses Blogger scheduling (publishDate), not a live cron push at 10:00.</p>
+                <div style="background:var(--inner-bg);border:1px solid var(--border-light);border-radius:12px;padding:14px 16px;margin-bottom:16px;font-size:0.85rem;line-height:1.6;">
+                    <strong>How to know cron is working (this is not the same as Approve):</strong>
+                    <ul style="margin:8px 0 0 18px;color:var(--text-muted);">
+                        <li><strong>Human Article → Approve</strong> writes HTML in that same click. You wait on the page. That is not cron.</li>
+                        <li><strong>Run Cron Now</strong> (this tab or Human tab) runs the worker immediately and returns a timestamp + counts (HTML created / scheduled / published / errors).</li>
+                        <li>If <strong>Last cron run</strong> below updates to the current time after you click, cron is working.</li>
+                        <li>Hostinger cron <code>*/5 * * * * php .../cron/daily_autoblog.php</code> does the same job every 5 minutes. If Last cron run is older than 15 minutes, Hostinger cron is not firing — use Run Cron Now until it is set.</li>
+                    </ul>
+                </div>
+                <form onsubmit="startAutoBlogCampaign(event)">
+                    <div class="form-grid">
+                        <div class="form-group"><label>Customer Website URL</label><input type="url" id="auto-project-domain" placeholder="https://customerwebsite.com" required></div>
+                        <div class="form-group"><label>Target Country</label><select id="auto-project-country" required><option value="India">India</option><option value="United States">United States</option><option value="United Kingdom">United Kingdom</option><option value="Canada">Canada</option><option value="Australia">Australia</option><option value="United Arab Emirates">United Arab Emirates</option><option value="Saudi Arabia">Saudi Arabia</option><option value="Singapore">Singapore</option><option value="Germany">Germany</option><option value="Other">Other</option></select></div>
+                        <div class="form-group"><label>Language</label><select id="auto-project-language"><option value="en">English</option><option value="hi">Hindi</option></select></div>
+                        <div class="form-group"><label>Destination</label><select id="auto-project-platform" onchange="updateAutoCalendarDates()"><option value="blogger">Google Blogger</option><option value="website">Website Blog (Code)</option><option value="local">HTML / Local Magazine</option><option value="wordpress">WordPress</option></select></div>
+                        <div class="form-group"><label>Campaign Days</label><select id="auto-project-days" onchange="updateAutoCalendarDates()"><option value="7">7 days</option><option value="10">10 days</option><option value="15">15 days</option><option value="25">25 days</option><option value="30">30 days</option></select></div>
+                        <div class="form-group"><label>Number of Posts Per Day</label><select id="auto-project-posts-per-day" onchange="updateAutoCalendarDates()"><option value="1">1 article</option><option value="2">2 articles</option><option value="3">3 articles</option></select></div>
+                        <div class="form-group"><label>Start Date</label><input type="date" id="auto-project-start-date" onchange="updateAutoCalendarDates()"></div>
+                        <div class="form-group">
+                            <label>Keyword Source</label>
+                            <select id="auto-project-keyword-source">
+                                <option value="planner">Google Keyword Planner (real volumes)</option>
+                                <option value="ai">Normal AI keyword search</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-grid">
+                        <div class="form-group"><label>Chat Model</label><select id="auto-project-chat-account"><option>Loading saved Chat models...</option></select></div>
+                        <div class="form-group"><label>Image Model</label><select id="auto-project-image-account"><option>Loading saved Image models...</option></select></div>
+                        <div class="form-group"><label>SEO Research Account</label><select id="auto-project-seo-account"><option>Loading saved DataForSEO accounts...</option></select></div>
+                        <div class="form-group"><label>Blogger Account</label><select id="auto-project-blogger-account"><option>Loading saved Blogger accounts...</option></select></div>
+                    </div>
+                    <div style="margin-top:16px; padding:16px; background:var(--inner-bg); border-radius:12px; border:1px solid var(--border-light);">
+                        <h4 style="font-size:0.95rem; font-weight:800; color:var(--primary-blue); margin-bottom:10px;">📅 Posting Schedule Calendar</h4>
+                        <div id="auto-posting-times-grid" class="form-grid"></div>
+                        <div id="auto-calendar-dates-display" style="margin-top:12px;"></div>
+                    </div>
+                    <button type="submit" class="btn btn-purple" style="margin-top:14px;">🚀 Start Auto Blog Campaign</button>
+                    <button type="button" class="btn" style="background:#0f172a;margin-left:8px" onclick="runAutoCronNow()">⏱️ Run Auto Cron Now</button>
+                </form>
+                <div id="auto-project-status" style="margin-top:12px;font-weight:700;"></div>
+            </div>
+            <div class="card" id="auto-cron-status-card">
+                <div class="card-header"><h2 class="card-title">⏱️ Cron Health</h2></div>
+                <div id="auto-cron-health" style="font-size:0.9rem;line-height:1.7;color:var(--text-muted);">Loading cron status...</div>
+            </div>
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Auto Blog Queue</h2>
+                    <button class="btn" style="background:#0f172a;" onclick="loadAutoBlogStatus()">🔄 Refresh</button>
+                </div>
+                <table>
+                    <thead><tr><th>Day/Slot</th><th>Blog</th><th>Article Status</th><th>Schedule</th><th>HTML</th><th>Tries</th><th>Last check / error</th></tr></thead>
+                    <tbody id="auto-progress-tbody"><tr><td colspan="7">No Auto Blog campaign yet. Fill the form above and start one.</td></tr></tbody>
+                </table>
             </div>
         </div>
 
@@ -1416,8 +1476,10 @@
 
         async function loadProjectModelChoices() {
             const map=[['chat_api','project-chat-account'],['image_api','project-image-account'],['dataforseo_api','project-seo-account'],['blogger_api','project-blogger-account']];
-            for (const [service,id] of map) { try { const rows=await (await fetch('/api/vault/accounts/'+service)).json(); const el=document.getElementById(id); el.innerHTML=rows.length?rows.map(x=>`<option value="${x.id}">${escapeHtml(x.account_alias)}${x.provider?' — '+escapeHtml(x.provider):''}${x.model?' — '+escapeHtml(x.model):''}</option>`).join(''):'<option value="">No saved account</option>'; } catch(e){} }
-            try { const s=await (await fetch('/api/projects/settings')).json(); if(s.domain_url)document.getElementById('project-domain').value=s.domain_url; if(s.target_country)document.getElementById('project-country').value=s.target_country; ['chat_credential_id','image_credential_id','seo_credential_id','blogger_credential_id'].forEach((k,i)=>{if(s[k])document.getElementById(map[i][1]).value=s[k];}); } catch(e){}
+            const autoMap=[['chat_api','auto-project-chat-account'],['image_api','auto-project-image-account'],['dataforseo_api','auto-project-seo-account'],['blogger_api','auto-project-blogger-account']];
+            for (const [service,id] of map) { try { const rows=await (await fetch('/api/vault/accounts/'+service)).json(); const el=document.getElementById(id); if(el) el.innerHTML=rows.length?rows.map(x=>`<option value="${x.id}">${escapeHtml(x.account_alias)}${x.provider?' — '+escapeHtml(x.provider):''}${x.model?' — '+escapeHtml(x.model):''}</option>`).join(''):'<option value="">No saved account</option>'; } catch(e){} }
+            for (const [service,id] of autoMap) { try { const rows=await (await fetch('/api/vault/accounts/'+service)).json(); const el=document.getElementById(id); if(el) el.innerHTML=rows.length?rows.map(x=>`<option value="${x.id}">${escapeHtml(x.account_alias)}${x.provider?' — '+escapeHtml(x.provider):''}${x.model?' — '+escapeHtml(x.model):''}</option>`).join(''):'<option value="">No saved account</option>'; } catch(e){} }
+            try { const s=await (await fetch('/api/projects/settings')).json(); if(s.domain_url){document.getElementById('project-domain').value=s.domain_url; const ad=document.getElementById('auto-project-domain'); if(ad && !ad.value) ad.value=s.domain_url;} if(s.target_country){document.getElementById('project-country').value=s.target_country; const ac=document.getElementById('auto-project-country'); if(ac) ac.value=s.target_country;} ['chat_credential_id','image_credential_id','seo_credential_id','blogger_credential_id'].forEach((k,i)=>{if(s[k]){ const a=document.getElementById(map[i][1]); const b=document.getElementById(autoMap[i][1]); if(a) a.value=s[k]; if(b) b.value=s[k];}}); } catch(e){}
         }
         async function dashboardDecision(token,decision) { const res=await fetch('/api/demo/decision/'+token+'/'+decision,{method:'POST'}); if(!res.ok){alert('This approval link is expired or already used.');} loadDemoProgress(); loadStats(); }
         async function htmlDecision(token,decision) { if(!confirm('Are you sure you want to '+(decision==='approve'?'APPROVE this HTML for publishing?':'REJECT and rewrite this HTML?'))) return; const res=await fetch('/api/demo/html-decision/'+token+'/'+decision,{method:'POST'}); if(res.ok){alert(decision==='approve'?'✅ HTML Approved! Article is now scheduled for publishing.':'🔄 HTML Rejected! A rewritten version will be generated shortly.');loadDemoProgress();loadStats();}else{alert('This HTML approval link is expired or already used.');} }
@@ -1472,12 +1534,14 @@
         }
 
         async function runCronNow() {
-            if(!confirm('Run the scheduler and approval timer now? This will generate HTML for approved items and publish any due scheduled posts.')) return;
+            if(!confirm('Run cron now?\n\nThis is NOT the same as Approve.\nApprove writes HTML in that click.\nRun Cron Now starts the background worker and returns a timestamp + counts.\nIf Last cron run updates, cron is working.')) return;
             try {
                 const res = await fetch('/api/run-scheduler', {method:'POST'});
                 const data = await res.json();
-                alert(res.ok ? '✅ Cron executed! ' + (data.message||'') : '🔴 ' + (data.error||'Failed'));
-                loadDemoProgress(); loadStats();
+                const auto = data.auto || {};
+                const msg = (data.message||'') + '\nHTML created: ' + (auto.html||0) + '\nScheduled: ' + (auto.scheduled||0) + '\nPublished: ' + (auto.published||0) + '\nErrors: ' + ((auto.errors||[]).length);
+                alert(res.ok ? '✅ Cron ran at ' + (data.last_run_at||'now') + '\n' + msg : '🔴 ' + (data.error||'Failed'));
+                loadDemoProgress(); loadStats(); loadAutoBlogStatus();
             } catch(e) { alert('Error: ' + e.message); }
         }
 
@@ -1539,7 +1603,7 @@
             await fetch('/api/projects/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(settings)});
             const postingTimes=[...document.querySelectorAll('.project-posting-time')].map(x=>x.value);
             const startDate=document.getElementById('project-start-date').value||new Date().toISOString().split('T')[0];
-            const res=await fetch('/api/research/ai-roadmap',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({domain_url:settings.domain_url,country:settings.target_country,language_code:settings.target_language,days:Number(document.getElementById('project-days').value),posts_per_day:Number(document.getElementById('project-posts-per-day').value),start_date:startDate,posting_times:postingTimes,target_platform:document.getElementById('project-platform').value,keyword_source:document.getElementById('project-keyword-source').value,workflow_mode:document.getElementById('project-workflow-mode').value})}); const data=await res.json();
+            const res=await fetch('/api/research/ai-roadmap',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({domain_url:settings.domain_url,country:settings.target_country,language_code:settings.target_language,days:Number(document.getElementById('project-days').value),posts_per_day:Number(document.getElementById('project-posts-per-day').value),start_date:startDate,posting_times:postingTimes,target_platform:document.getElementById('project-platform').value,keyword_source:document.getElementById('project-keyword-source').value,workflow_mode:'manual'})}); const data=await res.json();
             if(!res.ok){status.innerText='🔴 '+(data.error||'Website research failed.');return;} const srcLabel=data.keyword_source==='planner'?'Google Keyword Planner':'Normal AI keywords'; status.innerText=(data.email_sent?'🟢 ':'🟠 ')+'Roadmap used '+srcLabel+'. '+(data.email_sent?'Approval email sent.':'Brevo email not sent.'); const tbody=document.getElementById('automatic-roadmap-tbody'); tbody.innerHTML=(data.suggested_roadmap||[]).map(r=>`<tr><td><strong>${escapeHtml(r.topic)}</strong></td><td>${escapeHtml(r.keyword)}</td><td>${escapeHtml(r.supporting||'Related questions and long-tail variations will be assigned by research')}</td><td><a href="${r.target_link}" target="_blank">${escapeHtml(r.target_anchor||'Relevant page')}</a></td><td>${escapeHtml(r.competition||'')}${r.search_volume!==undefined&&r.search_volume!==null&&r.search_volume!==''?' — volume: '+r.search_volume:''}${r.difficulty?' — difficulty: '+r.difficulty:''}${r.keyword_source?' — '+escapeHtml(r.keyword_source):''}</td><td><button class="btn btn-purple" onclick="approveRoadmapPlan(${r.plan_id},this)">Approve Topic</button></td></tr>`).join(''); document.getElementById('automatic-roadmap-card').style.display='block';
         }
 
@@ -1819,7 +1883,7 @@
         }
         async function syncTopicsCsv() { try { const res = await fetch('/api/topics-csv/sync',{method:'POST'}); const data = await res.json(); alert(data.success?'Synced! '+data.count+' topics.':'Error: '+(data.error||'Failed')); loadTopicsHistory(); } catch(e) { alert('Error: '+e.message); } }
         const origSwitchTab = switchTab;
-        switchTab = function(tabId) { origSwitchTab(tabId); if (tabId === 'topics') loadTopicsHistory(); if (tabId === 'custom-topics') loadCustomTopics(); };
+        switchTab = function(tabId) { origSwitchTab(tabId); if (tabId === 'topics') loadTopicsHistory(); if (tabId === 'custom-topics') loadCustomTopics(); if (tabId === 'auto-blog') { loadAutoBlogStatus(); updateAutoCalendarDates(); } };
 
         // ===== CUSTOM TOPICS FUNCTIONS =====
         async function loadCustomTopics() {
@@ -1862,6 +1926,84 @@
                 loadStats(); // loadStats now also fetches custom topics count
             }, 12000);
         }
+
+        function updateAutoCalendarDates() {
+            const daysEl = document.getElementById('auto-project-days');
+            if (!daysEl) return;
+            const days = Number(daysEl.value);
+            const perDay = Number(document.getElementById('auto-project-posts-per-day').value);
+            const startDate = document.getElementById('auto-project-start-date').value || new Date().toISOString().split('T')[0];
+            if (!document.getElementById('auto-project-start-date').value) document.getElementById('auto-project-start-date').value = startDate;
+            const timesGrid = document.getElementById('auto-posting-times-grid');
+            timesGrid.innerHTML = Array.from({length: perDay}, (_, i) => `<div class="form-group"><label>Post ${i+1} Time</label><input type="time" class="auto-project-posting-time" value="${['10:00','18:00','20:30'][i]||'10:00'}"></div>`).join('');
+            const calDisplay = document.getElementById('auto-calendar-dates-display');
+            const startDateObj = new Date(startDate + 'T00:00:00');
+            let calHtml = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin-top:8px;">';
+            for (let d = 0; d < days; d++) {
+                const date = new Date(startDateObj); date.setDate(date.getDate() + d);
+                const dateStr = date.toLocaleDateString('en-IN', {weekday:'short', month:'short', day:'numeric'});
+                const timeInputs = Array.from({length: perDay}, (_, p) => `<span style="font-size:0.75rem;color:var(--text-muted);">Post ${p+1}: ${['10:00','18:00','20:30'][p]||'10:00'}</span>`).join('<br>');
+                calHtml += `<div style="background:var(--card-bg);border:1px solid var(--border-light);border-radius:8px;padding:8px 12px;font-size:0.8rem;"><div style="font-weight:700;color:var(--primary-blue);">Day ${d+1}</div><div style="color:var(--text-dark);">${dateStr}</div>${timeInputs}</div>`;
+            }
+            calHtml += '</div>';
+            calHtml += `<p style="margin-top:8px;font-size:0.82rem;color:var(--text-muted);">Total: <strong>${days * perDay} blogs</strong> across <strong>${days} days</strong> on <strong>${document.getElementById('auto-project-platform').value.toUpperCase()}</strong></p>`;
+            calDisplay.innerHTML = calHtml;
+        }
+        async function startAutoBlogCampaign(e) {
+            e.preventDefault();
+            const status=document.getElementById('auto-project-status');
+            status.innerText='Starting Auto Blog campaign (no email approval)...';
+            const settings={domain_url:document.getElementById('auto-project-domain').value,target_country:document.getElementById('auto-project-country').value,target_language:document.getElementById('auto-project-language').value,destination_platform:document.getElementById('auto-project-platform').value,chat_credential_id:document.getElementById('auto-project-chat-account').value,image_credential_id:document.getElementById('auto-project-image-account').value,seo_credential_id:document.getElementById('auto-project-seo-account').value,blogger_credential_id:document.getElementById('auto-project-blogger-account').value};
+            await fetch('/api/projects/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(settings)});
+            const postingTimes=[...document.querySelectorAll('.auto-project-posting-time')].map(x=>x.value);
+            const startDate=document.getElementById('auto-project-start-date').value||new Date().toISOString().split('T')[0];
+            const res=await fetch('/api/research/ai-roadmap',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({domain_url:settings.domain_url,country:settings.target_country,language_code:settings.target_language,days:Number(document.getElementById('auto-project-days').value),posts_per_day:Number(document.getElementById('auto-project-posts-per-day').value),start_date:startDate,posting_times:postingTimes,target_platform:document.getElementById('auto-project-platform').value,keyword_source:document.getElementById('auto-project-keyword-source').value,workflow_mode:'auto'})});
+            const data=await res.json();
+            if(!res.ok){status.innerText='🔴 '+(data.error||'Auto Blog start failed.');return;}
+            status.innerText='🟢 Auto campaign created. Topics are auto-approved. Click Run Auto Cron Now to write HTML for drafts (or wait for Hostinger cron every 5 minutes).';
+            loadAutoBlogStatus();
+        }
+        async function runAutoCronNow() {
+            const status=document.getElementById('auto-project-status');
+            status.innerText='Running Auto Cron now...';
+            try {
+                const res = await fetch('/api/auto-blog/run', {method:'POST'});
+                const data = await res.json();
+                const auto = data.auto || {};
+                const msg = (data.message||'') + '\\nLast run: ' + (data.last_run_at||'') + '\\nHTML created this run: ' + (auto.html||0) + '\\nScheduled: ' + (auto.scheduled||0) + '\\nPublished: ' + (auto.published||0) + '\\nStill waiting HTML: ' + (auto.waiting_html||0);
+                alert(res.ok ? '✅ ' + msg : '🔴 ' + (data.error||'Failed'));
+                status.innerText = res.ok ? '🟢 ' + msg : '🔴 ' + (data.error||'Failed');
+                loadAutoBlogStatus();
+            } catch(e) { alert('Error: ' + e.message); }
+        }
+        async function loadAutoBlogStatus() {
+            const health = document.getElementById('auto-cron-health');
+            const body = document.getElementById('auto-progress-tbody');
+            if (!health || !body) return;
+            try {
+                const data = await (await fetch('/api/auto-blog/status')).json();
+                const cron = data.cron || {};
+                const working = cron.cron_is_working;
+                const last = cron.last_run_at || 'never';
+                health.innerHTML = `<p><strong>Last cron run:</strong> ${escapeHtml(String(last))} ${working ? '<span class="badge badge-success">Working (ran in last 15 min)</span>' : '<span class="badge badge-warning">Not seen recently — click Run Auto Cron Now</span>'}</p>
+                    <p>Source: ${escapeHtml(cron.last_source||'—')} · HTML created last run: ${cron.last_html||0} · Scheduled: ${cron.last_scheduled||0} · Published: ${cron.last_published||0} · Failures: ${cron.last_failed||0}</p>
+                    <p style="margin-top:8px;">Approve in Human Article Writer writes HTML in that click. This timestamp only changes when cron / Run Cron Now runs.</p>`;
+                const items = data.items || [];
+                if (!items.length) { body.innerHTML = '<tr><td colspan="7">No Auto Blog campaign yet. Fill the form above and start one.</td></tr>'; return; }
+                body.innerHTML = items.map(x => `<tr>
+                    <td>Day ${x.day_number} / Slot ${x.post_number}</td>
+                    <td><strong>${escapeHtml(x.title||'')}</strong></td>
+                    <td><span class="badge ${x.article_status==='Published'||x.article_status==='HTML Ready'||x.article_status==='Scheduled'?'badge-success':'badge-warning'}">${escapeHtml(x.article_status||'Not Created')}</span></td>
+                    <td>${escapeHtml(x.scheduled_date||'—')} ${escapeHtml(x.scheduled_time||'')}</td>
+                    <td>${x.html_path?`<a href="${x.html_path}" target="_blank">View</a>`:'—'}</td>
+                    <td>${x.html_retry_count||0}/8</td>
+                    <td style="max-width:280px;font-size:0.78rem;color:${x.last_error?'#ef4444':'var(--text-muted)'}">${escapeHtml(x.last_error||'OK')}</td>
+                </tr>`).join('');
+            } catch(e) { health.innerText = 'Could not load cron status: ' + e.message; }
+        }
+        updateAutoCalendarDates();
+        loadAutoBlogStatus();
+
         startDashRefresh();
     </script>
 </body>

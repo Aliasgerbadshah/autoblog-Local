@@ -19,8 +19,11 @@ require_once __DIR__ . '/../includes/google_keyword_planner.php';
 require_once __DIR__ . '/../includes/auto_daily.php';
 
 @set_time_limit(180);
-$res = processAutoBlogCampaigns(3);
-echo '[Daily AutoBlog] published=' . $res['published'] . ' html=' . $res['html'] . ' processed=' . $res['processed'] . "\n";
+$res = processAutoBlogCampaigns(8, 5);
+if (function_exists('recordAutoCronRun')) {
+    recordAutoCronRun('hostinger_cron', $res);
+}
+echo '[Daily AutoBlog] published=' . $res['published'] . ' scheduled=' . ($res['scheduled'] ?? 0) . ' html=' . $res['html'] . ' processed=' . $res['processed'] . "\n";
 if (!empty($res['errors'])) {
     echo '[Daily AutoBlog] errors: ' . implode(' | ', $res['errors']) . "\n";
 }

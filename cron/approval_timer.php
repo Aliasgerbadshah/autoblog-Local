@@ -127,16 +127,14 @@ if ($campaign) {
 }
 
 // ============ 3. GENERATE HTML FOR ALL APPROVED ITEMS THAT DON'T HAVE HTML YET ============
-$stmt = $db->prepare("SELECT ci.* FROM campaign_items ci WHERE ci.plan_status = 'Approved' AND (ci.article_status IS NULL OR ci.article_status = '' OR ci.article_status = 'Not Created' OR ci.html_path IS NULL OR ci.html_path = '') ORDER BY ci.id ASC");
+// Manual campaigns: generate + email preview. Auto campaigns are handled by processAutoBlogCampaigns.
+$stmt = $db->prepare("SELECT ci.*, c.workflow_mode, c.user_id AS camp_user_id FROM campaign_items ci JOIN campaigns c ON c.id = ci.campaign_id WHERE ci.plan_status = 'Approved' AND (c.workflow_mode IS NULL OR c.workflow_mode = 'manual') AND (ci.article_status IS NULL OR ci.article_status = '' OR ci.article_status = 'Not Created' OR ci.html_path IS NULL OR ci.html_path = '') ORDER BY ci.id ASC");
 $stmt->execute();
 $needHtml = $stmt->fetchAll();
 
 foreach ($needHtml as $item) {
-    $stmt = $db->prepare('SELECT user_id FROM campaigns WHERE id = ?');
-    $stmt->execute([$item['campaign_id']]);
-    $campRow = $stmt->fetch();
-    if (!$campRow) continue;
-    $userId = $campRow['user_id'];
+    $userId = $item['camp_user_id'] ?? null;
+    if (!$userId) continue;
 
     $activeSlot = 1;
     $stmt = $db->prepare('SELECT active_slot_id FROM users WHERE id = ?');
@@ -146,7 +144,7 @@ foreach ($needHtml as $item) {
 
     $htmlResult = generateArticleHtmlReliable($item, $userId, $activeSlot, $db);
     if (!empty($htmlResult['success'])) {
-        $stmt = $db->prepare("UPDATE campaign_items SET article_status = 'HTML Ready', html_path = ? WHERE id = ?");
+        $stmt = $db->prepare("UPDATE campaign_items SET article_status = 'HTML Ready', html_path = ?, last_error = NULL WHERE id = ?");
         $stmt->execute([$htmlResult['html_path'], $item['id']]);
         $htmlToken = generateToken();
         $stmt = $db->prepare('INSERT INTO approval_tokens (user_id, campaign_item_id, approval_type, token, created_at) VALUES (?, ?, ?, ?, ?)');
@@ -155,7 +153,11 @@ foreach ($needHtml as $item) {
         sendApprovalEmail($userId, 'Blog HTML Preview - ' . escapeHtml($item['title']), $previewEmail);
         echo "[Timer] Generated HTML for approved item: {$item['title']}\n";
     } else {
-        echo "[Timer] HTML generation FAILED for: {$item['title']} - " . ($htmlResult['error'] ?? 'Unknown error') . "\n";
+        $err = $htmlResult['error'] ?? 'Unknown error';
+        $retries = intval($item['html_retry_count'] ?? 0) + 1;
+        $stmt = $db->prepare("UPDATE campaign_items SET last_error = ?, html_retry_count = ? WHERE id = ?");
+        $stmt->execute([$err, $retries, $item['id']]);
+        echo "[Timer] HTML generation FAILED for: {$item['title']} - $err\n";
     }
 }
 

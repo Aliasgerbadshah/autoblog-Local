@@ -1,13 +1,10 @@
 <?php
 /**
- * Automated daily blogging (no email approval).
+ * Automated daily blogging (no email approval). Isolated from Human Article Writer.
  *
- * Blogger: once HTML+image pass, the post is sent to Blogger's own scheduler
- * (draft + publishDate). Blogger goes live at that time — our cron does not
- * push the live post at 10:00.
- *
- * Cron is only used to: generate HTML, check quality, retry failures, and
- * hand the finished article to Blogger/Website.
+ * Cron jobs only: generate HTML for every approved draft, check quality,
+ * retry failures (max 8), then hand the finished article to Blogger/Website.
+ * Blogger uses native scheduling (draft + publishDate). Cron does not push live at 10:00.
  */
 
 function articleHasRealImage($html) {
@@ -16,7 +13,7 @@ function articleHasRealImage($html) {
     }
     foreach ($m[1] as $src) {
         $src = trim($src);
-        if ($src === '' || strpos($src, 'placeholder') !== false) continue;
+        if ($src === '' || stripos($src, 'placeholder') !== false) continue;
         if (stripos($src, 'http://') === 0 || stripos($src, 'https://') === 0 || stripos($src, 'data:image/') === 0) {
             return true;
         }
@@ -24,13 +21,105 @@ function articleHasRealImage($html) {
     return false;
 }
 
-function processAutoBlogCampaigns($limit = 3) {
+function recordAutoCronRun($source, $result, $userId = null) {
+    $db = getDB();
+    $now = function_exists('nowString') ? nowString() : date('Y-m-d H:i:s');
+    $details = json_encode($result, JSON_UNESCAPED_UNICODE);
+    try {
+        $stmt = $db->prepare('INSERT INTO auto_cron_log (user_id, source, ran_at, html_created, published, scheduled, processed, failed, details, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+        $stmt->execute([
+            $userId,
+            $source,
+            $now,
+            intval($result['html'] ?? 0),
+            intval($result['published'] ?? 0),
+            intval($result['scheduled'] ?? 0),
+            intval($result['processed'] ?? 0),
+            count($result['errors'] ?? []),
+            $details,
+            $now,
+        ]);
+    } catch (Throwable $e) {
+        error_log('[AutoCron] log write failed: ' . $e->getMessage());
+    }
+    try {
+        $db->prepare('UPDATE auto_blog_jobs SET last_run_at = ?, last_error = ? WHERE enabled = 1')->execute([
+            $now,
+            empty($result['errors']) ? null : implode(' | ', array_slice($result['errors'], 0, 5)),
+        ]);
+    } catch (Throwable $e) {}
+    $logFile = dirname(__DIR__) . '/data/auto_cron.log';
+    @file_put_contents($logFile, '[' . $now . '][' . $source . '] ' . $details . "\n", FILE_APPEND);
+}
+
+function getLatestAutoCronStatus($userId = null) {
+    $db = getDB();
+    try {
+        if ($userId) {
+            $stmt = $db->prepare('SELECT * FROM auto_cron_log WHERE user_id IS NULL OR user_id = ? ORDER BY id DESC LIMIT 8');
+            $stmt->execute([$userId]);
+        } else {
+            $stmt = $db->query('SELECT * FROM auto_cron_log ORDER BY id DESC LIMIT 8');
+        }
+        $rows = $stmt ? $stmt->fetchAll() : [];
+    } catch (Throwable $e) {
+        $rows = [];
+    }
+    $latest = $rows[0] ?? null;
+    return [
+        'last_run_at' => $latest['ran_at'] ?? null,
+        'last_source' => $latest['source'] ?? null,
+        'last_html' => intval($latest['html_created'] ?? 0),
+        'last_published' => intval($latest['published'] ?? 0),
+        'last_scheduled' => intval($latest['scheduled'] ?? 0),
+        'last_failed' => intval($latest['failed'] ?? 0),
+        'cron_is_working' => $latest ? (strtotime($latest['ran_at']) > time() - 900) : false,
+        'runs' => $rows,
+    ];
+}
+
+function inspectAutoItemHtml($item) {
+    $htmlPath = resolveAutoHtmlPath($item);
+    $htmlOk = function_exists('validateGeneratedArticleFile') ? validateGeneratedArticleFile($htmlPath) : false;
+    $content = ($htmlOk && function_exists('loadCampaignArticleContent')) ? loadCampaignArticleContent($item) : ($htmlOk ? (string)@file_get_contents($htmlPath) : '');
+    $words = str_word_count(strip_tags($content));
+    $hasImg = articleHasRealImage($content);
+    return [
+        'html_file' => $htmlPath,
+        'html_ok' => $htmlOk,
+        'words' => $words,
+        'has_image' => $hasImg,
+        'ready' => $htmlOk && $words >= 400 && $hasImg,
+    ];
+}
+
+function processAutoBlogCampaigns($htmlLimit = 8, $publishLimit = 5) {
+    @set_time_limit(180);
+    @ini_set('max_execution_time', '180');
     $db = getDB();
     $today = date('Y-m-d');
-    $out = ['processed' => 0, 'published' => 0, 'scheduled' => 0, 'html' => 0, 'errors' => []];
+    $started = time();
+    $out = [
+        'processed' => 0,
+        'published' => 0,
+        'scheduled' => 0,
+        'html' => 0,
+        'skipped_ready' => 0,
+        'waiting_html' => 0,
+        'errors' => [],
+        'items' => [],
+    ];
 
     $stmt = $db->query("SELECT * FROM campaigns WHERE workflow_mode = 'auto' AND status IN ('Auto Running','Roadmap Review') ORDER BY id DESC");
     $campaigns = $stmt ? $stmt->fetchAll() : [];
+    if (empty($campaigns)) {
+        $out['message'] = 'No Auto Blog campaign is running. Start one from the Auto Blog tab.';
+        return $out;
+    }
+
+    $htmlDid = 0;
+    $pubDid = 0;
+
     foreach ($campaigns as $camp) {
         $userId = intval($camp['user_id']);
         $slot = intval($camp['slot_number'] ?? 1);
@@ -38,28 +127,36 @@ function processAutoBlogCampaigns($limit = 3) {
         $itemsStmt = $db->prepare("SELECT * FROM campaign_items WHERE campaign_id = ? AND article_status NOT IN ('Published','Scheduled') ORDER BY day_number, post_number");
         $itemsStmt->execute([$camp['id']]);
         $items = $itemsStmt->fetchAll();
-        $did = 0;
+
         foreach ($items as $item) {
-            if ($did >= $limit) break;
+            if ((time() - $started) > 150) {
+                $out['errors'][] = 'Stopped this run to stay under Hostinger time limit. Next cron continues remaining drafts.';
+                break 2;
+            }
 
             if (!in_array($item['plan_status'], ['Approved', 'Provisional Approved'], true)) {
                 $db->prepare("UPDATE campaign_items SET plan_status = 'Approved' WHERE id = ?")->execute([$item['id']]);
+                $item['plan_status'] = 'Approved';
             }
 
-            $htmlPath = resolveAutoHtmlPath($item);
-            $htmlOk = validateGeneratedArticleFile($htmlPath);
-            $content = $htmlOk ? loadCampaignArticleContent($item) : '';
-            $words = str_word_count(strip_tags($content));
-            $hasImg = articleHasRealImage($content);
-            $ready = $htmlOk && $words >= 400 && $hasImg;
+            $check = inspectAutoItemHtml($item);
+            $ready = $check['ready'];
 
             if (!$ready) {
                 $retries = intval($item['html_retry_count'] ?? 0);
                 if ($retries >= 8) {
-                    $out['errors'][] = 'Gave up after 8 tries (need real HTML + image): ' . $item['title'];
+                    $msg = 'Gave up after 8 tries (need Chat content + real image + HTML file).';
+                    $out['errors'][] = $item['title'] . ': ' . $msg;
+                    $out['items'][] = ['id' => $item['id'], 'title' => $item['title'], 'action' => 'gave_up', 'error' => $msg];
                     continue;
                 }
+                if ($htmlDid >= $htmlLimit) {
+                    $out['waiting_html']++;
+                    continue;
+                }
+
                 $htmlResult = generateArticleHtmlReliable($item, $userId, $slot, $db);
+                $htmlDid++;
                 $file = $htmlResult['html_file'] ?? '';
                 $genContent = (!empty($htmlResult['success']) && is_file($file)) ? (string)@file_get_contents($file) : '';
                 $chatOk = !empty($htmlResult['used_chat_api']);
@@ -67,24 +164,39 @@ function processAutoBlogCampaigns($limit = 3) {
                 $wordsOk = str_word_count(strip_tags($genContent)) >= 400;
                 $ok = !empty($htmlResult['success']) && validateGeneratedArticleFile($file) && $chatOk && $imgOk && $wordsOk;
                 $err = $ok ? null : (
-                    !$chatOk ? 'Content generation failed — will retry Chat API'
-                    : (!$imgOk ? 'Image generation failed — will retry Image API'
+                    !$chatOk ? 'Content generation failed — Chat API will retry on next cron'
+                    : (!$imgOk ? 'Image generation failed — Image API will retry on next cron (HTML file kept)'
                     : ($htmlResult['error'] ?? 'HTML not ready'))
                 );
+                $savedPath = (!empty($htmlResult['html_path'])) ? $htmlResult['html_path'] : ($item['html_path'] ?? '');
                 $db->prepare("UPDATE campaign_items SET html_retry_count = ?, last_error = ?, article_status = ?, html_path = ? WHERE id = ?")->execute([
                     $retries + 1,
                     $err,
                     $ok ? 'HTML Ready' : 'Not Created',
-                    $ok ? ($htmlResult['html_path'] ?? '') : '',
+                    $savedPath,
                     $item['id']
                 ]);
+                $out['items'][] = [
+                    'id' => $item['id'],
+                    'title' => $item['title'],
+                    'action' => $ok ? 'html_created' : 'html_retry',
+                    'error' => $err,
+                    'html_path' => $savedPath,
+                    'try' => $retries + 1,
+                ];
                 if (!$ok) {
                     $out['errors'][] = $item['title'] . ': ' . $err;
                     continue;
                 }
-                $item['html_path'] = $htmlResult['html_path'];
+                $item['html_path'] = $savedPath;
                 $out['html']++;
+                $ready = true;
+            } else {
+                $out['skipped_ready']++;
             }
+
+            if (!$ready) continue;
+            if ($pubDid >= $publishLimit) continue;
 
             $schedDate = $item['scheduled_date'] ?: $today;
             $schedTime = $item['scheduled_time'] ?: '10:00';
@@ -92,7 +204,6 @@ function processAutoBlogCampaigns($limit = 3) {
             $scheduledStr = $schedDate . ' ' . $schedTime;
             $future = strtotime($scheduledStr) > time() + 90;
 
-            // Blogger: hand the post to Blogger's scheduler as soon as HTML+image pass.
             $useBloggerSchedule = ($platform === 'blogger' && $future);
             $pub = publishItemToSelectedPlatform(
                 $userId,
@@ -100,20 +211,24 @@ function processAutoBlogCampaigns($limit = 3) {
                 $platform,
                 $useBloggerSchedule ? $scheduledStr : ($platform === 'website' && $future ? $scheduledStr : null)
             );
-            $did++;
+            $pubDid++;
             $out['processed']++;
             if (!empty($pub['success']) && empty($pub['partial'])) {
                 $status = ($useBloggerSchedule || (!empty($pub['status']) && $pub['status'] === 'scheduled')) ? 'Scheduled' : 'Published';
                 $db->prepare("UPDATE campaign_items SET article_status = ?, last_error = NULL WHERE id = ?")->execute([$status, $item['id']]);
                 if ($status === 'Scheduled') $out['scheduled']++;
                 else $out['published']++;
+                $out['items'][] = ['id' => $item['id'], 'title' => $item['title'], 'action' => strtolower($status), 'url' => $pub['url'] ?? ''];
             } else {
                 $msg = $pub['error'] ?? ($pub['message'] ?? 'publish failed');
                 $db->prepare("UPDATE campaign_items SET last_error = ? WHERE id = ?")->execute([$msg, $item['id']]);
-                $out['errors'][] = 'Blogger/platform failed for ' . $item['title'] . ': ' . $msg;
+                $out['errors'][] = 'Platform failed for ' . $item['title'] . ': ' . $msg;
+                $out['items'][] = ['id' => $item['id'], 'title' => $item['title'], 'action' => 'publish_failed', 'error' => $msg];
             }
         }
     }
+
+    $out['message'] = 'Auto cron: HTML created ' . $out['html'] . ', scheduled ' . $out['scheduled'] . ', published ' . $out['published'] . ', retries/errors ' . count($out['errors']) . '.';
     return $out;
 }
 
