@@ -61,6 +61,7 @@ try {
     require_once __DIR__ . '/includes/research_agent.php';
     require_once __DIR__ . '/includes/mailer.php';
     require_once __DIR__ . '/includes/google_keyword_planner.php';
+    require_once __DIR__ . '/includes/auto_daily.php';
 } catch (Exception $e) {
     http_response_code(500);
     echo '<h1>AutoBlog Setup Error</h1><p>' . htmlspecialchars($e->getMessage()) . '</p><p>Check that all files are uploaded correctly and PHP version is 8.0+</p>';
@@ -153,15 +154,23 @@ function fetchKeywordPlannerKeywords($userId, $seedKeywords, $country = 'India',
     list($locationId, $languageCode) = keywordPlannerLocationAndLanguage($country, $language);
     $seeds = array_values(array_filter(array_map('trim', (array)$seedKeywords)));
     if (empty($seeds)) $seeds = ['digital marketing'];
-    return GoogleKeywordPlanner::generateKeywordIdeas(
+    $topic = $seeds[0];
+    $seeds = GoogleKeywordPlanner::expandSeedKeywords($topic, $seeds[0]);
+    $result = GoogleKeywordPlanner::generateKeywordIdeas(
         $developerToken, $customerId, $loginCustomerId, $tokenResult['access_token'],
         $seeds, $languageCode, $locationId
     );
+    if (!empty($result['success'])) {
+        $result['keywords'] = GoogleKeywordPlanner::selectBestTargetKeywords($result['keywords'] ?? [], $topic);
+        $result['count'] = count($result['keywords']);
+        $result['primary_keyword'] = $result['keywords'][0]['keyword'] ?? $topic;
+    }
+    return $result;
 }
 
 function plannerRowsToKeywordData($rows) {
     $out = [];
-    foreach ((array)$rows as $row) {
+    foreach ((array)$rows as $i => $row) {
         $out[] = [
             'keyword' => $row['keyword'] ?? '',
             'volume' => $row['volume'] ?? 0,
@@ -169,9 +178,46 @@ function plannerRowsToKeywordData($rows) {
             'intent' => $row['intent'] ?? 'Informational',
             'source' => 'Google Keyword Planner',
             'cpc' => $row['cpc'] ?? null,
+            'competition_index' => $row['competition_index'] ?? null,
+            'role' => $row['role'] ?? ($i === 0 ? 'primary' : 'secondary'),
         ];
     }
     return $out;
+}
+
+/** Apply ranked Keyword Planner keywords onto an article plan (primary = highest volume / lowest competition). */
+function applyPlannerKeywordsToPlan(&$plan, $userId, $country, $language) {
+    $topic = $plan['title'] ?? $plan['primary_keyword'] ?? '';
+    $seed = $plan['primary_keyword'] ?? $topic;
+    $kwRes = fetchKeywordPlannerKeywords($userId, [$seed, $topic], $country, $language);
+    if (empty($kwRes['success'])) {
+        return $kwRes;
+    }
+    $rows = $kwRes['keywords'] ?? [];
+    if (empty($rows)) {
+        return ['success' => false, 'error' => 'Keyword Planner returned no keyword ideas for: ' . $topic];
+    }
+    $plan['keywords'] = plannerRowsToKeywordData($rows);
+    $primary = $rows[0]['keyword'] ?? $seed;
+    $plan['primary_keyword'] = $primary;
+    $title = $plan['title'] ?? $topic;
+    if ($primary && stripos($title, $primary) === false) {
+        $plan['title'] = ucwords($primary);
+        $heads = $plan['headings'] ?? [];
+        if (!is_array($heads)) $heads = [];
+        $heads['H1'] = ucwords($primary);
+        $plan['headings'] = $heads;
+    }
+    return ['success' => true, 'primary_keyword' => $primary, 'count' => count($rows)];
+}
+
+function saveAutoBlogJob($userId, $slot, $campaignId, $domain, $country, $language, $days, $perDay, $startDate, $postingTimes, $platform, $keywordSource) {
+    $db = getDB();
+    $now = nowString();
+    $db->prepare('INSERT INTO auto_blog_jobs (user_id, slot_number, enabled, campaign_id, domain_url, country, language_code, days, posts_per_day, start_date, posting_times, target_platform, keyword_source, created_at) VALUES (?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(user_id, slot_number) DO UPDATE SET enabled=1, campaign_id=excluded.campaign_id, domain_url=excluded.domain_url, country=excluded.country, language_code=excluded.language_code, days=excluded.days, posts_per_day=excluded.posts_per_day, start_date=excluded.start_date, posting_times=excluded.posting_times, target_platform=excluded.target_platform, keyword_source=excluded.keyword_source, last_error=NULL')->execute([
+        $userId, $slot, $campaignId, $domain, $country, $language, $days, $perDay, $startDate, json_encode($postingTimes), $platform, $keywordSource, $now
+    ]);
 }
 
 function resolveKeywordPlannerOAuth($userId, $input = []) {
@@ -1133,14 +1179,9 @@ function handleApiRoute($uri) {
         $plannerUsedCount = 0;
         if ($keywordSource === 'planner') {
             foreach ($plans as &$plan) {
-                $seed = $plan['primary_keyword'] ?? $plan['title'] ?? '';
-                $kwRes = fetchKeywordPlannerKeywords($userId, [$seed], $country, $language);
+                $kwRes = applyPlannerKeywordsToPlan($plan, $userId, $country, $language);
                 if (empty($kwRes['success'])) {
                     jsonResponse(['error' => 'Keyword Planner selected, but it failed: ' . ($kwRes['error'] ?? 'unknown')], 400);
-                }
-                $plan['keywords'] = plannerRowsToKeywordData($kwRes['keywords'] ?? []);
-                if (!empty($plan['keywords'][0]['keyword'])) {
-                    $plan['primary_keyword'] = $plan['keywords'][0]['keyword'];
                 }
                 $plannerUsedCount++;
             }
@@ -1153,10 +1194,14 @@ function handleApiRoute($uri) {
         $startDate = $input['start_date'] ?? date('Y-m-d');
         $postingTimes = $input['posting_times'] ?? ['10:00'];
         $targetPlatform = $input['target_platform'] ?? 'blogger';
+        $workflowMode = (($input['workflow_mode'] ?? 'manual') === 'auto') ? 'auto' : 'manual';
 
-        $stmt = $db->prepare('INSERT INTO campaigns (user_id, slot_number, domain_url, target_country, language_code, days, posts_per_day, status, start_date, posting_times, target_platform, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
-        $stmt->execute([$userId, $activeSlot, $domain, $country, $language, $days, $postsPerDay, 'Roadmap Review', $startDate, json_encode($postingTimes), $targetPlatform, $now]);
+        $stmt = $db->prepare('INSERT INTO campaigns (user_id, slot_number, domain_url, target_country, language_code, days, posts_per_day, status, start_date, posting_times, target_platform, created_at, workflow_mode, keyword_source) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+        $stmt->execute([$userId, $activeSlot, $domain, $country, $language, $days, $postsPerDay, $workflowMode === 'auto' ? 'Auto Running' : 'Roadmap Review', $startDate, json_encode($postingTimes), $targetPlatform, $now, $workflowMode, $keywordSource]);
         $campaignId = $db->lastInsertId();
+        if ($workflowMode === 'auto') {
+            saveAutoBlogJob($userId, $activeSlot, $campaignId, $domain, $country, $language, $days, $postsPerDay, $startDate, $postingTimes, $targetPlatform, $keywordSource);
+        }
 
         $roadmapRows = [];
         foreach (array_slice($plans, 0, $days * $postsPerDay) as $i => $plan) {
@@ -1172,12 +1217,15 @@ function handleApiRoute($uri) {
             $schedTime = $postingTimes[min($postNum - 1, count($postingTimes) - 1)] ?? '10:00';
 
             $stmt = $db->prepare('INSERT INTO campaign_items (campaign_id, day_number, post_number, title, primary_keyword, keyword_data, internal_links, external_links, headings, image_prompts, video_url, plan_status, article_status, scheduled_date, scheduled_time, target_platform, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
-            $stmt->execute([$campaignId, $dayNum, $postNum, $plan['title'] ?? 'Untitled', $plan['primary_keyword'] ?? '', json_encode($kws), json_encode($links), json_encode($ext), json_encode($heads), json_encode($prompts), $plan['video_url'] ?? '', 'Pending', 'Not Created', $schedDate, $schedTime, $targetPlatform, $now]);
+            $planStatus = $workflowMode === 'auto' ? 'Approved' : 'Pending';
+            $stmt->execute([$campaignId, $dayNum, $postNum, $plan['title'] ?? 'Untitled', $plan['primary_keyword'] ?? '', json_encode($kws), json_encode($links), json_encode($ext), json_encode($heads), json_encode($prompts), $plan['video_url'] ?? '', $planStatus, 'Not Created', $schedDate, $schedTime, $targetPlatform, $now]);
             $itemId = $db->lastInsertId();
 
+            if ($workflowMode !== 'auto') {
             $token = generateToken();
             $stmt = $db->prepare('INSERT INTO approval_tokens (user_id, campaign_item_id, approval_type, token, created_at) VALUES (?, ?, ?, ?, ?)');
             $stmt->execute([$userId, $itemId, 'roadmap', $token, $now]);
+            }
 
             $firstKw = $kws[0] ?? [];
             $support = implode(', ', array_slice(array_filter(array_map(fn($x) => $x['keyword'] ?? '', $kws)), 1, 5));
@@ -1201,8 +1249,11 @@ function handleApiRoute($uri) {
         $stmt->execute([$campaignId]);
         $allCampaignItems = $stmt->fetchAll();
         $campaignRow = ['domain_url' => $domain, 'days' => $days, 'posts_per_day' => $postsPerDay];
-        $richEmailHtml = buildRichApprovalEmailHtml($allCampaignItems, $campaignRow, $db);
-        $sent = sendApprovalEmail($userId, 'Your AI Research Roadmap Draft — Approve or Disapprove Each Article', $richEmailHtml);
+        $sent = false;
+        if ($workflowMode !== 'auto') {
+            $richEmailHtml = buildRichApprovalEmailHtml($allCampaignItems, $campaignRow, $db);
+            $sent = sendApprovalEmail($userId, 'Your AI Research Roadmap Draft — Approve or Disapprove Each Article', $richEmailHtml);
+        }
         
         // ===== REMOVE USED TOPICS FROM CUSTOM CSV =====
         if ($csvCount > 0) {
@@ -1383,10 +1434,14 @@ function handleApiRoute($uri) {
         $postingTimes = $input['posting_times'] ?? ['10:00'];
         $targetPlatform = $input['target_platform'] ?? 'blogger';
         $keywordSource = (($input['keyword_source'] ?? 'ai') === 'planner') ? 'planner' : 'ai';
+        $workflowMode = (($input['workflow_mode'] ?? 'manual') === 'auto') ? 'auto' : 'manual';
 
-        $stmt = $db->prepare('INSERT INTO campaigns (user_id, slot_number, domain_url, target_country, language_code, days, posts_per_day, status, start_date, posting_times, target_platform, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
-        $stmt->execute([$userId, $activeSlot, $domain, $country, $language, $days, $perDay, 'Roadmap Review', $startDate, json_encode($postingTimes), $targetPlatform, $now]);
+        $stmt = $db->prepare('INSERT INTO campaigns (user_id, slot_number, domain_url, target_country, language_code, days, posts_per_day, status, start_date, posting_times, target_platform, created_at, workflow_mode, keyword_source) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+        $stmt->execute([$userId, $activeSlot, $domain, $country, $language, $days, $perDay, $workflowMode === 'auto' ? 'Auto Running' : 'Roadmap Review', $startDate, json_encode($postingTimes), $targetPlatform, $now, $workflowMode, $keywordSource]);
         $campaignId = $db->lastInsertId();
+        if ($workflowMode === 'auto') {
+            saveAutoBlogJob($userId, $activeSlot, $campaignId, $domain, $country, $language, $days, $perDay, $startDate, $postingTimes, $targetPlatform, $keywordSource);
+        }
 
         for ($day = 1; $day <= $days; $day++) {
             for ($post = 1; $post <= $perDay; $post++) {
@@ -1411,6 +1466,8 @@ function handleApiRoute($uri) {
                     $title = $csvPlan['title'] ?? ucwords($kw);
                     $primaryKw = $csvPlan['primary_keyword'] ?? $kw;
                 } else {
+                $title = '';
+                $primaryKw = '';
                 $articleKeywords = array_slice(array_merge(array_slice($base, $idx % count($base)), array_slice($base, 0, $idx % count($base))), 0, 8);
 
                 $kws = [];
@@ -1420,7 +1477,11 @@ function handleApiRoute($uri) {
                         jsonResponse(['error' => 'Keyword Planner selected, but it failed: ' . ($gkwResult['error'] ?? 'unknown')], 400);
                     }
                     $kws = array_slice(plannerRowsToKeywordData($gkwResult['keywords'] ?? []), 0, 8);
-                    error_log("[Demo Campaign] Used Google Keyword Planner for '$kw' - got " . count($kws) . " keywords");
+                    if (!empty($kws[0]['keyword'])) {
+                        $primaryKw = $kws[0]['keyword'];
+                        $title = ucwords($primaryKw);
+                    }
+                    error_log("[Demo Campaign] Used Google Keyword Planner for '$kw' - primary=" . ($kws[0]['keyword'] ?? '') . " vol=" . ($kws[0]['volume'] ?? ''));
                 }
                 // Fallback to demo estimates if Keyword Planner not available or failed
                 if (empty($kws)) {
@@ -1452,19 +1513,21 @@ function handleApiRoute($uri) {
                     $external[] = ['url' => $domain, 'anchor_text' => 'Customer Website'];
                 }
                 $prompts = ["Editorial photograph illustrating $kw, natural lighting, no text, no logos, professional magazine style.", "Practical real-world scene related to $kw, authentic people and setting, no text or logos."];
-                    $title = ucwords($kw);
-                    $primaryKw = $kw;
+                    if (empty($title)) $title = ucwords($kw);
+                    if (empty($primaryKw)) $primaryKw = $kw;
                 }
 
                 $schedDate = (new DateTime($startDate))->modify(($day - 1) . ' days')->format('Y-m-d');
                 $schedTime = $postingTimes[min($post - 1, count($postingTimes) - 1)] ?? '10:00';
 
                 $stmt = $db->prepare('INSERT INTO campaign_items (campaign_id, day_number, post_number, title, primary_keyword, keyword_data, internal_links, external_links, headings, image_prompts, video_url, plan_status, article_status, scheduled_date, scheduled_time, target_platform, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
-                $stmt->execute([$campaignId, $day, $post, $title, $primaryKw, json_encode($kws), json_encode($internal), json_encode($external), json_encode($headings), json_encode($prompts), '', 'Pending', 'Not Created', $schedDate, $schedTime, $targetPlatform, $now]);
+                $stmt->execute([$campaignId, $day, $post, $title, $primaryKw, json_encode($kws), json_encode($internal), json_encode($external), json_encode($headings), json_encode($prompts), '', $workflowMode === 'auto' ? 'Approved' : 'Pending', 'Not Created', $schedDate, $schedTime, $targetPlatform, $now]);
                 $itemId = $db->lastInsertId();
+                if ($workflowMode !== 'auto') {
                 $token = generateToken();
                 $stmt = $db->prepare('INSERT INTO approval_tokens (user_id, campaign_item_id, approval_type, token, created_at) VALUES (?, ?, ?, ?, ?)');
                 $stmt->execute([$userId, $itemId, 'roadmap', $token, $now]);
+                }
                 
                 // Record topic to persistent JSON + CSV for dedup
                 addTopicToJsonFile($title, $primaryKw, $domain, 'pending', $campaignId);
@@ -1485,8 +1548,11 @@ function handleApiRoute($uri) {
         $stmt->execute([$campaignId]);
         $allItems = $stmt->fetchAll();
         $campaignRow = ['domain_url' => $domain, 'days' => $days, 'posts_per_day' => $perDay];
-        $richEmailHtml = buildRichApprovalEmailHtml($allItems, $campaignRow, $db);
-        $sent = sendApprovalEmail($userId, 'Your AutoBlog Roadmap Draft — Approve or Disapprove Each Article', $richEmailHtml);
+        $sent = false;
+        if ($workflowMode !== 'auto') {
+            $richEmailHtml = buildRichApprovalEmailHtml($allItems, $campaignRow, $db);
+            $sent = sendApprovalEmail($userId, 'Your AutoBlog Roadmap Draft — Approve or Disapprove Each Article', $richEmailHtml);
+        }
         
         // ===== REMOVE USED TOPICS FROM CUSTOM CSV =====
         if ($csvCount > 0) {
@@ -1730,6 +1796,12 @@ function handleApiRoute($uri) {
                 jsonResponse(['success' => true, 'message' => 'Published to WordPress.', 'url' => $schedDirectResult['url'] ?? '']);
             }
         } elseif ($platform === 'website') {
+            if (empty($schedArticleContent)) {
+                $schedArticleContent = loadCampaignArticleContent($item);
+            }
+            if (empty($schedArticleContent)) {
+                jsonResponse(['success' => false, 'error' => 'HTML is created in the dashboard but the file was not found on disk. Click Generate All HTML, then publish again. Path: ' . ($item['html_path'] ?? 'none')], 400);
+            }
             $schedDirectResult = publishToWebsiteBlog($item, $schedTitle, $schedArticleContent, $scheduledStr);
             if (!empty($schedDirectResult['success'])) {
                 $stmt = $db->prepare("UPDATE campaign_items SET article_status = ?, scheduled_date = ?, scheduled_time = ? WHERE id = ?");
@@ -1867,7 +1939,7 @@ function handleApiRoute($uri) {
                 $stmt = $db->prepare('SELECT * FROM campaign_items WHERE id = ?');
                 $stmt->execute([$item['id']]);
                 $freshItem = $stmt->fetch();
-                $htmlResult = generateArticleHtmlFromCampaignItem($freshItem, $tok['user_id'], $activeSlot, $db);
+                $htmlResult = generateArticleHtmlReliable($freshItem, $tok['user_id'], $activeSlot, $db);
                 if (!empty($htmlResult['success'])) {
                     $stmt = $db->prepare("UPDATE campaign_items SET article_status = 'HTML Ready', html_path = ? WHERE id = ?");
                     $stmt->execute([$htmlResult['html_path'], $item['id']]);
@@ -1923,7 +1995,7 @@ function handleApiRoute($uri) {
             $stmt = $db->prepare('SELECT * FROM campaign_items WHERE id = ?');
             $stmt->execute([$item['id']]);
             $freshItem = $stmt->fetch();
-            $htmlResult = generateArticleHtmlFromCampaignItem($freshItem, $tok['user_id'], $activeSlot, $db);
+            $htmlResult = generateArticleHtmlReliable($freshItem, $tok['user_id'], $activeSlot, $db);
             if (!empty($htmlResult['success'])) {
                 $stmt = $db->prepare("UPDATE campaign_items SET article_status = 'HTML Ready', html_path = ? WHERE id = ?");
                 $stmt->execute([$htmlResult['html_path'], $item['id']]);
@@ -2078,7 +2150,7 @@ function handleApiRoute($uri) {
             $stmt->execute([$tok['campaign_item_id']]);
             $reItem = $stmt->fetch();
             if ($reItem) {
-                $regenResult = generateArticleHtmlFromCampaignItem($reItem, $tok['user_id'], $activeSlot, $db, 'Take a completely different practical angle. Focus on real-world case studies, alternative methods, and contrarian insights. Use different examples and a fresh narrative voice.');
+                $regenResult = generateArticleHtmlReliable($reItem, $tok['user_id'], $activeSlot, $db, 'Take a completely different practical angle. Focus on real-world case studies, alternative methods, and contrarian insights. Use different examples and a fresh narrative voice.');
                 if (!empty($regenResult['success'])) {
                     $stmt = $db->prepare("UPDATE campaign_items SET article_status = 'HTML Ready', html_path = ? WHERE id = ?");
                     $stmt->execute([$regenResult['html_path'], $tok['campaign_item_id']]);
@@ -2145,7 +2217,7 @@ function handleApiRoute($uri) {
         $generated = [];
 
         foreach ($items as $item) {
-            $htmlResult = generateArticleHtmlFromCampaignItem($item, $userId, $activeSlot, $db);
+            $htmlResult = generateArticleHtmlReliable($item, $userId, $activeSlot, $db);
             if (!empty($htmlResult['success'])) {
                 $stmt = $db->prepare("UPDATE campaign_items SET article_status = 'HTML Ready', html_path = ? WHERE id = ?");
                 $stmt->execute([$htmlResult['html_path'], $item['id']]);
@@ -2389,7 +2461,7 @@ function handleApiRoute($uri) {
                 $stmt = $db->prepare('SELECT * FROM campaign_items WHERE id = ?');
                 $stmt->execute([$itemId]);
                 $freshItem = $stmt->fetch();
-                $htmlResult = generateArticleHtmlFromCampaignItem($freshItem, $userId, $activeSlot, $db);
+                $htmlResult = generateArticleHtmlReliable($freshItem, $userId, $activeSlot, $db);
                 if (!empty($htmlResult['success'])) {
                     $stmt = $db->prepare("UPDATE campaign_items SET article_status = 'HTML Ready', html_path = ? WHERE id = ?");
                     $stmt->execute([$htmlResult['html_path'], $itemId]);
@@ -2444,6 +2516,15 @@ function handleApiRoute($uri) {
             ob_start();
             try { include $schedulerPath; } catch (Exception $e) { $schedulerOutput .= 'Scheduler error: ' . $e->getMessage(); }
             $schedulerOutput .= ob_get_clean();
+        }
+        $autoOutput = '';
+        if (function_exists('processAutoBlogCampaigns')) {
+            try {
+                $autoRes = processAutoBlogCampaigns(3);
+                $autoOutput = json_encode($autoRes);
+            } catch (Throwable $e) {
+                $autoOutput = 'Auto daily error: ' . $e->getMessage();
+            }
         }
         ob_end_clean();
         // Also publish any scheduled website blog posts

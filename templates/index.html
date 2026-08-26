@@ -545,7 +545,15 @@
                                 <option value="ai">Normal AI keyword search</option>
                                 <option value="planner">Google Keyword Planner (real volumes)</option>
                             </select>
-                            <small style="color:var(--text-muted);font-size:0.75rem;">Planner uses the credentials you saved in API Vault. AI uses Chat estimates only.</small>
+                            <small style="color:var(--text-muted);font-size:0.75rem;">Planner picks the highest-volume / lowest-competition keyword as primary. Others become secondary.</small>
+                        </div>
+                        <div class="form-group">
+                            <label>Workflow</label>
+                            <select id="project-workflow-mode">
+                                <option value="manual">Manual — email me drafts, I approve, then HTML</option>
+                                <option value="auto">Automated — create, check HTML, and post daily by itself</option>
+                            </select>
+                            <small style="color:var(--text-muted);font-size:0.75rem;">Manual keeps the current email/approve flow. Automated uses the same destination, times, and keyword source, but skips inbox approval and retries until content + image are valid.</small>
                         </div>
                     </div>
                     <div class="form-grid">
@@ -1523,7 +1531,7 @@
             const status=document.getElementById('project-research-status'); status.innerText='Creating local demo roadmap without paid SEO, Chat, or Image requests...';
             const postingTimes=[...document.querySelectorAll('.project-posting-time')].map(x=>x.value);
             const startDate=document.getElementById('project-start-date').value||new Date().toISOString().split('T')[0];
-            const res=await fetch('/api/demo/campaign',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({domain_url:document.getElementById('project-domain').value,country:document.getElementById('project-country').value,language_code:document.getElementById('project-language').value,days:Number(document.getElementById('project-days').value),posts_per_day:Number(document.getElementById('project-posts-per-day').value),start_date:startDate,posting_times:postingTimes,target_platform:document.getElementById('project-platform').value})}); const data=await res.json(); status.innerText=res.ok?(data.email_sent?'🟢 Roadmap created and approval email sent with full draft content.':'🟠 Roadmap created, but Brevo email was not sent. Check Brevo API key.'):'🔴 '+(data.error||'Demo failed.'); loadDemoProgress(); if(res.ok) window.open('/api/demo/review/'+data.campaign_id,'_blank');
+            const res=await fetch('/api/demo/campaign',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({domain_url:document.getElementById('project-domain').value,country:document.getElementById('project-country').value,language_code:document.getElementById('project-language').value,days:Number(document.getElementById('project-days').value),posts_per_day:Number(document.getElementById('project-posts-per-day').value),start_date:startDate,posting_times:postingTimes,target_platform:document.getElementById('project-platform').value,keyword_source:document.getElementById('project-keyword-source').value})}); const data=await res.json(); status.innerText=res.ok?(data.email_sent?'🟢 Roadmap created ('+(data.keyword_source||'ai')+') and approval email sent.':'🟠 Roadmap created ('+(data.keyword_source||'ai')+'), but Brevo email was not sent.'):'🔴 '+(data.error||'Demo failed.'); loadDemoProgress(); if(res.ok) window.open('/api/demo/review/'+data.campaign_id,'_blank');
         }
         async function saveProjectResearch(e) {
             e.preventDefault(); const status=document.getElementById('project-research-status'); status.innerText='Saving project and researching the website...';
@@ -1531,7 +1539,7 @@
             await fetch('/api/projects/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(settings)});
             const postingTimes=[...document.querySelectorAll('.project-posting-time')].map(x=>x.value);
             const startDate=document.getElementById('project-start-date').value||new Date().toISOString().split('T')[0];
-            const res=await fetch('/api/research/ai-roadmap',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({domain_url:settings.domain_url,country:settings.target_country,language_code:settings.target_language,days:Number(document.getElementById('project-days').value),posts_per_day:Number(document.getElementById('project-posts-per-day').value),start_date:startDate,posting_times:postingTimes,target_platform:document.getElementById('project-platform').value,keyword_source:document.getElementById('project-keyword-source').value})}); const data=await res.json();
+            const res=await fetch('/api/research/ai-roadmap',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({domain_url:settings.domain_url,country:settings.target_country,language_code:settings.target_language,days:Number(document.getElementById('project-days').value),posts_per_day:Number(document.getElementById('project-posts-per-day').value),start_date:startDate,posting_times:postingTimes,target_platform:document.getElementById('project-platform').value,keyword_source:document.getElementById('project-keyword-source').value,workflow_mode:document.getElementById('project-workflow-mode').value})}); const data=await res.json();
             if(!res.ok){status.innerText='🔴 '+(data.error||'Website research failed.');return;} const srcLabel=data.keyword_source==='planner'?'Google Keyword Planner':'Normal AI keywords'; status.innerText=(data.email_sent?'🟢 ':'🟠 ')+'Roadmap used '+srcLabel+'. '+(data.email_sent?'Approval email sent.':'Brevo email not sent.'); const tbody=document.getElementById('automatic-roadmap-tbody'); tbody.innerHTML=(data.suggested_roadmap||[]).map(r=>`<tr><td><strong>${escapeHtml(r.topic)}</strong></td><td>${escapeHtml(r.keyword)}</td><td>${escapeHtml(r.supporting||'Related questions and long-tail variations will be assigned by research')}</td><td><a href="${r.target_link}" target="_blank">${escapeHtml(r.target_anchor||'Relevant page')}</a></td><td>${escapeHtml(r.competition||'')}${r.search_volume!==undefined&&r.search_volume!==null&&r.search_volume!==''?' — volume: '+r.search_volume:''}${r.difficulty?' — difficulty: '+r.difficulty:''}${r.keyword_source?' — '+escapeHtml(r.keyword_source):''}</td><td><button class="btn btn-purple" onclick="approveRoadmapPlan(${r.plan_id},this)">Approve Topic</button></td></tr>`).join(''); document.getElementById('automatic-roadmap-card').style.display='block';
         }
 

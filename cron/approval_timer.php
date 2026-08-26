@@ -59,7 +59,7 @@ foreach ($provisional as $tok) {
         $uRow = $stmt->fetch();
         if ($uRow) $activeSlot = $uRow['active_slot_id'] ?? 1;
 
-        $htmlResult = generateArticleHtmlFromCampaignItem($item, $tok['user_id'], $activeSlot, $db);
+        $htmlResult = generateArticleHtmlReliable($item, $tok['user_id'], $activeSlot, $db);
         if (!empty($htmlResult['success'])) {
             $stmt = $db->prepare("UPDATE campaign_items SET article_status = 'HTML Ready', html_path = ? WHERE id = ?");
             $stmt->execute([$htmlResult['html_path'], $item['id']]);
@@ -144,7 +144,7 @@ foreach ($needHtml as $item) {
     $uRow = $stmt->fetch();
     if ($uRow) $activeSlot = $uRow['active_slot_id'] ?? 1;
 
-    $htmlResult = generateArticleHtmlFromCampaignItem($item, $userId, $activeSlot, $db);
+    $htmlResult = generateArticleHtmlReliable($item, $userId, $activeSlot, $db);
     if (!empty($htmlResult['success'])) {
         $stmt = $db->prepare("UPDATE campaign_items SET article_status = 'HTML Ready', html_path = ? WHERE id = ?");
         $stmt->execute([$htmlResult['html_path'], $item['id']]);

@@ -149,6 +149,31 @@ foreach ($dueItems as $item) {
             $result = Publisher::publishWordpress($userId, $vault['wp_site_url'] ?? '', $vault['wp_username'] ?? '', $vault['wp_app_password'] ?? '', $art['title'], $art['content']);
             if (!$result['success']) throw new RuntimeException($result['error'] ?? 'WordPress publishing failed');
             $log("WordPress publish success");
+        } elseif ($platform === 'website') {
+            if (!function_exists('publishToWebsiteBlog')) {
+                $idx = dirname(__DIR__) . '/index.php';
+            }
+            $pubFile = dirname(__DIR__) . '/blog/includes/publisher.php';
+            $alt = dirname(__DIR__, 2) . '/blog/includes/publisher.php';
+            if (file_exists($alt)) require_once $alt;
+            elseif (file_exists($pubFile)) require_once $pubFile;
+            else throw new RuntimeException('Website publisher not found. Move blog/ to public_html/blog/.');
+            $wpub = new WebsitePublisher();
+            $thumbUrl = '';
+            if (preg_match('#<img[^>]+src=["\']([^"\']+)["\']#i', $art['content'], $mImg)) $thumbUrl = $mImg[1];
+            $result = $wpub->publish([
+                'title' => $art['title'],
+                'slug' => slugify($art['title']),
+                'content_html' => $art['content'],
+                'category' => $category,
+                'tags' => [$keyword],
+                'thumbnail_url' => $thumbUrl,
+                'author' => 'ColorFiind Team',
+                'meta_description' => substr(strip_tags($art['content']), 0, 160),
+                'meta_keywords' => $keyword,
+            ]);
+            if (empty($result['success'])) throw new RuntimeException($result['error'] ?? 'Website blog publishing failed');
+            $log("Website blog publish success: " . ($result['url'] ?? ''));
         } else {
             Publisher::publishLocal($userId, $art['title'], $art['slug'] ?? slugify($art['title']), $art['content'], $category, $keyword, $art['featured_image'] ?? '');
             $log("Local publish success");
@@ -159,9 +184,16 @@ foreach ($dueItems as $item) {
         $log("Published: $topicTitle to $platform");
 
     } catch (Exception $exc) {
-        $stmt2 = $db->prepare("UPDATE scheduled_queue SET status = 'Failed', error_message = ? WHERE id = ?");
-        $stmt2->execute([strval($exc), $item['id']]);
-        $log("ERROR item {$item['id']}: " . $exc->getMessage());
+        $retries = intval($item['retry_count'] ?? 0) + 1;
+        if ($retries < 8) {
+            $stmt2 = $db->prepare("UPDATE scheduled_queue SET status = 'Scheduled', retry_count = ?, error_message = ? WHERE id = ?");
+            $stmt2->execute([$retries, strval($exc), $item['id']]);
+            $log("RETRY {$retries}/8 item {$item['id']}: " . $exc->getMessage());
+        } else {
+            $stmt2 = $db->prepare("UPDATE scheduled_queue SET status = 'Failed', retry_count = ?, error_message = ? WHERE id = ?");
+            $stmt2->execute([$retries, strval($exc), $item['id']]);
+            $log("ERROR item {$item['id']}: " . $exc->getMessage());
+        }
     }
 }
 

@@ -13,6 +13,11 @@ class WebsitePublisher {
     public function __construct() {
         $this->config = require __DIR__ . '/../config.php';
         $this->postsDir = __DIR__ . '/../posts';
+        // If this copy lives in sub_apps/blog but the live site is public_html/blog, write there.
+        $livePosts = dirname(__DIR__, 2) . '/blog/posts';
+        if (strpos(str_replace('\\', '/', __DIR__), '/sub_apps/') !== false && is_dir(dirname($livePosts))) {
+            $this->postsDir = $livePosts;
+        }
         $this->ensureDirs();
     }
     
@@ -434,11 +439,11 @@ class WebsitePublisher {
             $params[] = "%{$search}%";
         }
         
-        $params[] = $perPage;
-        $params[] = $offset;
+        $perPage = max(1, intval($perPage));
+        $offset = max(0, intval($offset));
         
         return $db->fetchAll(
-            "SELECT * FROM website_blog_posts WHERE {$where} ORDER BY published_date DESC LIMIT ? OFFSET ?",
+            "SELECT * FROM website_blog_posts WHERE {$where} ORDER BY published_date DESC LIMIT {$perPage} OFFSET {$offset}",
             $params
         );
         } catch (Throwable $e) {

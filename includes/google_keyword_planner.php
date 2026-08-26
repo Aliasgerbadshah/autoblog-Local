@@ -79,12 +79,14 @@ class GoogleKeywordPlanner {
         // Build request body (REST format)
         $body = [
             'keywordSeed' => [
-                'keywords' => array_slice($seedKeywords, 0, 10)
+                'keywords' => array_slice(array_values(array_unique($seedKeywords)), 0, 20)
             ],
             'language' => "languageConstants/{$languageCode}",
             'geoTargetConstants' => ["geoTargetConstants/{$locationId}"],
+            'keywordPlanNetwork' => 'GOOGLE_SEARCH',
             'pageSize' => 100,
             'historicalMetricsOptions' => [
+                'includeAverageCpc' => true,
                 'yearMonthRange' => [
                     'start' => ['year' => $startYear, 'month' => $monthEnum[$startMonth]],
                     'end' => ['year' => $currentYear, 'month' => $monthEnum[$currentMonth]]
@@ -200,7 +202,7 @@ class GoogleKeywordPlanner {
                 'keyword' => $text,
                 'volume' => $volume,
                 'difficulty' => $compLevel,
-                'competition_index' => $compIndex,
+                'competition_index' => $compIndex !== null ? intval($compIndex) : null,
                 'cpc' => $cpc,
                 'intent' => self::determineIntent($text),
                 'source' => 'Google Keyword Planner',
@@ -214,15 +216,149 @@ class GoogleKeywordPlanner {
                 }, $monthlySearchVolumes)
             ];
         }
-        
-        error_log("[Google Keyword Planner] Got " . count($keywords) . " keyword ideas");
+
+        $keywords = self::selectBestTargetKeywords($keywords, $seedKeywords[0] ?? '');
+        error_log("[Google Keyword Planner] Ranked " . count($keywords) . " ideas; primary=" . ($keywords[0]['keyword'] ?? ''));
         
         return [
             'success' => true,
             'keywords' => $keywords,
             'count' => count($keywords),
+            'primary_keyword' => $keywords[0]['keyword'] ?? ($seedKeywords[0] ?? ''),
             'source' => 'Google Keyword Planner'
         ];
+    }
+
+    /**
+     * Expand a topic into many Keyword Planner seeds so Google returns
+     * high-volume / low-competition ideas, not just the raw title.
+     */
+    public static function expandSeedKeywords($topic, $primary = '') {
+        $topic = trim((string)$topic);
+        $primary = trim((string)$primary);
+        $seeds = [];
+        foreach ([$topic, $primary] as $raw) {
+            if ($raw === '') continue;
+            $seeds[] = $raw;
+            $clean = strtolower($raw);
+            $clean = preg_replace('/[^a-z0-9\s]+/i', ' ', $clean);
+            $stop = ['the','a','an','and','or','for','of','to','in','on','with','your','you','best','guide','tips','how','what','why'];
+            $words = array_values(array_filter(preg_split('/\s+/', $clean), function($w) use ($stop) {
+                return strlen($w) > 2 && !in_array($w, $stop, true);
+            }));
+            if (!empty($words)) {
+                $core = implode(' ', array_slice($words, 0, 6));
+                $seeds[] = $core;
+                $seeds[] = 'best ' . $core;
+                $seeds[] = $core . ' guide';
+                $seeds[] = $core . ' tips';
+                $seeds[] = 'how to ' . $core;
+                $seeds[] = $core . ' for beginners';
+                $seeds[] = $core . ' vs';
+                $seeds[] = $core . ' cost';
+                $seeds[] = $core . ' examples';
+                if (count($words) >= 2) {
+                    $seeds[] = $words[0] . ' ' . $words[1];
+                }
+            }
+        }
+        $out = [];
+        $seen = [];
+        foreach ($seeds as $s) {
+            $s = trim(preg_replace('/\s+/', ' ', $s));
+            if ($s === '' || strlen($s) < 3) continue;
+            $k = strtolower($s);
+            if (isset($seen[$k])) continue;
+            $seen[$k] = true;
+            $out[] = $s;
+            if (count($out) >= 16) break;
+        }
+        return $out ?: ['digital marketing'];
+    }
+
+    /**
+     * Rank Keyword Planner ideas: highest volume, lowest competition,
+     * still relevant to the topic. Index 0 = primary, rest = secondary.
+     */
+    public static function selectBestTargetKeywords($rows, $topic = '') {
+        $rows = array_values(array_filter((array)$rows, function($r) {
+            return !empty($r['keyword']);
+        }));
+        if (empty($rows)) return [];
+
+        $topicWords = self::topicWords($topic);
+        foreach ($rows as &$r) {
+            $kw = strtolower(trim($r['keyword'] ?? ''));
+            $volume = intval($r['volume'] ?? 0);
+            $diff = strtolower((string)($r['difficulty'] ?? ''));
+            $idx = $r['competition_index'] ?? null;
+            if ($idx === null || $idx === '') $idx = ($diff === 'low' ? 20 : ($diff === 'high' ? 80 : 50));
+            $idx = max(0, min(100, intval($idx)));
+
+            $compMult = 1.0;
+            if ($diff === 'low') $compMult = 1.6;
+            elseif ($diff === 'medium') $compMult = 1.0;
+            elseif ($diff === 'high') $compMult = 0.35;
+            else $compMult = 0.8;
+
+            $rel = self::relevanceScore($kw, $topicWords);
+            $score = ($volume > 0 ? $volume : 1) * $compMult / (1 + ($idx / 70));
+            $score *= (0.35 + (0.65 * $rel));
+            if ($volume <= 0 && $diff === 'low') $score *= 1.15;
+            $r['_score'] = $score;
+            $r['_relevance'] = $rel;
+            $r['role'] = 'secondary';
+        }
+        unset($r);
+
+        usort($rows, function($a, $b) {
+            $s = ($b['_score'] <=> $a['_score']);
+            if ($s !== 0) return $s;
+            $v = (intval($b['volume'] ?? 0) <=> intval($a['volume'] ?? 0));
+            if ($v !== 0) return $v;
+            return (intval($a['competition_index'] ?? 50) <=> intval($b['competition_index'] ?? 50));
+        });
+
+        $relevant = array_values(array_filter($rows, function($r) {
+            return ($r['_relevance'] ?? 0) >= 0.18;
+        }));
+        if (count($relevant) >= 3) $rows = $relevant;
+
+        $seen = [];
+        $out = [];
+        foreach ($rows as $r) {
+            $k = strtolower(trim($r['keyword']));
+            if (isset($seen[$k])) continue;
+            $seen[$k] = true;
+            unset($r['_score'], $r['_relevance']);
+            $out[] = $r;
+            if (count($out) >= 12) break;
+        }
+        if (!empty($out)) $out[0]['role'] = 'primary';
+        return $out;
+    }
+
+    private static function topicWords($topic) {
+        $clean = strtolower(preg_replace('/[^a-z0-9\s]+/i', ' ', (string)$topic));
+        $stop = ['the','a','an','and','or','for','of','to','in','on','with','your','you','best','guide','tips'];
+        return array_values(array_filter(preg_split('/\s+/', $clean), function($w) use ($stop) {
+            return strlen($w) > 2 && !in_array($w, $stop, true);
+        }));
+    }
+
+    private static function relevanceScore($keyword, $topicWords) {
+        if (empty($topicWords)) return 1.0;
+        $kwWords = preg_split('/\s+/', strtolower($keyword));
+        $hit = 0;
+        foreach ($topicWords as $w) {
+            foreach ($kwWords as $kw) {
+                if ($kw === $w || strpos($kw, $w) !== false || strpos($w, $kw) !== false) {
+                    $hit++;
+                    break;
+                }
+            }
+        }
+        return min(1.0, $hit / max(1, count($topicWords)));
     }
     
     /**

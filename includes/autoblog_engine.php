@@ -888,6 +888,8 @@ function stripAndValidateImages($content) {
  * Returns ['success' => bool, 'html_path' => string, 'used_chat_api' => bool, 'featured_image' => string, 'error' => string]
  */
 function generateArticleHtmlFromCampaignItem($item, $userId, $activeSlot, $db, $contentAngle = '') {
+    @set_time_limit(180);
+    @ini_set('max_execution_time', '180');
     $headings = json_decode($item['headings'] ?? '{}', true) ?: [];
     $kws = json_decode($item['keyword_data'] ?? '[]', true) ?: [];
     $links = json_decode($item['internal_links'] ?? '[]', true) ?: [];
@@ -921,14 +923,21 @@ function generateArticleHtmlFromCampaignItem($item, $userId, $activeSlot, $db, $
         $nowYear = date('Y');
         $prompt = "Write a complete, publication-ready HTML blog article about \"$keyword\".\n\nTITLE: $title\nH1: $h1\nH2 SECTIONS: $h2List\nSUPPORTING KEYWORDS: $kwList\nINTERNAL LINKS (weave naturally into the text — ONLY use these URLs, do NOT make up any):\n$intLinkList\nEXTERNAL REFERENCES (cite naturally — at least 4 required — ONLY use the URLs listed below, do NOT make up any Wikipedia, Moz, or other URLs):\n$extLinkList\nIMAGE PROMPTS: " . implode('; ', $prompts) . "\n$angleNote\n\nREQUIREMENTS:\n- 1,800 to 2,200 words of original, researched content\n- Use semantic HTML: proper H1, H2, H3, H4, p, ul, li, table, figure, blockquote tags\n- CRITICAL: Keep paragraphs SHORT — strictly 45 to 50 words per paragraph. Every <p> tag must have between 45 and 50 words. Break long paragraphs into multiple short <p> tags. Readers skim; short paragraphs improve readability and mobile experience.\n- Write in a natural, authoritative human voice - no AI cliches or banned phrases\n- Include a FAQ section at the end with 3 real questions and answers about $keyword\n- Include 1-2 internal links with natural anchor text to the client website pages listed in INTERNAL LINKS\n- MANDATORY: Include at least 4 external authority references using the URLs provided in EXTERNAL REFERENCES above. Do NOT make up any new URLs. Only use the URLs that are explicitly listed.\n- Also include up to 2 links to the client website pages listed in internal links\n- Add a comparison data table where relevant\n- Use current year $nowYear throughout the article. NEVER use outdated years like 2023 or older. Do NOT mention the current month ($nowMonth) in the H1 title or any heading. You may use the year in headings where it feels natural.\n- Do NOT include html/head/body tags - only the article content\n- Do NOT invent facts, statistics, or quotes\n- Do NOT make up URLs — ONLY use URLs from the INTERNAL LINKS and EXTERNAL REFERENCES lists provided above\n- Return ONLY the article HTML, no markdown fences";
 
-        $chatResult = AIProviderClient::chat($chatVault, $prompt);
+        $chatResult = ['success' => false];
+        for ($chatTry = 1; $chatTry <= 3; $chatTry++) {
+            $chatResult = AIProviderClient::chat($chatVault, $prompt);
+            if (!empty($chatResult['success']) && !empty($chatResult['content']) && strlen(strip_tags($chatResult['content'])) > 400) {
+                break;
+            }
+            error_log("[HTML] Chat attempt {$chatTry} failed: " . ($chatResult['error'] ?? 'empty content'));
+        }
         if (!empty($chatResult['success']) && !empty($chatResult['content'])) {
             $chatContent = AntiAiSanitizer::sanitizeText($chatResult['content']);
             $chatContent = trim($chatContent);
             if (preg_match('/^```(?:html)?\s*\n(.+)\n```$/s', $chatContent, $m)) {
                 $chatContent = $m[1];
             }
-            $chatUsed = true;
+            $chatUsed = strlen(strip_tags($chatContent)) > 400;
         }
     }
 
@@ -945,10 +954,10 @@ function generateArticleHtmlFromCampaignItem($item, $userId, $activeSlot, $db, $
     }
 
     // Featured THUMBNAIL image via Image API — 9:16 ratio, MANDATORY first image
-    // Retry up to 5 times with different seeds. NEVER use gradient placeholder.
+    // Retry up to 3 times. HTML is written even if images fail (then rewritten).
     $featuredImgUrl = '';
     if (!empty($imageVault['api_key'])) {
-        for ($imgAttempt = 1; $imgAttempt <= 5; $imgAttempt++) {
+        for ($imgAttempt = 1; $imgAttempt <= 3; $imgAttempt++) {
             $thumbPrompt = "YouTube thumbnail image for a blog about $keyword. Vertical 9:16 aspect ratio, 1080x1920. Eye-catching, professional, bold visual representing the concept. No text, no logos, no watermarks. Clean editorial style.";
             $imgResult = AIProviderClient::image($imageVault, $thumbPrompt);
             if (!empty($imgResult['success']) && !empty($imgResult['url'])) {
@@ -988,7 +997,7 @@ function generateArticleHtmlFromCampaignItem($item, $userId, $activeSlot, $db, $
     // Retry up to 3 times. Must be different from thumbnail.
     $contentImgUrl = '';
     if (!empty($imageVault['api_key'])) {
-        for ($imgAttempt2 = 1; $imgAttempt2 <= 3; $imgAttempt2++) {
+        for ($imgAttempt2 = 1; $imgAttempt2 <= 2; $imgAttempt2++) {
             $contentImgPrompt = "Wide landscape editorial image for a blog about $keyword. Horizontal 16:9 aspect ratio, 1200x675. Professional, relevant to the topic, no text, no logos, no watermarks. Clean magazine style.";
             $imgResult2 = AIProviderClient::image($imageVault, $contentImgPrompt);
             if (!empty($imgResult2['success']) && !empty($imgResult2['url'])) {
@@ -1112,7 +1121,25 @@ CSS;
 </html>
 HTML;
 
-    @file_put_contents($filePath, $fullHtml);
+    $written = @file_put_contents($filePath, $fullHtml);
+    if ($written === false || !is_file($filePath) || filesize($filePath) < 400) {
+        $altDir = dirname(__DIR__) . '/published_posts/demo';
+        ensureDir($altDir);
+        $altPath = $altDir . "/$slug.html";
+        $written = @file_put_contents($altPath, $fullHtml);
+        if ($written !== false && is_file($altPath)) {
+            $filePath = $altPath;
+        } else {
+            return [
+                'success' => false,
+                'html_path' => '',
+                'html_file' => '',
+                'used_chat_api' => $chatUsed,
+                'featured_image' => $featuredImgUrl,
+                'error' => 'Could not write HTML file. Check published_posts/ permissions.'
+            ];
+        }
+    }
 
     return [
         'success' => true,
@@ -1123,6 +1150,7 @@ HTML;
         'error' => ''
     ];
 }
+
 
 /**
  * Generate fallback HTML article when Chat API is not available.
@@ -1135,9 +1163,11 @@ function generateFallbackArticleHtml($title, $keyword, $h1, $h2s, $h3s, $kws, $l
     $sectionsHtml = '';
     foreach ($h2s as $i => $h2) {
         $escH2 = escapeHtml($h2);
-        $sectionContent = "<p>This section covers key practical aspects of $keyword that professionals and business owners need to understand. The following analysis draws on documented industry practices and verified operational data.</p>";
+        $sectionContent = "<p>This section covers key practical aspects of $escKw that professionals and business owners need to understand. The following analysis draws on documented industry practices and verified operational data so the advice stays usable.</p>";
+        $sectionContent .= "<p>Start by mapping the outcome you want from $escKw, then list the smallest actions that move that outcome this week. Teams that skip this baseline usually publish generic advice and cannot measure whether the work actually helped.</p>";
+        $sectionContent .= "<p>Keep a simple scorecard: what you tried, what changed, and what you will stop doing. Review it every two weeks. That habit turns $escKw from a vague topic into an operating routine that compounds.</p>";
         if (isset($h3s[$i])) {
-            $sectionContent .= "<h3>" . escapeHtml($h3s[$i]) . "</h3><p>Understanding the nuances of " . escapeHtml($h3s[$i]) . " is critical for building a sustainable long-term strategy around $keyword.</p>";
+            $sectionContent .= "<h3>" . escapeHtml($h3s[$i]) . "</h3><p>Understanding the nuances of " . escapeHtml($h3s[$i]) . " is critical for building a sustainable long-term strategy around $escKw. Use examples from your own pipeline instead of invented statistics.</p>";
         }
         if (isset($links[$i])) {
             $link = $links[$i];
@@ -1180,4 +1210,118 @@ $faqHtml
 ARTICLE;
 
     return $html;
+}
+
+function validateGeneratedArticleFile($filePath) {
+    if (empty($filePath) || !is_file($filePath)) return false;
+    $html = @file_get_contents($filePath);
+    if ($html === false || strlen($html) < 800) return false;
+    $words = str_word_count(strip_tags($html));
+    if ($words < 250) return false;
+    if (stripos($html, '<h1') === false) return false;
+    return true;
+}
+
+function loadCampaignArticleContent($item) {
+    $htmlPath = $item['html_path'] ?? '';
+    $base = $htmlPath ? basename($htmlPath) : '';
+    $outDir = defined('OUTPUT_DIR') ? rtrim(OUTPUT_DIR, '/') : (dirname(__DIR__) . '/published_posts');
+    $candidates = [];
+    if (function_exists('resolveCampaignHtmlFile')) {
+        $resolved = resolveCampaignHtmlFile($htmlPath);
+        if ($resolved) $candidates[] = $resolved;
+    }
+    if ($htmlPath) {
+        $rel = ltrim(str_replace('\\', '/', $htmlPath), '/');
+        $candidates[] = dirname(__DIR__) . '/' . $rel;
+        $candidates[] = $outDir . '/' . $base;
+        $candidates[] = $outDir . '/demo/' . $base;
+        $candidates[] = dirname(__DIR__) . '/published_posts/demo/' . $base;
+        $candidates[] = dirname(__DIR__) . '/published_posts/' . $base;
+    }
+    foreach ($candidates as $p) {
+        if ($p && @is_file($p)) {
+            $fullHtml = file_get_contents($p);
+            if (preg_match('#<article[^>]*>(.*?)</article>#is', $fullHtml, $artMatch)) {
+                return trim($artMatch[1]);
+            }
+            return $fullHtml;
+        }
+    }
+    return '';
+}
+
+function generateArticleHtmlReliable($item, $userId, $activeSlot, $db, $contentAngle = '') {
+    $last = ['success' => false, 'error' => 'HTML generation did not run'];
+    $angles = [
+        $contentAngle,
+        'Take a practical how-to angle with real steps, examples, and a checklist.',
+        'Write as an expert briefing with comparisons, mistakes to avoid, and FAQs.',
+    ];
+    foreach ($angles as $i => $angle) {
+        try {
+            $last = generateArticleHtmlFromCampaignItem($item, $userId, $activeSlot, $db, $angle);
+        } catch (Throwable $e) {
+            $last = ['success' => false, 'error' => $e->getMessage()];
+            error_log('[HTML] generate exception: ' . $e->getMessage());
+            continue;
+        }
+        $file = $last['html_file'] ?? '';
+        if (!empty($last['success']) && validateGeneratedArticleFile($file)) {
+            return $last;
+        }
+        $last['error'] = ($last['error'] ?? '') ?: ('HTML attempt ' . ($i + 1) . ' was too thin or missing on disk');
+    }
+    return $last;
+}
+
+function publishItemToSelectedPlatform($userId, $item, $platform, $scheduledStr = null) {
+    $title = $item['title'] ?? 'Untitled';
+    $articleContent = loadCampaignArticleContent($item);
+    if (trim(strip_tags($articleContent)) === '') {
+        return ['success' => false, 'error' => 'HTML file not found or empty. Path: ' . ($item['html_path'] ?? 'none')];
+    }
+    $platform = $platform ?: ($item['target_platform'] ?? 'blogger');
+    if ($platform === 'blogger') {
+        $vault = SecurityVault::getApiCredentials($userId, 'blogger_api');
+        $blogId = $vault['blogger_blog_id'] ?? '';
+        if (empty($blogId)) return ['success' => false, 'error' => 'Blogger Blog ID is missing in Vault.'];
+        return Publisher::publishBlogger($userId, $blogId, $title, $articleContent, $vault['client_id'] ?? '', $vault['client_secret'] ?? '', $vault['refresh_token'] ?? '', $scheduledStr);
+    }
+    if ($platform === 'wordpress') {
+        $vault = SecurityVault::getApiCredentials($userId, 'wordpress_api');
+        return Publisher::publishWordpress($userId, $vault['wp_site_url'] ?? '', $vault['wp_username'] ?? '', $vault['wp_app_password'] ?? '', $title, $articleContent);
+    }
+    if ($platform === 'website') {
+        if (function_exists('publishToWebsiteBlog')) {
+            return publishToWebsiteBlog($item, $title, $articleContent, $scheduledStr);
+        }
+        $pubFile = dirname(__DIR__) . '/blog/includes/publisher.php';
+        $alt = dirname(__DIR__, 2) . '/blog/includes/publisher.php';
+        if (file_exists($alt)) require_once $alt;
+        elseif (file_exists($pubFile)) require_once $pubFile;
+        else return ['success' => false, 'error' => 'Website publisher not found.'];
+        if (!class_exists('WebsitePublisher')) return ['success' => false, 'error' => 'WebsitePublisher class missing.'];
+        try {
+            $wpub = new WebsitePublisher();
+            $thumbUrl = '';
+            if (preg_match('#<img[^>]+src=["\']([^"\']+)["\']#i', $articleContent, $m)) $thumbUrl = $m[1];
+            return $wpub->publish([
+                'title' => $title,
+                'slug' => slugify($title),
+                'content_html' => $articleContent,
+                'category' => $item['category'] ?? 'General',
+                'tags' => array_values(array_filter([$item['primary_keyword'] ?? '', $item['category'] ?? ''])),
+                'thumbnail_url' => $thumbUrl,
+                'author' => 'ColorFiind Team',
+                'meta_description' => substr(strip_tags($articleContent), 0, 160),
+                'meta_keywords' => $item['primary_keyword'] ?? '',
+                'scheduled_date' => $scheduledStr,
+            ]);
+        } catch (Throwable $e) {
+            return ['success' => false, 'error' => 'Website blog publish failed: ' . $e->getMessage()];
+        }
+    }
+    $url = Publisher::publishLocal($userId, $title, slugify($title), $articleContent, 'General', $item['primary_keyword'] ?? '', '');
+    return ['success' => true, 'url' => $url, 'message' => 'Published locally.'];
 }

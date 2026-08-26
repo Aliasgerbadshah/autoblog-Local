@@ -127,6 +127,33 @@ function initAutoblogDB() {
     try { $db->exec('ALTER TABLE campaigns ADD COLUMN target_platform TEXT DEFAULT \'blogger\''); } catch (Exception $e) {}
     try { $db->exec('ALTER TABLE campaign_items ADD COLUMN scheduled_date TEXT'); } catch (Exception $e) {}
     try { $db->exec('ALTER TABLE campaign_items ADD COLUMN target_platform TEXT DEFAULT \'local\''); } catch (Exception $e) {}
+    try { $db->exec('ALTER TABLE campaigns ADD COLUMN workflow_mode TEXT DEFAULT \'manual\''); } catch (Exception $e) {}
+    try { $db->exec('ALTER TABLE campaigns ADD COLUMN keyword_source TEXT DEFAULT \'ai\''); } catch (Exception $e) {}
+    try { $db->exec('ALTER TABLE campaign_items ADD COLUMN html_retry_count INTEGER DEFAULT 0'); } catch (Exception $e) {}
+    try { $db->exec('ALTER TABLE campaign_items ADD COLUMN last_error TEXT'); } catch (Exception $e) {}
+    try { $db->exec('ALTER TABLE scheduled_queue ADD COLUMN retry_count INTEGER DEFAULT 0'); } catch (Exception $e) {}
+    try { $db->exec('ALTER TABLE scheduled_queue ADD COLUMN campaign_item_id INTEGER'); } catch (Exception $e) {}
+
+    $db->exec('CREATE TABLE IF NOT EXISTS auto_blog_jobs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        slot_number INTEGER DEFAULT 1,
+        enabled INTEGER DEFAULT 1,
+        campaign_id INTEGER,
+        domain_url TEXT NOT NULL,
+        country TEXT DEFAULT \'India\',
+        language_code TEXT DEFAULT \'en\',
+        days INTEGER DEFAULT 7,
+        posts_per_day INTEGER DEFAULT 1,
+        start_date TEXT,
+        posting_times TEXT DEFAULT \'["10:00"]\',
+        target_platform TEXT DEFAULT \'blogger\',
+        keyword_source TEXT DEFAULT \'planner\',
+        last_run_at TEXT,
+        last_error TEXT,
+        created_at TEXT NOT NULL,
+        UNIQUE(user_id, slot_number)
+    )');
 
     // Created blog topics tracking (for dedup across campaigns)
     $db->exec('CREATE TABLE IF NOT EXISTS created_blog_topics (
