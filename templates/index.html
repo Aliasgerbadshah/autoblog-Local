@@ -659,10 +659,10 @@
                 <div style="background:var(--inner-bg);border:1px solid var(--border-light);border-radius:12px;padding:14px 16px;margin-bottom:16px;font-size:0.85rem;line-height:1.6;">
                     <strong>How to know cron is working (this is not the same as Approve):</strong>
                     <ul style="margin:8px 0 0 18px;color:var(--text-muted);">
-                        <li><strong>Human Article → Approve</strong> writes HTML in that same click. You wait on the page. That is not cron.</li>
-                        <li><strong>Run Cron Now</strong> (this tab or Human tab) runs the worker immediately and returns a timestamp + counts (HTML created / scheduled / published / errors).</li>
-                        <li>If <strong>Last cron run</strong> below updates to the current time after you click, cron is working.</li>
-                        <li>Hostinger cron <code>*/5 * * * * php .../cron/daily_autoblog.php</code> does the same job every 5 minutes. If Last cron run is older than 15 minutes, Hostinger cron is not firing — use Run Cron Now until it is set.</li>
+                        <li><strong>Generate HTML Now</strong> writes HTML from each approved draft. This is the last draft step. Cron does not write HTML.</li>
+                        <li><strong>Human Article → Approve</strong> also writes HTML in that same click.</li>
+                        <li><strong>Run Auto Cron</strong> only schedules ready HTML to Blogger (publishDate). It will skip drafts that still have no HTML.</li>
+                        <li>If <strong>Last cron run</strong> updates after you click Run Auto Cron, scheduling cron is working.</li>
                     </ul>
                 </div>
                 <form onsubmit="startAutoBlogCampaign(event)">
@@ -694,7 +694,8 @@
                         <div id="auto-calendar-dates-display" style="margin-top:12px;"></div>
                     </div>
                     <button type="submit" class="btn btn-purple" style="margin-top:14px;">🚀 Start Auto Blog Campaign</button>
-                    <button type="button" class="btn" style="background:#0f172a;margin-left:8px" onclick="runAutoCronNow()">⏱️ Run Auto Cron Now</button>
+                    <button type="button" class="btn btn-accent" style="margin-left:8px" onclick="generateAutoHtmlNow()">⚡ Generate HTML Now</button>
+                    <button type="button" class="btn" style="background:#0f172a;margin-left:8px" onclick="runAutoCronNow()">⏱️ Run Auto Cron (schedule only)</button>
                 </form>
                 <div id="auto-project-status" style="margin-top:12px;font-weight:700;"></div>
             </div>
@@ -1960,8 +1961,28 @@
             const res=await fetch('/api/research/ai-roadmap',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({domain_url:settings.domain_url,country:settings.target_country,language_code:settings.target_language,days:Number(document.getElementById('auto-project-days').value),posts_per_day:Number(document.getElementById('auto-project-posts-per-day').value),start_date:startDate,posting_times:postingTimes,target_platform:document.getElementById('auto-project-platform').value,keyword_source:document.getElementById('auto-project-keyword-source').value,workflow_mode:'auto'})});
             const data=await res.json();
             if(!res.ok){status.innerText='🔴 '+(data.error||'Auto Blog start failed.');return;}
-            status.innerText='🟢 Auto campaign created. Topics are auto-approved. Click Run Auto Cron Now to write HTML for drafts (or wait for Hostinger cron every 5 minutes).';
+            status.innerText='🟢 Auto campaign created from Custom Topics + ranked keywords. Writing HTML now (last step, not cron)...';
             loadAutoBlogStatus();
+            await generateAutoHtmlNow();
+        }
+        async function generateAutoHtmlNow() {
+            const status=document.getElementById('auto-project-status');
+            status.innerText='Writing HTML from drafts (one article at a time)...';
+            try {
+                const data = await (await fetch('/api/auto-blog/status')).json();
+                if (!data.campaign) { status.innerText='🔴 No Auto Blog campaign. Start one first.'; return; }
+                const items = (data.items||[]).filter(x => !x.html_path || x.article_status==='Not Created' || x.article_status==='Regenerating HTML');
+                if (!items.length) { status.innerText='🟢 All drafts already have HTML. Cron can now schedule them.'; loadAutoBlogStatus(); return; }
+                let ok=0, fail=0;
+                for (const item of items) {
+                    status.innerText='Writing HTML: ' + item.title + ' ...';
+                    const res = await fetch('/api/campaign-item/generate-html/' + item.id, {method:'POST'});
+                    const row = await res.json();
+                    if (res.ok && row.success) ok++; else fail++;
+                    loadAutoBlogStatus();
+                }
+                status.innerText='🟢 HTML step done. Created '+ok+', failed '+fail+'. Cron will only schedule articles that already have HTML.';
+            } catch(e) { status.innerText='🔴 HTML error: '+e.message; }
         }
         async function runAutoCronNow() {
             const status=document.getElementById('auto-project-status');

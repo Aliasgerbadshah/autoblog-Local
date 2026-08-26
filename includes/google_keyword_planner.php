@@ -332,7 +332,7 @@ class GoogleKeywordPlanner {
             $seen[$k] = true;
             unset($r['_score'], $r['_relevance']);
             $out[] = $r;
-            if (count($out) >= 12) break;
+            if (count($out) >= 5) break;
         }
         if (!empty($out)) $out[0]['role'] = 'primary';
         return $out;

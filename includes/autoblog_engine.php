@@ -912,16 +912,21 @@ function generateArticleHtmlFromCampaignItem($item, $userId, $activeSlot, $db, $
     $chatContent = '';
     $chatUsed = false;
 
+    $kws = array_slice(array_values($kws), 0, 5);
+    $primaryKw = $kws[0]['keyword'] ?? $keyword;
+    $secondaryKws = array_values(array_filter(array_map(fn($x) => $x['keyword'] ?? '', array_slice($kws, 1))));
+
     if (!empty($chatVault['api_key'])) {
         $kwList = implode(', ', array_map(fn($x) => $x['keyword'] ?? '', $kws));
         $intLinkList = implode("\n", array_map(fn($x) => "- {$x['anchor_text']}: {$x['url']}", $links));
         $extLinkList = implode("\n", array_map(fn($x) => "- {$x['anchor_text']}: {$x['url']}", $ext));
         $h2List = implode(' | ', $h2s);
         $angleNote = $contentAngle ? "\nCONTENT ANGLE: $contentAngle" : '';
+        $secList = implode(', ', $secondaryKws);
 
         $nowMonth = date('F');
         $nowYear = date('Y');
-        $prompt = "Write a complete, publication-ready HTML blog article about \"$keyword\".\n\nTITLE: $title\nH1: $h1\nH2 SECTIONS: $h2List\nSUPPORTING KEYWORDS: $kwList\nINTERNAL LINKS (weave naturally into the text — ONLY use these URLs, do NOT make up any):\n$intLinkList\nEXTERNAL REFERENCES (cite naturally — at least 4 required — ONLY use the URLs listed below, do NOT make up any Wikipedia, Moz, or other URLs):\n$extLinkList\nIMAGE PROMPTS: " . implode('; ', $prompts) . "\n$angleNote\n\nREQUIREMENTS:\n- 1,800 to 2,200 words of original, researched content\n- Use semantic HTML: proper H1, H2, H3, H4, p, ul, li, table, figure, blockquote tags\n- CRITICAL: Keep paragraphs SHORT — strictly 45 to 50 words per paragraph. Every <p> tag must have between 45 and 50 words. Break long paragraphs into multiple short <p> tags. Readers skim; short paragraphs improve readability and mobile experience.\n- Write in a natural, authoritative human voice - no AI cliches or banned phrases\n- Include a FAQ section at the end with 3 real questions and answers about $keyword\n- Include 1-2 internal links with natural anchor text to the client website pages listed in INTERNAL LINKS\n- MANDATORY: Include at least 4 external authority references using the URLs provided in EXTERNAL REFERENCES above. Do NOT make up any new URLs. Only use the URLs that are explicitly listed.\n- Also include up to 2 links to the client website pages listed in internal links\n- Add a comparison data table where relevant\n- Use current year $nowYear throughout the article. NEVER use outdated years like 2023 or older. Do NOT mention the current month ($nowMonth) in the H1 title or any heading. You may use the year in headings where it feels natural.\n- Do NOT include html/head/body tags - only the article content\n- Do NOT invent facts, statistics, or quotes\n- Do NOT make up URLs — ONLY use URLs from the INTERNAL LINKS and EXTERNAL REFERENCES lists provided above\n- Return ONLY the article HTML, no markdown fences";
+        $prompt = "Write a complete, publication-ready HTML blog article about \"$title\".\n\nTITLE: $title\nH1: $h1\nH2 SECTIONS: $h2List\nPRIMARY KEYWORD (highest volume): $primaryKw\nSECONDARY KEYWORDS (use sparingly, max 4): $secList\nINTERNAL LINKS (weave naturally into the text — ONLY use these URLs, do NOT make up any):\n$intLinkList\nEXTERNAL REFERENCES (cite naturally — at least 4 required — ONLY use the URLs listed below, do NOT make up any Wikipedia, Moz, or other URLs):\n$extLinkList\n$angleNote\n\nREQUIREMENTS:\n- 1,800 to 2,200 words of original, researched content\n- Use semantic HTML: proper H1, H2, H3, H4, p, ul, li, table, figure, blockquote tags\n- CRITICAL: Keep paragraphs SHORT — strictly 45 to 50 words per paragraph. Every <p> tag must have between 45 and 50 words. Break long paragraphs into multiple short <p> tags. Readers skim; short paragraphs improve readability and mobile experience.\n- KEYWORD USE: Use the PRIMARY keyword naturally in the H1 and the first two paragraphs. Use each SECONDARY keyword at most twice, only where it fits the sentence. Do NOT stuff keywords. Do NOT invent extra target keywords.\n- Write in a natural, authoritative human voice - no AI cliches or banned phrases\n- Include a FAQ section at the end with 3 real questions and answers about $primaryKw\n- Include 1-2 internal links with natural anchor text to the client website pages listed in INTERNAL LINKS\n- MANDATORY: Include at least 4 external authority references using the URLs provided in EXTERNAL REFERENCES above. Do NOT make up any new URLs. Only use the URLs that are explicitly listed.\n- Also include up to 2 links to the client website pages listed in internal links\n- Add a comparison data table where relevant\n- Use current year $nowYear throughout the article. NEVER use outdated years like 2023 or older. Do NOT mention the current month ($nowMonth) in the H1 title or any heading. You may use the year in headings where it feels natural.\n- Do NOT include html/head/body tags - only the article content\n- Do NOT invent facts, statistics, or quotes\n- Do NOT make up URLs — ONLY use URLs from the INTERNAL LINKS and EXTERNAL REFERENCES lists provided above\n- Return ONLY the article HTML, no markdown fences";
 
         $chatResult = ['success' => false];
         for ($chatTry = 1; $chatTry <= 3; $chatTry++) {
@@ -953,12 +958,12 @@ function generateArticleHtmlFromCampaignItem($item, $userId, $activeSlot, $db, $
         $chatContent = generateFallbackArticleHtml($title, $keyword, $h1, $h2s, $h3s, $kws, $links, $ext, $prompts);
     }
 
-    // Featured THUMBNAIL image via Image API — 9:16 ratio, MANDATORY first image
-    // Retry up to 3 times. HTML is written even if images fail (then rewritten).
+    // Featured THUMBNAIL: first write a core-concept prompt from the blog, then generate the image.
     $featuredImgUrl = '';
+    $coreVisual = buildCoreConceptImagePrompt($item, $chatVault, $chatContent);
     if (!empty($imageVault['api_key'])) {
         for ($imgAttempt = 1; $imgAttempt <= 3; $imgAttempt++) {
-            $thumbPrompt = "YouTube thumbnail image for a blog about $keyword. Vertical 9:16 aspect ratio, 1080x1920. Eye-catching, professional, bold visual representing the concept. No text, no logos, no watermarks. Clean editorial style.";
+            $thumbPrompt = $coreVisual . " Vertical 9:16 blog thumbnail, 1080x1920, photorealistic, related to this exact article. No text, no logos, no watermarks.";
             $imgResult = AIProviderClient::image($imageVault, $thumbPrompt);
             if (!empty($imgResult['success']) && !empty($imgResult['url'])) {
                 if (validateImageUrl($imgResult['url'])) {
@@ -998,7 +1003,7 @@ function generateArticleHtmlFromCampaignItem($item, $userId, $activeSlot, $db, $
     $contentImgUrl = '';
     if (!empty($imageVault['api_key'])) {
         for ($imgAttempt2 = 1; $imgAttempt2 <= 2; $imgAttempt2++) {
-            $contentImgPrompt = "Wide landscape editorial image for a blog about $keyword. Horizontal 16:9 aspect ratio, 1200x675. Professional, relevant to the topic, no text, no logos, no watermarks. Clean magazine style.";
+            $contentImgPrompt = $coreVisual . " Wide landscape 16:9 editorial photograph, 1200x675, same core concept, different camera angle. No text, no logos, no watermarks.";
             $imgResult2 = AIProviderClient::image($imageVault, $contentImgPrompt);
             if (!empty($imgResult2['success']) && !empty($imgResult2['url'])) {
                 if ($imgResult2['url'] !== $featuredImgUrl && validateImageUrl($imgResult2['url'])) {
@@ -1299,6 +1304,32 @@ function publishItemToSelectedPlatform($userId, $item, $platform, $scheduledStr 
         $pubFile = dirname(__DIR__) . '/blog/includes/publisher.php';
         $alt = dirname(__DIR__, 2) . '/blog/includes/publisher.php';
         if (file_exists($alt)) require_once $alt;
+        elseif (file_exists($pubFile)) require_once $pubFile;
+        else return ['success' => false, 'error' => 'Website publisher not found.'];
+        if (!class_exists('WebsitePublisher')) return ['success' => false, 'error' => 'WebsitePublisher class missing.'];
+        try {
+            $wpub = new WebsitePublisher();
+            $thumbUrl = '';
+            if (preg_match('#<img[^>]+src=["\']([^"\']+)["\']#i', $articleContent, $m)) $thumbUrl = $m[1];
+            return $wpub->publish([
+                'title' => $title,
+                'slug' => slugify($title),
+                'content_html' => $articleContent,
+                'category' => $item['category'] ?? 'General',
+                'tags' => array_values(array_filter([$item['primary_keyword'] ?? '', $item['category'] ?? ''])),
+                'thumbnail_url' => $thumbUrl,
+                'author' => 'ColorFiind Team',
+                'meta_description' => substr(strip_tags($articleContent), 0, 160),
+                'meta_keywords' => $item['primary_keyword'] ?? '',
+                'scheduled_date' => $scheduledStr,
+            ]);
+        } catch (Throwable $e) {
+            return ['success' => false, 'error' => 'Website blog publish failed: ' . $e->getMessage()];
+        }
+    }
+    $url = Publisher::publishLocal($userId, $title, slugify($title), $articleContent, 'General', $item['primary_keyword'] ?? '', '');
+    return ['success' => true, 'url' => $url, 'message' => 'Published locally.'];
+}
         elseif (file_exists($pubFile)) require_once $pubFile;
         else return ['success' => false, 'error' => 'Website publisher not found.'];
         if (!class_exists('WebsitePublisher')) return ['success' => false, 'error' => 'WebsitePublisher class missing.'];

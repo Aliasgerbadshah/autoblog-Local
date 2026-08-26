@@ -185,28 +185,53 @@ function plannerRowsToKeywordData($rows) {
     return $out;
 }
 
+function customTopicsCsvPath() {
+    $cands = [
+        __DIR__ . '/data/custom_topics.csv',
+        dirname(__DIR__) . '/data/custom_topics.csv',
+    ];
+    foreach ($cands as $p) {
+        if (file_exists($p)) return $p;
+    }
+    $dir = __DIR__ . '/data';
+    if (!is_dir($dir)) @mkdir($dir, 0755, true);
+    return $dir . '/custom_topics.csv';
+}
+
+function limitPlanKeywords($keywords, $max = 5) {
+    $rows = array_values(array_filter((array)$keywords, fn($x) => !empty($x['keyword'])));
+    $rows = array_slice($rows, 0, $max);
+    foreach ($rows as $i => &$r) {
+        $r['role'] = $i === 0 ? 'primary' : 'secondary';
+    }
+    unset($r);
+    return $rows;
+}
+
 /** Apply ranked Keyword Planner keywords onto an article plan (primary = highest volume / lowest competition). */
-function applyPlannerKeywordsToPlan(&$plan, $userId, $country, $language) {
+function applyPlannerKeywordsToPlan(&$plan, $userId, $country, $language, $keepTitle = false) {
     $topic = $plan['title'] ?? $plan['primary_keyword'] ?? '';
     $seed = $plan['primary_keyword'] ?? $topic;
     $kwRes = fetchKeywordPlannerKeywords($userId, [$seed, $topic], $country, $language);
     if (empty($kwRes['success'])) {
         return $kwRes;
     }
-    $rows = $kwRes['keywords'] ?? [];
+    $rows = array_slice($kwRes['keywords'] ?? [], 0, 5);
     if (empty($rows)) {
         return ['success' => false, 'error' => 'Keyword Planner returned no keyword ideas for: ' . $topic];
     }
-    $plan['keywords'] = plannerRowsToKeywordData($rows);
+    $plan['keywords'] = limitPlanKeywords(plannerRowsToKeywordData($rows), 5);
     $primary = $rows[0]['keyword'] ?? $seed;
     $plan['primary_keyword'] = $primary;
-    $title = $plan['title'] ?? $topic;
-    if ($primary && stripos($title, $primary) === false) {
-        $plan['title'] = ucwords($primary);
-        $heads = $plan['headings'] ?? [];
-        if (!is_array($heads)) $heads = [];
-        $heads['H1'] = ucwords($primary);
-        $plan['headings'] = $heads;
+    if (!$keepTitle) {
+        $title = $plan['title'] ?? $topic;
+        if ($primary && stripos($title, $primary) === false) {
+            $plan['title'] = ucwords($primary);
+            $heads = $plan['headings'] ?? [];
+            if (!is_array($heads)) $heads = [];
+            $heads['H1'] = ucwords($primary);
+            $plan['headings'] = $heads;
+        }
     }
     return ['success' => true, 'primary_keyword' => $primary, 'count' => count($rows)];
 }
@@ -1060,7 +1085,7 @@ function handleApiRoute($uri) {
         if (!$domain) jsonResponse(['error' => 'Website URL is required.'], 400);
 
         // ===== READ CUSTOM TOPICS CSV FIRST =====
-        $csvPath = dirname(__DIR__) . '/data/custom_topics.csv';
+        $csvPath = customTopicsCsvPath();
         $customTopics = [];
         if (file_exists($csvPath)) {
             $fp = @fopen($csvPath, 'r');
@@ -1104,7 +1129,7 @@ function handleApiRoute($uri) {
         $csvPlanObjects = [];
         if (!empty($selectedCsvTopics)) {
             $csvTopicsList = implode("\n", array_map(fn($i, $t) => ($i + 1) . '. ' . $t, array_keys($selectedCsvTopics), $selectedCsvTopics));
-            $csvResearchPrompt = "You are an SEO research strategist. The user has provided these specific article topics for the website $domain in target country $country, language $language. The current year is $nowYear.\n\nUSER TOPICS:\n$csvTopicsList\n\nFor EACH topic above, do deep research:\n1. Find the best primary keyword and 5-8 supporting keywords with volume/difficulty estimates\n2. Find 1-2 of the client's crawled website pages that are MOST RELATED to each topic (for internal links)\n3. Find at least 4 REAL working URLs to well-known authority sites that are SPECIFICALLY RELATED to each topic (NOT generic SEO links — find Wikipedia articles, Google docs, industry reports, tool pages, etc. that match the actual topic)\n4. Create detailed headings (H1, H2s, H3s) for a comprehensive article\n5. Create 2 image prompts for editorial-style images\n\nDo NOT include the month name in any title. Include the year $nowYear only when natural. Do NOT mention the country in the title unless it adds targeting value.$countryNote\n\nCrawled website pages:\n$pageContext\n\nReturn ONLY valid JSON: {\"articles\":[{\"title\":\"...\",\"primary_keyword\":\"...\",\"keywords\":[{\"keyword\":\"...\",\"volume\":\"AI estimate\",\"difficulty\":\"Low/Medium/High\",\"intent\":\"...\"}],\"internal_links\":[{\"url\":\"...\",\"anchor_text\":\"...\",\"reason\":\"...\"}],\"external_links\":[{\"url\":\"...\",\"anchor_text\":\"...\",\"reason\":\"...\"}],\"headings\":{\"H1\":\"...\",\"H2\":[\"...\"],\"H3\":[\"...\"]},\"image_prompts\":[\"...\"]}]}";
+            $csvResearchPrompt = "You are an SEO research strategist. The user has provided these specific article topics for the website $domain in target country $country, language $language. The current year is $nowYear.\n\nUSER TOPICS:\n$csvTopicsList\n\nFor EACH topic above, do deep research:\n1. Keep the user topic as the article TITLE. Find 4-5 related keywords with HIGH search volume and LOW competition. Highest volume = primary, rest = secondary. Do NOT invent more than 5 keywords.\n2. Find 1-2 of the client's crawled website pages that are MOST RELATED to each topic (for internal links)\n3. Find at least 4 REAL working URLs to well-known authority sites that are SPECIFICALLY RELATED to each topic (NOT generic SEO links — find Wikipedia articles, Google docs, industry reports, tool pages, etc. that match the actual topic)\n4. Create detailed headings (H1, H2s, H3s) for a comprehensive article\n5. Create 2 image prompts for editorial-style images\n\nDo NOT include the month name in any title. Include the year $nowYear only when natural. Do NOT mention the country in the title unless it adds targeting value.$countryNote\n\nCrawled website pages:\n$pageContext\n\nReturn ONLY valid JSON: {\"articles\":[{\"title\":\"...\",\"primary_keyword\":\"...\",\"keywords\":[{\"keyword\":\"...\",\"volume\":\"AI estimate\",\"difficulty\":\"Low/Medium/High\",\"intent\":\"...\"}],\"internal_links\":[{\"url\":\"...\",\"anchor_text\":\"...\",\"reason\":\"...\"}],\"external_links\":[{\"url\":\"...\",\"anchor_text\":\"...\",\"reason\":\"...\"}],\"headings\":{\"H1\":\"...\",\"H2\":[\"...\"],\"H3\":[\"...\"]},\"image_prompts\":[\"...\"]}]}";
             
             $csvResult = AIProviderClient::chat($chat, $csvResearchPrompt);
             if (!empty($csvResult['success']) && !empty($csvResult['content'])) {
@@ -1177,16 +1202,24 @@ function handleApiRoute($uri) {
         if (empty($plans)) jsonResponse(['error' => 'ALL proposed topics are duplicates of existing blogs. The software has covered this niche extensively. Try a different website or industry angle.', 'dedup_stats' => $dedupStats], 400);
         $keywordSource = (($input['keyword_source'] ?? 'ai') === 'planner') ? 'planner' : 'ai';
         $plannerUsedCount = 0;
-        if ($keywordSource === 'planner') {
-            foreach ($plans as &$plan) {
-                $kwRes = applyPlannerKeywordsToPlan($plan, $userId, $country, $language);
+        $csvTitleSet = array_fill_keys(array_map('strtolower', $selectedCsvTopics), true);
+        foreach ($plans as &$plan) {
+            $isCustom = !empty($csvTitleSet[strtolower(trim($plan['title'] ?? ''))]);
+            $needPlanner = ($keywordSource === 'planner') || $isCustom;
+            if ($needPlanner) {
+                $kwRes = applyPlannerKeywordsToPlan($plan, $userId, $country, $language, $isCustom);
                 if (empty($kwRes['success'])) {
-                    jsonResponse(['error' => 'Keyword Planner selected, but it failed: ' . ($kwRes['error'] ?? 'unknown')], 400);
+                    if ($keywordSource === 'planner') {
+                        jsonResponse(['error' => 'Keyword Planner selected, but it failed: ' . ($kwRes['error'] ?? 'unknown')], 400);
+                    }
+                } else {
+                    $plannerUsedCount++;
                 }
-                $plannerUsedCount++;
             }
-            unset($plan);
+            $plan['keywords'] = limitPlanKeywords($plan['keywords'] ?? [['keyword' => ($plan['primary_keyword'] ?? $plan['title'] ?? 'topic')]], 5);
+            if (!empty($plan['keywords'][0]['keyword'])) $plan['primary_keyword'] = $plan['keywords'][0]['keyword'];
         }
+        unset($plan);
         // PRESERVE APPROVED ITEMS: Only archive campaigns with NO approved/finalized items
         $db->exec("UPDATE approval_tokens SET decision = 'Expired' WHERE user_id = $userId AND decision IN ('Pending','Provisional') AND campaign_item_id NOT IN (SELECT id FROM campaign_items WHERE plan_status IN ('Approved','Provisional Approved') OR article_status IN ('HTML Ready','Final Article Approved'))");
         $db->exec("UPDATE campaigns SET status = 'Archived' WHERE user_id = $userId AND status = 'Roadmap Review' AND id NOT IN (SELECT DISTINCT campaign_id FROM campaign_items WHERE plan_status IN ('Approved','Provisional Approved') OR article_status IN ('HTML Ready','Final Article Approved'))");
@@ -1297,7 +1330,7 @@ function handleApiRoute($uri) {
         $neededCount = $days * $perDay;
 
         // ===== READ CUSTOM TOPICS CSV FIRST =====
-        $csvPath = dirname(__DIR__) . '/data/custom_topics.csv';
+        $csvPath = customTopicsCsvPath();
         $customTopics = [];
         if (file_exists($csvPath)) {
             $fpCt = @fopen($csvPath, 'r');
@@ -2220,17 +2253,22 @@ function handleApiRoute($uri) {
         $generated = [];
 
         $failed = [];
+        $campRow = $db->prepare('SELECT workflow_mode FROM campaigns WHERE id = ?');
+        $campRow->execute([$campaignId]);
+        $campMode = ($campRow->fetch()['workflow_mode'] ?? 'manual');
         foreach ($items as $item) {
             $htmlResult = generateArticleHtmlReliable($item, $userId, $activeSlot, $db);
             if (!empty($htmlResult['success'])) {
                 $stmt = $db->prepare("UPDATE campaign_items SET article_status = 'HTML Ready', html_path = ?, last_error = NULL WHERE id = ?");
                 $stmt->execute([$htmlResult['html_path'], $item['id']]);
+                if ($campMode !== 'auto') {
                 $htmlToken = generateToken();
                 $nowG = nowString();
                 $stmt = $db->prepare('INSERT INTO approval_tokens (user_id, campaign_item_id, approval_type, token, created_at) VALUES (?, ?, ?, ?, ?)');
                 $stmt->execute([$userId, $item['id'], 'html', $htmlToken, $nowG]);
                 $previewEmailHtml = buildHtmlPreviewEmailHtml($item, $htmlResult['html_path'], $htmlToken, $htmlResult['used_chat_api']);
                 sendApprovalEmail($userId, 'Blog HTML Preview - ' . escapeHtml($item['title']), $previewEmailHtml);
+                }
                 $generated[] = ['id' => $item['id'], 'url' => $htmlResult['html_path'], 'title' => $item['title']];
             } else {
                 $err = $htmlResult['error'] ?? 'HTML generation failed';
@@ -2304,7 +2342,7 @@ function handleApiRoute($uri) {
 
     // ========== CUSTOM TOPICS CSV — User-provided topics for blog generation ==========
     if ($uri === '/api/custom-topics' && $method === 'GET') {
-        $csvPath = dirname(__DIR__) . '/data/custom_topics.csv';
+        $csvPath = customTopicsCsvPath();
         if (!file_exists($csvPath)) { jsonResponse(['success' => true, 'topics' => [], 'count' => 0]); }
         $topics = [];
         $fp = @fopen($csvPath, 'r');
@@ -2320,7 +2358,7 @@ function handleApiRoute($uri) {
     if ($uri === '/api/custom-topics/upload' && $method === 'POST') {
         $topicsList = $input['topics'] ?? [];
         if (!is_array($topicsList)) $topicsList = [$topicsList];
-        $csvPath = dirname(__DIR__) . '/data/custom_topics.csv';
+        $csvPath = customTopicsCsvPath();
         // Ensure data directory exists
         $dataDir = dirname($csvPath);
         if (!is_dir($dataDir)) mkdir($dataDir, 0755, true);
@@ -2339,7 +2377,7 @@ function handleApiRoute($uri) {
     if ($uri === '/api/custom-topics/remove' && $method === 'POST') {
         $removeTopics = $input['topics'] ?? [];
         if (!is_array($removeTopics)) $removeTopics = [$removeTopics];
-        $csvPath = dirname(__DIR__) . '/data/custom_topics.csv';
+        $csvPath = customTopicsCsvPath();
         $existing = [];
         if (file_exists($csvPath)) {
             $fp = @fopen($csvPath, 'r');
@@ -2379,7 +2417,7 @@ function handleApiRoute($uri) {
         $nowYear = date('Y');
         
         // Load custom topics CSV
-        $csvPath = dirname(__DIR__) . '/data/custom_topics.csv';
+        $csvPath = customTopicsCsvPath();
         $customTopics = [];
         if (file_exists($csvPath)) {
             $fp = @fopen($csvPath, 'r');
@@ -2599,6 +2637,26 @@ function handleApiRoute($uri) {
         jsonResponse(['success' => true, 'auto' => $autoRes, 'last_run_at' => date('Y-m-d H:i:s'), 'message' => $autoRes['message'] ?? 'Auto cron finished.']);
     }
 
+    // ========== GENERATE HTML FOR ONE DRAFT (last step — not cron) ==========
+    if (preg_match('#^/api/campaign-item/generate-html/(\d+)$#', $uri, $m) && $method === 'POST') {
+        $itemId = intval($m[1]);
+        $db = getDB();
+        $stmt = $db->prepare('SELECT ci.*, c.user_id AS camp_user_id, c.workflow_mode, c.slot_number FROM campaign_items ci JOIN campaigns c ON c.id = ci.campaign_id WHERE ci.id = ?');
+        $stmt->execute([$itemId]);
+        $item = $stmt->fetch();
+        if (!$item || intval($item['camp_user_id']) !== intval($userId)) jsonResponse(['error' => 'Item not found.'], 404);
+        @set_time_limit(180);
+        $slot = intval($item['slot_number'] ?? $activeSlot);
+        $htmlResult = generateArticleHtmlReliable($item, $userId, $slot, $db);
+        if (!empty($htmlResult['success'])) {
+            $db->prepare("UPDATE campaign_items SET article_status = 'HTML Ready', html_path = ?, last_error = NULL WHERE id = ?")->execute([$htmlResult['html_path'], $itemId]);
+            jsonResponse(['success' => true, 'html_path' => $htmlResult['html_path'], 'title' => $item['title'], 'message' => 'HTML created for ' . $item['title']]);
+        }
+        $err = $htmlResult['error'] ?? 'HTML generation failed';
+        $db->prepare("UPDATE campaign_items SET last_error = ?, html_retry_count = COALESCE(html_retry_count,0)+1 WHERE id = ?")->execute([$err, $itemId]);
+        jsonResponse(['success' => false, 'error' => $err, 'title' => $item['title']], 400);
+    }
+
     // ========== DELETE CAMPAIGN ITEM =========="
     if (preg_match('#^/api/campaign-item/delete/(\d+)$#', $uri, $m) && $method === 'POST') {
         $itemId = $m[1];
@@ -2632,7 +2690,7 @@ function handleApiRoute($uri) {
         if (empty($topicTitle)) jsonResponse(['error' => 'Item has no title to resend.'], 400);
         
         // Add topic back to custom_topics.csv
-        $csvPath = dirname(__DIR__) . '/data/custom_topics.csv';
+        $csvPath = customTopicsCsvPath();
         $existingTopics = [];
         if (file_exists($csvPath)) {
             $fpR = @fopen($csvPath, 'r');
@@ -2695,46 +2753,6 @@ function handleApiRoute($uri) {
 
     // ========== WEBSITE BLOG DIAGNOSTIC (JSON) ==========
     if ($uri === '/api/website-blog/test') {
-        $paths = [
-            'public_html/blog' => dirname(__DIR__) . '/blog/includes/publisher.php',
-            'sub_apps/blog' => __DIR__ . '/blog/includes/publisher.php',
-            'legacy website_blog' => __DIR__ . '/website_blog/includes/publisher.php',
-        ];
-        $checked = [];
-        $found = null;
-        foreach ($paths as $label => $p) {
-            $exists = file_exists($p);
-            $checked[] = ['label' => $label, 'path' => $p, 'exists' => $exists];
-            if ($exists && !$found) $found = $p;
-        }
-        $cfg = null;
-        $cfgPath = null;
-        if ($found) {
-            $cfgPath = dirname(dirname($found)) . '/config.php';
-            if (file_exists($cfgPath)) $cfg = require $cfgPath;
-        }
-        $autoblogRoot = is_array($cfg) ? ($cfg['autoblog_root'] ?? '') : '';
-        $dbFile = $autoblogRoot ? ($autoblogRoot . '/includes/database.php') : '';
-        $postsDir = $found ? (dirname(dirname($found)) . '/posts') : '';
-        jsonResponse([
-            'success' => true,
-            'publisher_found' => (bool)$found,
-            'publisher_path' => $found,
-            'paths_checked' => $checked,
-            'config_path' => $cfgPath,
-            'autoblog_root' => $autoblogRoot,
-            'database_file_exists' => $dbFile ? file_exists($dbFile) : false,
-            'database_class_exists' => class_exists('Database'),
-            'getDB_exists' => function_exists('getDB'),
-            'blog_url' => is_array($cfg) ? ($cfg['site_url'] ?? '') : '',
-            'posts_dir' => $postsDir,
-            'posts_dir_writable' => $postsDir ? (is_dir($postsDir) ? is_writable($postsDir) : is_writable(dirname($postsDir))) : false,
-        ]);
-    }
-
-    // 404 for unmatched API routes
-    jsonResponse(['error' => 'API endpoint not found'], 404);
-}pi/website-blog/test') {
         $paths = [
             'public_html/blog' => dirname(__DIR__) . '/blog/includes/publisher.php',
             'sub_apps/blog' => __DIR__ . '/blog/includes/publisher.php',

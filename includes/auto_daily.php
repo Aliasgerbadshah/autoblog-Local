@@ -2,9 +2,8 @@
 /**
  * Automated daily blogging (no email approval). Isolated from Human Article Writer.
  *
- * Cron jobs only: generate HTML for every approved draft, check quality,
- * retry failures (max 8), then hand the finished article to Blogger/Website.
- * Blogger uses native scheduling (draft + publishDate). Cron does not push live at 10:00.
+ * Cron only schedules/publishes articles that already have HTML.
+ * HTML is created as the last draft step (Approve or Generate HTML), not by cron.
  */
 
 function articleHasRealImage($html) {
@@ -143,54 +142,11 @@ function processAutoBlogCampaigns($htmlLimit = 8, $publishLimit = 5) {
             $ready = $check['ready'];
 
             if (!$ready) {
-                $retries = intval($item['html_retry_count'] ?? 0);
-                if ($retries >= 8) {
-                    $msg = 'Gave up after 8 tries (need Chat content + real image + HTML file).';
-                    $out['errors'][] = $item['title'] . ': ' . $msg;
-                    $out['items'][] = ['id' => $item['id'], 'title' => $item['title'], 'action' => 'gave_up', 'error' => $msg];
-                    continue;
-                }
-                if ($htmlDid >= $htmlLimit) {
-                    $out['waiting_html']++;
-                    continue;
-                }
-
-                $htmlResult = generateArticleHtmlReliable($item, $userId, $slot, $db);
-                $htmlDid++;
-                $file = $htmlResult['html_file'] ?? '';
-                $genContent = (!empty($htmlResult['success']) && is_file($file)) ? (string)@file_get_contents($file) : '';
-                $chatOk = !empty($htmlResult['used_chat_api']);
-                $imgOk = articleHasRealImage($genContent) || !empty($htmlResult['featured_image']);
-                $wordsOk = str_word_count(strip_tags($genContent)) >= 400;
-                $ok = !empty($htmlResult['success']) && validateGeneratedArticleFile($file) && $chatOk && $imgOk && $wordsOk;
-                $err = $ok ? null : (
-                    !$chatOk ? 'Content generation failed — Chat API will retry on next cron'
-                    : (!$imgOk ? 'Image generation failed — Image API will retry on next cron (HTML file kept)'
-                    : ($htmlResult['error'] ?? 'HTML not ready'))
-                );
-                $savedPath = (!empty($htmlResult['html_path'])) ? $htmlResult['html_path'] : ($item['html_path'] ?? '');
-                $db->prepare("UPDATE campaign_items SET html_retry_count = ?, last_error = ?, article_status = ?, html_path = ? WHERE id = ?")->execute([
-                    $retries + 1,
-                    $err,
-                    $ok ? 'HTML Ready' : 'Not Created',
-                    $savedPath,
-                    $item['id']
-                ]);
-                $out['items'][] = [
-                    'id' => $item['id'],
-                    'title' => $item['title'],
-                    'action' => $ok ? 'html_created' : 'html_retry',
-                    'error' => $err,
-                    'html_path' => $savedPath,
-                    'try' => $retries + 1,
-                ];
-                if (!$ok) {
-                    $out['errors'][] = $item['title'] . ': ' . $err;
-                    continue;
-                }
-                $item['html_path'] = $savedPath;
-                $out['html']++;
-                $ready = true;
+                $out['waiting_html']++;
+                $msg = 'HTML not generated yet. Click Generate HTML — cron only schedules ready articles.';
+                $db->prepare("UPDATE campaign_items SET last_error = ? WHERE id = ?")->execute([$msg, $item['id']]);
+                $out['items'][] = ['id' => $item['id'], 'title' => $item['title'], 'action' => 'waiting_html', 'error' => $msg];
+                continue;
             } else {
                 $out['skipped_ready']++;
             }
