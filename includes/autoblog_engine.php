@@ -1415,13 +1415,3 @@ function publishItemToSelectedPlatform($userId, $item, $platform, $scheduledStr 
     $url = Publisher::publishLocal($userId, $title, slugify($title), $articleContent, 'General', $item['primary_keyword'] ?? '', '');
     return ['success' => true, 'url' => $url, 'message' => 'Published locally.'];
 }
-           'meta_keywords' => $item['primary_keyword'] ?? '',
-                'scheduled_date' => $scheduledStr,
-            ]);
-        } catch (Throwable $e) {
-            return ['success' => false, 'error' => 'Website blog publish failed: ' . $e->getMessage()];
-        }
-    }
-    $url = Publisher::publishLocal($userId, $title, slugify($title), $articleContent, 'General', $item['primary_keyword'] ?? '', '');
-    return ['success' => true, 'url' => $url, 'message' => 'Published locally.'];
-}
