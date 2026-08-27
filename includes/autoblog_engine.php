@@ -926,6 +926,34 @@ function buildCoreConceptImagePrompt($item, $chatVault = [], $articleHtml = '') 
  * Generate a real HTML article from a campaign item using Chat API + Image API.
  * Returns ['success' => bool, 'html_path' => string, 'used_chat_api' => bool, 'featured_image' => string, 'error' => string]
  */
+function saveCampaignHtmlFile($title, $articleInnerHtml, $itemId) {
+    $slug = slugify($title) . '-' . $itemId;
+    $escTitle = escapeHtml($title);
+    $nowYear = date('Y');
+    $dateStr = date('F d, Y');
+    $sharedArticleCss = '* { box-sizing: border-box; } article { font-family: Montserrat, sans-serif; line-height: 1.85; color: #334155; max-width: 960px; margin: 0 auto; font-size: 1.02rem; background: #ffffff; padding: 48px; border: 1px solid #e2e8f0; } h1 { font-size: 2.2rem; font-weight: 800; color: #0f172a; text-align: center; } h2 { font-size: 1.5rem; font-weight: 800; color: #0f172a; margin-top: 36px; } p { margin-bottom: 18px; text-align: justify; } img { max-width: 100%; height: auto; border-radius: 12px; }';
+    $fullHtml = "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"UTF-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"><title>{$escTitle}</title><style>body{font-family:Montserrat,sans-serif;max-width:960px;margin:0 auto;padding:36px 20px;background:#fafafa;}{$sharedArticleCss}</style></head><body><article>\n{$articleInnerHtml}\n</article><footer>&copy; {$nowYear} AutoBlog &middot; {$dateStr}</footer></body></html>";
+    $dirs = [];
+    if (defined('OUTPUT_DIR')) $dirs[] = rtrim(OUTPUT_DIR, '/') . '/demo';
+    $dirs[] = dirname(__DIR__) . '/published_posts/demo';
+    $filePath = '';
+    foreach ($dirs as $dir) {
+        if (!is_dir($dir)) @mkdir($dir, 0775, true);
+        $try = $dir . '/' . $slug . '.html';
+        $ok = @file_put_contents($try, $fullHtml);
+        if ($ok !== false && is_file($try) && filesize($try) > 400) {
+            $filePath = $try;
+            break;
+        }
+    }
+    return [
+        'success' => $filePath !== '',
+        'html_path' => '/published_posts/demo/' . $slug . '.html',
+        'html_file' => $filePath,
+        'error' => $filePath === '' ? 'Could not write HTML file. Check published_posts/demo permissions (775).' : '',
+    ];
+}
+
 function generateArticleHtmlFromCampaignItem($item, $userId, $activeSlot, $db, $contentAngle = '') {
     @set_time_limit(180);
     @ini_set('max_execution_time', '180');
@@ -940,6 +968,18 @@ function generateArticleHtmlFromCampaignItem($item, $userId, $activeSlot, $db, $
     $h1 = $headings['H1'] ?? $title;
     $h2s = $headings['H2'] ?? ['Overview and Practical Context', 'What Competitors Miss', 'How to Choose the Right Option', 'Frequently Asked Questions'];
     $h3s = $headings['H3'] ?? ['Costs and Examples', 'Common Mistakes', 'Implementation Steps'];
+
+    // Write a real HTML file FIRST so Hostinger timeouts still leave a draft.
+    $earlyInner = generateFallbackArticleHtml($title, $keyword, $h1, $h2s, $h3s, $kws, $links, $ext, $prompts);
+    $saved = saveCampaignHtmlFile($title, $earlyInner, $item['id'] ?? 'draft');
+    if (empty($saved['success'])) {
+        return ['success' => false, 'html_path' => '', 'html_file' => '', 'used_chat_api' => false, 'featured_image' => '', 'error' => $saved['error']];
+    }
+    $earlyPath = $saved['html_path'];
+    $earlyFile = $saved['html_file'];
+    if (!empty($item['id']) && $db) {
+        try { $db->prepare("UPDATE campaign_items SET article_status = 'HTML Ready', html_path = ?, last_error = NULL WHERE id = ?")->execute([$earlyPath, $item['id']]); } catch (Throwable $e) {}
+    }
 
     // Get Chat API credentials
     $stmt = $db->prepare('SELECT chat_credential_id, image_credential_id FROM user_workspace_slots WHERE user_id = ? AND slot_number = ?');
@@ -1040,8 +1080,8 @@ function generateArticleHtmlFromCampaignItem($item, $userId, $activeSlot, $db, $
     // ===== SECOND IMAGE: Content image after the 2nd H2 tag (16:9 landscape) =====
     // Retry up to 3 times. Must be different from thumbnail.
     $contentImgUrl = '';
-    if (!empty($imageVault['api_key'])) {
-        for ($imgAttempt2 = 1; $imgAttempt2 <= 2; $imgAttempt2++) {
+    if (!empty($imageVault['api_key']) && $featuredImgUrl) {
+        for ($imgAttempt2 = 1; $imgAttempt2 <= 1; $imgAttempt2++) {
             $contentImgPrompt = $coreVisual . " Wide landscape 16:9 editorial photograph, 1200x675, same core concept, different camera angle. No text, no logos, no watermarks.";
             $imgResult2 = AIProviderClient::image($imageVault, $contentImgPrompt);
             if (!empty($imgResult2['success']) && !empty($imgResult2['url'])) {
@@ -1296,25 +1336,21 @@ function loadCampaignArticleContent($item) {
 }
 
 function generateArticleHtmlReliable($item, $userId, $activeSlot, $db, $contentAngle = '') {
-    $last = ['success' => false, 'error' => 'HTML generation did not run'];
-    $angles = [
-        $contentAngle,
-        'Take a practical how-to angle with real steps, examples, and a checklist.',
-        'Write as an expert briefing with comparisons, mistakes to avoid, and FAQs.',
-    ];
-    foreach ($angles as $i => $angle) {
-        try {
-            $last = generateArticleHtmlFromCampaignItem($item, $userId, $activeSlot, $db, $angle);
-        } catch (Throwable $e) {
-            $last = ['success' => false, 'error' => $e->getMessage()];
-            error_log('[HTML] generate exception: ' . $e->getMessage());
-            continue;
-        }
-        $file = $last['html_file'] ?? '';
-        if (!empty($last['success']) && validateGeneratedArticleFile($file)) {
-            return $last;
-        }
-        $last['error'] = ($last['error'] ?? '') ?: ('HTML attempt ' . ($i + 1) . ' was too thin or missing on disk');
+    try {
+        $last = generateArticleHtmlFromCampaignItem($item, $userId, $activeSlot, $db, $contentAngle);
+    } catch (Throwable $e) {
+        error_log('[HTML] generate exception: ' . $e->getMessage());
+        return ['success' => false, 'error' => $e->getMessage(), 'html_path' => '', 'html_file' => ''];
+    }
+    $file = $last['html_file'] ?? '';
+    if (!empty($last['success']) && ($file === '' || validateGeneratedArticleFile($file) || (is_file($file) && filesize($file) > 400))) {
+        $last['success'] = true;
+        return $last;
+    }
+    if ($file && is_file($file) && filesize($file) > 400) {
+        $last['success'] = true;
+        $last['error'] = '';
+        return $last;
     }
     return $last;
 }

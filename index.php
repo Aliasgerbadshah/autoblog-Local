@@ -174,11 +174,19 @@ if (str_starts_with($requestUri, '/api/')) {
 // Published posts
 if (str_starts_with($requestUri, '/published_posts/')) {
     $filename = basename($requestUri);
-    $filePath = OUTPUT_DIR . '/' . $filename;
-    if (file_exists($filePath)) {
-        header('Content-Type: text/html; charset=utf-8');
-        readfile($filePath);
-        exit;
+    $outDir = defined('OUTPUT_DIR') ? rtrim(OUTPUT_DIR, '/') : (__DIR__ . '/published_posts');
+    $candidates = [
+        $outDir . '/' . $filename,
+        $outDir . '/demo/' . $filename,
+        __DIR__ . '/published_posts/' . $filename,
+        __DIR__ . '/published_posts/demo/' . $filename,
+    ];
+    foreach ($candidates as $filePath) {
+        if ($filePath && is_file($filePath)) {
+            header('Content-Type: text/html; charset=utf-8');
+            readfile($filePath);
+            exit;
+        }
     }
     http_response_code(404);
     echo 'File not found';
@@ -977,7 +985,7 @@ function handleApiRoute($uri) {
         $nowYear = date('Y');
         $nowMonth = date('F');
         $countryNote = ($country !== 'India' && $country !== '') ? " The target country is $country — topics MUST be relevant to $country's market, culture, regulations, and business landscape. Do NOT reuse generic topics that could apply to any country. Make them specific to $country." : "";
-        $prompt = "You are an SEO research strategist. Search the web broadly for the business website $domain in target country $country, language $language. The current year is $nowYear — use it in content but do NOT mention the current month in article titles. Create exactly $researchCount UNIQUE article plans for a $days-day campaign with $postsPerDay article(s) per day. Each article MUST cover a DIFFERENT angle — do not repeat the same concept with slight wording changes. Think broadly: search different blogs, industry reports, competitor analysis, trending news, how-to guides, comparison reviews, case studies, tool roundups, expert opinions, FAQ compilations, myth-busting articles, beginner tutorials, advanced strategies, cost analyses, ROI discussions, compliance/legal aspects, regional opportunities, technology integrations, workflow optimizations, and productivity hacks. Return ONLY valid JSON with this shape: {\"articles\":[{\"title\":\"...\",\"primary_keyword\":\"...\",\"keywords\":[{\"keyword\":\"...\",\"volume\":\"AI estimate\",\"difficulty\":\"Low/Medium/High\",\"intent\":\"...\"}],\"internal_links\":[{\"url\":\"...\",\"anchor_text\":\"...\",\"reason\":\"...\"}],\"external_links\":[{\"url\":\"...\",\"anchor_text\":\"...\",\"reason\":\"...\"}],\"headings\":{\"H1\":\"...\",\"H2\":[\"...\"],\"H3\":[\"...\"]},\"image_prompts\":[\"...\"]}]}. IMPORTANT: (1) Each article title must be UNIQUE in concept — not just different wording of the same idea. (2) Do NOT include the month name in any title. (3) Include the year $nowYear in titles only when natural. (4) Do NOT mention the country in the title unless it specifically adds targeting value. (5) For external_links: Provide at least 4 REAL working URLs to well-known authority sites (Wikipedia, Google docs, Mozilla MDN, Schema.org, Moz, Ahrefs, Neil Patel, HubSpot, Backlinko, etc.) that are RELATED to each article topic. Do NOT invent or guess URLs. (6) Include 1-2 of the client's crawled pages in internal_links.$countryNote Crawled pages:\n$pageContext";
+        $prompt = "You are an SEO research strategist. Search the web broadly for the business website $domain in target country $country, language $language. The current year is $nowYear — use it in content but do NOT mention the current month in article titles. Create exactly $researchCount UNIQUE article plans for a $days-day campaign with $postsPerDay article(s) per day. Each article MUST cover a DIFFERENT angle — do not repeat the same concept with slight wording changes. Think broadly: search different blogs, industry reports, competitor analysis, trending news, how-to guides, comparison reviews, case studies, tool roundups, expert opinions, FAQ compilations, myth-busting articles, beginner tutorials, advanced strategies, cost analyses, ROI discussions, compliance/legal aspects, regional opportunities, technology integrations, workflow optimizations, and productivity hacks. Return ONLY valid JSON with this shape: {\"articles\":[{\"title\":\"...\",\"primary_keyword\":\"...\",\"keywords\":[{\"keyword\":\"...\",\"volume\":0,\"difficulty\":\"\",\"intent\":\"...\"}],\"internal_links\":[{\"url\":\"...\",\"anchor_text\":\"...\",\"reason\":\"...\"}],\"external_links\":[{\"url\":\"...\",\"anchor_text\":\"...\",\"reason\":\"...\"}],\"headings\":{\"H1\":\"...\",\"H2\":[\"...\"],\"H3\":[\"...\"]},\"image_prompts\":[\"...\"]}]}. IMPORTANT: (1) Each article title must be UNIQUE in concept — not just different wording of the same idea. (2) Do NOT include the month name in any title. (3) Include the year $nowYear in titles only when natural. (4) Do NOT mention the country in the title unless it specifically adds targeting value. (5) For external_links: Provide at least 4 REAL working URLs to well-known authority sites (Wikipedia, Google docs, Mozilla MDN, Schema.org, Moz, Ahrefs, Neil Patel, HubSpot, Backlinko, etc.) that are RELATED to each article topic. Do NOT invent or guess URLs. (6) Include 1-2 of the client's crawled pages in internal_links.$countryNote Crawled pages:\n$pageContext";
 
         $result = AIProviderClient::chat($chat, $prompt);
         if (!$result['success']) jsonResponse(['error' => 'Chat research failed: ' . ($result['error'] ?? 'Unknown error')], 400);
@@ -992,7 +1000,7 @@ function handleApiRoute($uri) {
         $csvPlanObjects = [];
         if (!empty($selectedCsvTopics)) {
             $csvTopicsList = implode("\n", array_map(fn($i, $t) => ($i + 1) . '. ' . $t, array_keys($selectedCsvTopics), $selectedCsvTopics));
-            $csvResearchPrompt = "You are an SEO research strategist. The user has provided these specific article topics for the website $domain in target country $country, language $language. The current year is $nowYear.\n\nUSER TOPICS:\n$csvTopicsList\n\nFor EACH topic above, do deep research:\n1. Keep the user topic as the article TITLE. Find 4-5 related keywords with HIGH search volume and LOW competition. Highest volume = primary, rest = secondary. Do NOT invent more than 5 keywords.\n2. Find 1-2 of the client's crawled website pages that are MOST RELATED to each topic (for internal links)\n3. Find at least 4 REAL working URLs to well-known authority sites that are SPECIFICALLY RELATED to each topic (NOT generic SEO links — find Wikipedia articles, Google docs, industry reports, tool pages, etc. that match the actual topic)\n4. Create detailed headings (H1, H2s, H3s) for a comprehensive article\n5. Create 2 image prompts for editorial-style images\n\nDo NOT include the month name in any title. Include the year $nowYear only when natural. Do NOT mention the country in the title unless it adds targeting value.$countryNote\n\nCrawled website pages:\n$pageContext\n\nReturn ONLY valid JSON: {\"articles\":[{\"title\":\"...\",\"primary_keyword\":\"...\",\"keywords\":[{\"keyword\":\"...\",\"volume\":\"AI estimate\",\"difficulty\":\"Low/Medium/High\",\"intent\":\"...\"}],\"internal_links\":[{\"url\":\"...\",\"anchor_text\":\"...\",\"reason\":\"...\"}],\"external_links\":[{\"url\":\"...\",\"anchor_text\":\"...\",\"reason\":\"...\"}],\"headings\":{\"H1\":\"...\",\"H2\":[\"...\"],\"H3\":[\"...\"]},\"image_prompts\":[\"...\"]}]}";
+            $csvResearchPrompt = "You are an SEO research strategist. The user has provided these specific article topics for the website $domain in target country $country, language $language. The current year is $nowYear.\n\nUSER TOPICS:\n$csvTopicsList\n\nFor EACH topic above, do deep research:\n1. Keep the user topic as the article TITLE. Do NOT invent search volume or difficulty. Keyword Planner will supply keywords.\n2. Find 1-2 of the client's crawled website pages that are MOST RELATED to each topic (for internal links)\n3. Find at least 4 REAL working URLs to well-known authority sites that are SPECIFICALLY RELATED to each topic (NOT generic SEO links — find Wikipedia articles, Google docs, industry reports, tool pages, etc. that match the actual topic)\n4. Create detailed headings (H1, H2s, H3s) for a comprehensive article\n5. Create 2 image prompts for editorial-style images\n\nDo NOT include the month name in any title. Include the year $nowYear only when natural. Do NOT mention the country in the title unless it adds targeting value.$countryNote\n\nCrawled website pages:\n$pageContext\n\nReturn ONLY valid JSON: {\"articles\":[{\"title\":\"...\",\"primary_keyword\":\"...\",\"keywords\":[{\"keyword\":\"...\",\"volume\":0,\"difficulty\":\"\",\"intent\":\"...\"}],\"internal_links\":[{\"url\":\"...\",\"anchor_text\":\"...\",\"reason\":\"...\"}],\"external_links\":[{\"url\":\"...\",\"anchor_text\":\"...\",\"reason\":\"...\"}],\"headings\":{\"H1\":\"...\",\"H2\":[\"...\"],\"H3\":[\"...\"]},\"image_prompts\":[\"...\"]}]}";
             
             $csvResult = AIProviderClient::chat($chat, $csvResearchPrompt);
             if (!empty($csvResult['success']) && !empty($csvResult['content'])) {
@@ -1009,7 +1017,7 @@ function handleApiRoute($uri) {
                     $csvPlanObjects[] = [
                         'title' => $csvTopic,
                         'primary_keyword' => $csvTopic,
-                        'keywords' => [['keyword' => $csvTopic, 'volume' => 'Custom topic', 'difficulty' => 'Medium', 'intent' => 'Informational']],
+                        'keywords' => [],
                         'internal_links' => [['url' => $domain, 'anchor_text' => 'client website']],
                         'external_links' => array_slice(array_map(fn($p) => ['url' => $p['page_url'], 'anchor_text' => $p['page_title'] ?: basename($p['page_url'])], $pages), 0, 4) ?: [['url' => $domain, 'anchor_text' => 'Customer Website']],
                         'headings' => ['H1' => $csvTopic, 'H2' => ['Overview', 'Key Insights', 'How to Apply', 'FAQ'], 'H3' => ['Details', 'Common Questions']],
@@ -1044,7 +1052,7 @@ function handleApiRoute($uri) {
             $extraNeeded = $neededCount - count($plans);
             $usedTitles = array_map(fn($p) => $p['title'] ?? '', $plans);
             $usedTitlesStr = implode(', ', $usedTitles);
-            $extraPrompt = "I already have these article topics planned: $usedTitlesStr. I need $extraNeeded MORE completely different article topics for the website $domain in country $country. Each must be a UNIQUE angle not covered by the existing topics. Think of different blogs, industry angles, tool reviews, case studies, comparisons, FAQs, myths, regional opportunities, technology trends, compliance aspects, ROI analysis, workflow tips. Do NOT repeat any concept from the existing list. Return ONLY valid JSON: {\"articles\":[{\"title\":\"...\",\"primary_keyword\":\"...\",\"keywords\":[{\"keyword\":\"...\",\"volume\":\"AI estimate\",\"difficulty\":\"Low/Medium/High\",\"intent\":\"...\"}],\"internal_links\":[{\"url\":\"...\",\"anchor_text\":\"...\",\"reason\":\"...\"}],\"external_links\":[{\"url\":\"...\",\"anchor_text\":\"...\",\"reason\":\"...\"}],\"headings\":{\"H1\":\"...\",\"H2\":[\"...\"],\"H3\":[\"...\"]},\"image_prompts\":[\"...\"]}]}. Do NOT include month in titles. Include year $nowYear only when natural.";
+            $extraPrompt = "I already have these article topics planned: $usedTitlesStr. I need $extraNeeded MORE completely different article topics for the website $domain in country $country. Each must be a UNIQUE angle not covered by the existing topics. Think of different blogs, industry angles, tool reviews, case studies, comparisons, FAQs, myths, regional opportunities, technology trends, compliance aspects, ROI analysis, workflow tips. Do NOT repeat any concept from the existing list. Return ONLY valid JSON: {\"articles\":[{\"title\":\"...\",\"primary_keyword\":\"...\",\"keywords\":[{\"keyword\":\"...\",\"volume\":0,\"difficulty\":\"\",\"intent\":\"...\"}],\"internal_links\":[{\"url\":\"...\",\"anchor_text\":\"...\",\"reason\":\"...\"}],\"external_links\":[{\"url\":\"...\",\"anchor_text\":\"...\",\"reason\":\"...\"}],\"headings\":{\"H1\":\"...\",\"H2\":[\"...\"],\"H3\":[\"...\"]},\"image_prompts\":[\"...\"]}]}. Do NOT include month in titles. Include year $nowYear only when natural.";
             $extraResult = AIProviderClient::chat($chat, $extraPrompt);
             if (!empty($extraResult['success']) && !empty($extraResult['content'])) {
                 $extraRaw = trim($extraResult['content']);
@@ -1293,7 +1301,7 @@ function handleApiRoute($uri) {
                 $pageContextDemo = implode("\n", array_map(fn($p) => "URL: {$p['page_url']} | Page topic: {$p['page_title']}", array_slice($pages, 0, 50)));
                 $csvTopicsListDemo = implode("\n", array_map(fn($i, $t) => ($i + 1) . '. ' . $t, array_keys($selectedCsvTopics), $selectedCsvTopics));
                 $countryNoteDemo = ($country !== 'India' && $country !== '') ? " Target country is $country." : "";
-                $csvDemoPrompt = "You are an SEO research strategist. For the website $domain, research these topics deeply:\n$csvTopicsListDemo\n\nFor EACH topic: find the best primary keyword, 5-8 supporting keywords, 1-2 most related client pages from the list below, at least 4 REAL authority site URLs SPECIFICALLY related to the topic, detailed headings (H1, H2s, H3s), and 2 image prompts. Current year: $nowYear. Do NOT include month in titles.$countryNoteDemo\n\nClient pages:\n$pageContextDemo\n\nReturn ONLY valid JSON: {\"articles\":[{\"title\":\"...\",\"primary_keyword\":\"...\",\"keywords\":[{\"keyword\":\"...\",\"volume\":\"AI estimate\",\"difficulty\":\"Low/Medium/High\",\"intent\":\"...\"}],\"internal_links\":[{\"url\":\"...\",\"anchor_text\":\"...\",\"reason\":\"...\"}],\"external_links\":[{\"url\":\"...\",\"anchor_text\":\"...\",\"reason\":\"...\"}],\"headings\":{\"H1\":\"...\",\"H2\":[\"...\"],\"H3\":[\"...\"]},\"image_prompts\":[\"...\"]}]}";
+                $csvDemoPrompt = "You are an SEO research strategist. For the website $domain, research these topics deeply:\n$csvTopicsListDemo\n\nFor EACH topic: find the best primary keyword, 5-8 supporting keywords, 1-2 most related client pages from the list below, at least 4 REAL authority site URLs SPECIFICALLY related to the topic, detailed headings (H1, H2s, H3s), and 2 image prompts. Current year: $nowYear. Do NOT include month in titles.$countryNoteDemo\n\nClient pages:\n$pageContextDemo\n\nReturn ONLY valid JSON: {\"articles\":[{\"title\":\"...\",\"primary_keyword\":\"...\",\"keywords\":[{\"keyword\":\"...\",\"volume\":0,\"difficulty\":\"\",\"intent\":\"...\"}],\"internal_links\":[{\"url\":\"...\",\"anchor_text\":\"...\",\"reason\":\"...\"}],\"external_links\":[{\"url\":\"...\",\"anchor_text\":\"...\",\"reason\":\"...\"}],\"headings\":{\"H1\":\"...\",\"H2\":[\"...\"],\"H3\":[\"...\"]},\"image_prompts\":[\"...\"]}]}";
                 $csvDemoResult = AIProviderClient::chat($chatVaultDemo, $csvDemoPrompt);
                 if (!empty($csvDemoResult['success']) && !empty($csvDemoResult['content'])) {
                     $csvDemoRaw = trim($csvDemoResult['content']);
@@ -2351,7 +2359,12 @@ function handleApiRoute($uri) {
                 $kw = $topicTitle;
                 $page = $pages[$idx % max(1, count($pages))] ?? ['page_url' => $domain, 'page_title' => 'relevant page'];
                 
-                $kws = [['keyword' => $kw, 'volume' => 'Custom topic', 'difficulty' => 'Medium', 'intent' => 'Informational']];
+                $kws = [];
+                $planTmp = ['title' => $topicTitle, 'primary_keyword' => $kw, 'keywords' => []];
+                $kwFix = requirePlannerKeywordsOnPlan($planTmp, $userId, $country, $language, true);
+                if (empty($kwFix['success'])) jsonResponse(['error' => 'Keyword Planner is required. It failed: ' . ($kwFix['error'] ?? 'unknown')], 400);
+                $kws = $planTmp['keywords'];
+                $kw = $planTmp['primary_keyword'];
                 $headings = ['H1' => ucwords($kw), 'H2' => ['Overview and practical context', 'What research reveals', 'How to apply the insights', 'Frequently Asked Questions'], 'H3' => ['Key findings', 'Common misconceptions', 'Action steps']];
                 $internal = [['url' => $page['page_url'] ?? $domain, 'anchor_text' => $page['page_title'] ?? 'related website page']];
                 // Use crawled customer pages as external links (not hardcoded)
