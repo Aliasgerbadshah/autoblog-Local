@@ -2499,6 +2499,22 @@ function handleApiRoute($uri) {
         $created = 0;
         $htmlMade = 0;
         $errors = [];
+        $itemOut = null;
+        $today = date('Y-m-d');
+        $startIsFuture = ($startDate > $today);
+        if ($startIsFuture) {
+            jsonResponse([
+                'success' => true,
+                'campaign_id' => $campaignId,
+                'created' => 0,
+                'html' => 0,
+                'posted' => false,
+                'errors' => [],
+                'keyword_source' => 'planner',
+                'item' => null,
+                'message' => 'Auto Blog is Active. Nothing was posted to Blogger. Start date is ' . $startDate . ' (after today). The first draft is created on that date when cron / Run Auto Cron runs. Look at Auto Blog Queue — it stays empty until then.',
+            ]);
+        }
         if (function_exists('createNextAutoBlogDraft')) {
             $camp = $db->query('SELECT * FROM campaigns WHERE id = ' . intval($campaignId))->fetch();
             $jobRow = $db->prepare('SELECT * FROM auto_blog_jobs WHERE user_id = ? AND slot_number = ?');
@@ -2513,15 +2529,49 @@ function handleApiRoute($uri) {
                     $item = $it->fetch();
                     if ($item && function_exists('generateHtmlForCampaignItem')) {
                         $hr = generateHtmlForCampaignItem($item, $userId, $activeSlot, $db);
-                        if (!empty($hr['success'])) $htmlMade = 1;
-                        else $errors[] = $hr['error'] ?? 'HTML failed';
+                        if (!empty($hr['html_path'])) {
+                            $htmlMade = !empty($hr['success']) ? 1 : 0;
+                            $item['html_path'] = $hr['html_path'];
+                            $item['article_status'] = $hr['article_status'] ?? ($htmlMade ? 'HTML Ready' : 'Draft HTML');
+                            if (!$htmlMade) $errors[] = $hr['error'] ?? 'Chat API did not write Master HTML. Draft HTML is on disk.';
+                        } else {
+                            $errors[] = $hr['error'] ?? 'HTML failed';
+                        }
                     }
+                    $itemOut = $item ? [
+                        'id' => $item['id'],
+                        'title' => $item['title'] ?? '',
+                        'html_path' => $item['html_path'] ?? '',
+                        'article_status' => $item['article_status'] ?? 'Not Created',
+                        'scheduled_date' => $item['scheduled_date'] ?? '',
+                        'scheduled_time' => $item['scheduled_time'] ?? '',
+                    ] : null;
                 } elseif (!empty($made['error'])) {
                     $errors[] = $made['error'];
+                } elseif (($made['reason'] ?? '') === 'today_full') {
+                    $errors[] = 'Today already has the planned number of Auto Blog drafts.';
                 }
             }
         }
-        jsonResponse(['success' => true, 'campaign_id' => $campaignId, 'created' => $created, 'html' => $htmlMade, 'errors' => $errors, 'keyword_source' => 'planner', 'message' => ($htmlMade ? 'Auto Blog is Active. First draft HTML was written from Keyword Planner.' : ('Auto Blog is Active. ' . (implode(' ', $errors) ?: 'Cron will create the next daily post from Custom Topics + Keyword Planner.')))]);
+        $msg = 'Auto Blog is Active. Nothing was posted to Blogger yet. ';
+        if ($created && !empty($itemOut['html_path'])) {
+            $msg .= 'First draft is in Auto Blog Queue. Open View to see the HTML file. Click Run Auto Cron to schedule/publish it to ' . strtoupper($targetPlatform) . ' at ' . ($itemOut['scheduled_date'] ?? '') . ' ' . ($itemOut['scheduled_time'] ?? '') . '.';
+        } elseif ($created) {
+            $msg .= 'Draft row was created but HTML is missing. Click Generate HTML Now, then look at Auto Blog Queue.';
+        } else {
+            $msg .= implode(' ', $errors) ?: 'No draft was created. Add topics in Custom Topics, confirm Keyword Planner Test works, then click Start again.';
+        }
+        jsonResponse([
+            'success' => true,
+            'campaign_id' => $campaignId,
+            'created' => $created,
+            'html' => $htmlMade,
+            'posted' => false,
+            'errors' => $errors,
+            'keyword_source' => 'planner',
+            'item' => $itemOut,
+            'message' => $msg,
+        ]);
     }
 
     if ($uri === '/api/auto-blog/toggle' && $method === 'POST') {
