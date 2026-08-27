@@ -2325,12 +2325,6 @@ function handleApiRoute($uri) {
             if (!empty($chatVault['api_key'])) {
                 $usedListStr = implode(', ', array_merge($selectedTopics, array_map(fn($et) => $et['topic'] ?? '', $existingTopics)));
                 $countryNote = ($country !== 'India' && $country !== '') ? " Target country is $country — make topics specific to $country's market." : "";
-                $researchPrompt = "I need $researchCount UNIQUE article topics for the website $domain. I already have these topics covered: $usedListStr. Give me $research       $researchedTopics = [];
-        if ($researchCount > 0) {
-            $chatVault = SecurityVault::getApiCredentials($userId, 'chat_api');
-            if (!empty($chatVault['api_key'])) {
-                $usedListStr = implode(', ', array_merge($selectedTopics, array_map(fn($et) => $et['topic'] ?? '', $existingTopics)));
-                $countryNote = ($country !== 'India' && $country !== '') ? " Target country is $country — make topics specific to $country's market." : "";
                 $researchPrompt = "I need $researchCount UNIQUE article topics for the website $domain. I already have these topics covered: $usedListStr. Give me $researchCount completely different topics that are NOT similar to any of the above. Think broadly: different blogs, industry angles, tool reviews, case studies, comparisons, FAQs, myths, regional opportunities, technology trends, compliance, ROI analysis, workflow tips. Return ONLY a JSON array of strings, no other text. Example: [\"topic one\",\"topic two\"]$countryNote";
                 $chatResult = AIProviderClient::chat($chatVault, $researchPrompt);
                 if (!empty($chatResult['success']) && !empty($chatResult['content'])) {
@@ -2662,7 +2656,7 @@ function handleApiRoute($uri) {
         jsonResponse(['success' => false, 'error' => $err, 'title' => $item['title']], 400);
     }
 
-    // ========== DELETE CAMPAIGN ITEM =========="
+    // ========== DELETE CAMPAIGN ITEM ==========
     if (preg_match('#^/api/campaign-item/delete/(\d+)$#', $uri, $m) && $method === 'POST') {
         $itemId = $m[1];
         $db = getDB();
