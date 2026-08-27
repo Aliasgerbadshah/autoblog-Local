@@ -1515,6 +1515,23 @@
             document.body.insertAdjacentHTML('beforeend', modalHtml);
         }
 
+        async function rewriteMasterHtml(itemId) {
+            if (!itemId) return;
+            const ok = confirm('Write MASTER HTML with Chat API + Image API? Draft HTML is only a placeholder. This can take up to 1 minute.');
+            if (!ok) return;
+            try {
+                const res = await fetch('/api/campaign-item/generate-html/' + itemId, {method:'POST'});
+                const data = await res.json();
+                if (res.ok && data.used_chat_api) {
+                    alert('Master HTML is ready. Open View to see the Chat article.');
+                    if (data.html_path) window.open(data.html_path, '_blank');
+                } else {
+                    alert('Master HTML was not written.\n\n' + (data.error || data.message || 'Chat API failed. Open Vault and click Test Chat API, then try again.'));
+                }
+                if (typeof loadDemoProgress === 'function') loadDemoProgress();
+                if (typeof loadAutoBlogStatus === 'function') loadAutoBlogStatus();
+            } catch (e) { alert('Error: ' + e.message); }
+        }
         async function generateAllHtml() {
             const btn = document.getElementById('btn-gen-all-html');
             btn.innerText = '⏳ Generating...'; btn.disabled = true;
@@ -1522,7 +1539,7 @@
                 const statusRes = await fetch('/api/demo/campaign-status');
                 const statusData = await statusRes.json();
                 if (!statusData.campaign) { alert('No active campaign found.'); btn.innerText='⚡ Generate All HTML'; btn.disabled=false; return; }
-                const items = (statusData.items||[]).filter(x => !x.html_path || x.article_status==='Not Created' || x.article_status==='Regenerating HTML');
+                const items = (statusData.items||[]).filter(x => !x.html_path || ['Not Created','Regenerating HTML','Draft HTML'].includes(x.article_status));
                 if (!items.length) { alert('All approved drafts already have HTML.'); btn.innerText='⚡ Generate All HTML'; btn.disabled=false; loadDemoProgress(); return; }
                 let ok=0, fail=0, lastErr='';
                 for (const item of items) {
@@ -1594,7 +1611,7 @@
             const pendingItems=[];const approvedItems=[];
             data.items.forEach(x=>{if(x.plan_status==='Approved'||x.plan_status==='Provisional Approved'||x.article_status==='HTML Ready'||x.article_status==='Final Article Approved'){approvedItems.push(x);}else{pendingItems.push(x);}});
             body.innerHTML=pendingItems.length?pendingItems.map(x=>`<tr><td>Day ${x.day_number} / Slot ${x.post_number}</td><td>${escapeHtml(x.title)}</td><td>${formatPlannerKeywords(x)}</td><td><span class="badge badge-purple">${x.plan_status}</span></td><td><span class="badge badge-purple">${x.article_status}</span></td><td>${x.scheduled_date||'—'}</td><td>${x.scheduled_time||'—'}</td><td><span class="badge badge-success">${(x.target_platform||'local').toUpperCase()}</span></td><td>${x.html_path?`<a href="${x.html_path}" target="_blank">View</a> <button class="btn btn-danger" style="font-size:0.7rem;padding:3px 8px;" onclick="downloadItemHtml(${x.id})">⬇</button>`:'—'}</td><td style="white-space:nowrap;">${x.approval_token?`<button class="btn btn-purple" style="font-size:0.75rem;padding:4px 10px;" onclick="dashboardDecision('${x.approval_token}','approve')">Approve</button> <button class="btn btn-danger" style="font-size:0.75rem;padding:4px 10px;" onclick="dashboardDecision('${x.approval_token}','reject')">Disapprove</button>`:''}${x.html_approval_token?` <button class="btn btn-accent" style="font-size:0.75rem;padding:4px 10px;" onclick="htmlDecision('${x.html_approval_token}','approve')">✅ Approve HTML</button> <button class="btn btn-danger" style="font-size:0.75rem;padding:4px 10px;" onclick="htmlDecision('${x.html_approval_token}','reject')">🔄 Rewrite</button>`:''}${x.article_status!=='Published'?` <button class="btn btn-danger" style="font-size:0.7rem;padding:3px 8px;" onclick="deleteCampaignItem(${x.id})">🗑️</button> <button class="btn" style="font-size:0.7rem;padding:3px 8px;background:#8b5cf6;color:#fff;" onclick="resendToTopicList(${x.id})">📝 Resend</button>`:''}${(!x.approval_token&&!x.html_approval_token&&x.article_status!=='Published')?'—':''}</td></tr>`).join(''):'<tr><td colspan="9" style="text-align:center;color:var(--accent-green);font-weight:700;">✅ All items approved! Check Approved & Scheduled section below.</td></tr>';
-            if(approvedItems.length){approvedCard.style.display='block';approvedBody.innerHTML=approvedItems.map(x=>`<tr><td>Day ${x.day_number}</td><td><strong>${escapeHtml(x.title)}</strong></td><td>${formatPlannerKeywords(x)}</td><td>${x.scheduled_date||'—'}</td><td>${x.scheduled_time||'—'}</td><td><span class="badge badge-success">${(x.target_platform||'local').toUpperCase()}</span></td><td><span class="badge badge-success">${x.article_status}</span></td><td>${x.html_path?`<a href="${x.html_path}" target="_blank">View</a> <button class="btn btn-danger" style="font-size:0.7rem;padding:3px 8px;" onclick="downloadItemHtml(${x.id})">⬇</button>`:'—'}</td><td style="white-space:nowrap;">${x.article_status!=='Published'?`<button class="btn btn-accent" style="font-size:0.8rem;padding:6px 12px;" onclick="publishNow(${x.id},'${x.target_platform||'blogger'}')">🚀 Publish Now</button> <button class="btn btn-purple" style="font-size:0.8rem;padding:6px 12px;" onclick="showScheduleModal(${x.id},'${x.scheduled_date||''}','${x.scheduled_time||''}','${x.target_platform||'blogger'}')">📅 Schedule</button> <button class="btn btn-danger" style="font-size:0.7rem;padding:4px 8px;" onclick="deleteCampaignItem(${x.id})">🗑️</button> <button class="btn" style="font-size:0.7rem;padding:4px 8px;background:#8b5cf6;color:#fff;" onclick="resendToTopicList(${x.id})">📝 Resend</button>`:'<span style="color:#10b981;font-weight:700;">✅ Published</span>'}</td></tr>`).join('');}else{approvedCard.style.display='none';}
+            if(approvedItems.length){approvedCard.style.display='block';approvedBody.innerHTML=approvedItems.map(x=>`<tr><td>Day ${x.day_number}</td><td><strong>${escapeHtml(x.title)}</strong></td><td>${formatPlannerKeywords(x)}</td><td>${x.scheduled_date||'—'}</td><td>${x.scheduled_time||'—'}</td><td><span class="badge badge-success">${(x.target_platform||'local').toUpperCase()}</span></td><td><span class="badge badge-success">${x.article_status}</span></td><td>${x.html_path?`<a href="${x.html_path}" target="_blank">View</a> <button class="btn btn-danger" style="font-size:0.7rem;padding:3px 8px;" onclick="downloadItemHtml(${x.id})">⬇</button>`:'—'}</td><td style="white-space:nowrap;">${x.article_status!=='Published'?`${(x.article_status==='Draft HTML'||x.article_status==='Not Created'||!x.html_path)?`<button class="btn btn-purple" style="font-size:0.75rem;padding:6px 10px;" onclick="rewriteMasterHtml(${x.id})">✍ Write Master HTML</button> `:''}<button class="btn btn-accent" style="font-size:0.8rem;padding:6px 12px;" onclick="publishNow(${x.id},'${x.target_platform||'blogger'}')">🚀 Publish Now</button> <button class="btn btn-purple" style="font-size:0.8rem;padding:6px 12px;" onclick="showScheduleModal(${x.id},'${x.scheduled_date||''}','${x.scheduled_time||''}','${x.target_platform||'blogger'}')">📅 Schedule</button> <button class="btn btn-danger" style="font-size:0.7rem;padding:4px 8px;" onclick="deleteCampaignItem(${x.id})">🗑️</button> <button class="btn" style="font-size:0.7rem;padding:4px 8px;background:#8b5cf6;color:#fff;" onclick="resendToTopicList(${x.id})">📝 Resend</button>`:'<span style="color:#10b981;font-weight:700;">✅ Published</span>'}</td></tr>`).join('');}else{approvedCard.style.display='none';}
         } catch(e){} }
         async function createDemoCampaign() {
             const status=document.getElementById('project-research-status'); status.innerText='Creating local demo roadmap without paid SEO, Chat, or Image requests...';
@@ -1989,7 +2006,7 @@
             try {
                 const data = await (await fetch('/api/auto-blog/status')).json();
                 if (!data.campaign) { status.innerText='🔴 No Auto Blog campaign. Start one first.'; return; }
-                const items = (data.items||[]).filter(x => !x.html_path || x.article_status==='Not Created' || x.article_status==='Regenerating HTML');
+                const items = (data.items||[]).filter(x => !x.html_path || ['Not Created','Regenerating HTML','Draft HTML'].includes(x.article_status));
                 if (!items.length) { status.innerText='🟢 All drafts already have HTML. Cron can now schedule them.'; loadAutoBlogStatus(); return; }
                 let ok=0, fail=0;
                 for (const item of items) {
@@ -2040,7 +2057,7 @@
                     <td>${formatPlannerKeywords(x)}</td>
                     <td><span class="badge ${x.article_status==='Published'||x.article_status==='HTML Ready'||x.article_status==='Scheduled'?'badge-success':'badge-warning'}">${escapeHtml(x.article_status||'Not Created')}</span>${x.article_status==='Draft HTML'?' <span style="font-size:0.72rem;color:#ef4444;">Chat/Image not applied</span>':''}</td>
                     <td>${escapeHtml(x.scheduled_date||'—')} ${escapeHtml(x.scheduled_time||'')}</td>
-                    <td>${x.html_path?`<a href="${x.html_path}" target="_blank">View</a>`:'—'}</td>
+                    <td>${x.html_path?`<a href="${x.html_path}" target="_blank">View</a>`:'—'}${x.article_status==='Draft HTML'||x.article_status==='Not Created'?` <button class="btn btn-purple" style="font-size:0.7rem;padding:3px 8px;" onclick="rewriteMasterHtml(${x.id})">Master HTML</button>`:''}</td>
                     <td>${x.html_retry_count||0}/8</td>
                     <td style="max-width:280px;font-size:0.78rem;color:${x.last_error?'#ef4444':'var(--text-muted)'}">${escapeHtml(x.last_error||'OK')}</td>
                 </tr>`).join('');

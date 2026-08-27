@@ -177,8 +177,13 @@ function generateHtmlForCampaignItem($item, $userId, $slot, $db) {
     } catch (Throwable $e) {
         return ['success' => false, 'error' => $e->getMessage()];
     }
-    if (!empty($htmlResult['success'])) {
-        $db->prepare("UPDATE campaign_items SET article_status = 'HTML Ready', html_path = ?, last_error = NULL WHERE id = ?")->execute([$htmlResult['html_path'], $item['id']]);
+    if (!empty($htmlResult['html_path'])) {
+        $chatOk = !empty($htmlResult['used_chat_api']);
+        $st = $chatOk ? 'HTML Ready' : 'Draft HTML';
+        $err = $chatOk ? null : ($htmlResult['error'] ?? 'Chat API did not write master HTML.');
+        $db->prepare("UPDATE campaign_items SET article_status = ?, html_path = ?, last_error = ? WHERE id = ?")->execute([$st, $htmlResult['html_path'], $err, $item['id']]);
+        $htmlResult['success'] = $chatOk;
+        $htmlResult['article_status'] = $st;
         return $htmlResult;
     }
     $err = $htmlResult['error'] ?? 'HTML generation failed';

@@ -2116,7 +2116,7 @@ function handleApiRoute($uri) {
     if (preg_match('#^/api/demo/generate-html/(\d+)$#', $uri, $m) && $method === 'POST') {
         $campaignId = $m[1];
         $db = getDB();
-        $stmt = $db->prepare('SELECT * FROM campaign_items WHERE campaign_id = ? AND plan_status IN ("Approved","Provisional Approved") AND (html_path IS NULL OR html_path = "" OR article_status IS NULL OR article_status = "" OR article_status = "Not Created" OR article_status = "Regenerating HTML") LIMIT 1');
+        $stmt = $db->prepare('SELECT * FROM campaign_items WHERE campaign_id = ? AND plan_status IN ("Approved","Provisional Approved") AND (html_path IS NULL OR html_path = "" OR article_status IS NULL OR article_status = "" OR article_status = "Not Created" OR article_status = "Regenerating HTML" OR article_status = "Draft HTML") LIMIT 1');
         $stmt->execute([$campaignId]);
         $items = $stmt->fetchAll();
         $generated = [];
