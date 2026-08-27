@@ -1538,7 +1538,7 @@
             btn.innerText = '⏳ Generating...'; btn.disabled = true;
             try {
                 const statusRes = await fetch('/api/demo/campaign-status');
-                const statusData = await statusRes.json();
+                const statusParsed = await readJson(statusRes); const statusData = statusParsed.data||{};
                 if (!statusData.campaign) { alert('No active campaign found.'); btn.innerText='⚡ Generate All HTML'; btn.disabled=false; return; }
                 const items = (statusData.items||[]).filter(x => !x.html_path || ['Not Created','Regenerating HTML','Draft HTML'].includes(x.article_status));
                 if (!items.length) { alert('All approved drafts already have HTML.'); btn.innerText='⚡ Generate All HTML'; btn.disabled=false; loadDemoProgress(); return; }
@@ -1546,8 +1546,8 @@
                 for (const item of items) {
                     btn.innerText = '⏳ HTML: ' + (item.title||'').slice(0,40);
                     const res = await fetch('/api/campaign-item/generate-html/' + item.id, {method:'POST'});
-                    const data = await res.json();
-                    if (res.ok && data.success) ok++; else { fail++; lastErr = data.error||'failed'; }
+                    const parsed = await readJson(res); const data = parsed.data||{};
+                    if (parsed.ok && data.success) ok++; else { fail++; lastErr = data.error||'failed'; }
                     loadDemoProgress();
                 }
                 alert('HTML created: ' + ok + '. Failed: ' + fail + (lastErr? '\nLast error: '+lastErr:''));
@@ -1618,7 +1618,7 @@
             const status=document.getElementById('project-research-status'); status.innerText='Creating local demo roadmap without paid SEO, Chat, or Image requests...';
             const postingTimes=[...document.querySelectorAll('.project-posting-time')].map(x=>x.value);
             const startDate=document.getElementById('project-start-date').value||new Date().toISOString().split('T')[0];
-            const res=await fetch('/api/demo/campaign',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({domain_url:document.getElementById('project-domain').value,country:document.getElementById('project-country').value,language_code:document.getElementById('project-language').value,days:Number(document.getElementById('project-days').value),posts_per_day:Number(document.getElementById('project-posts-per-day').value),start_date:startDate,posting_times:postingTimes,target_platform:document.getElementById('project-platform').value,keyword_source:document.getElementById('project-keyword-source').value})}); const data=await res.json(); status.innerText=res.ok?(data.email_sent?'🟢 Roadmap created ('+(data.keyword_source||'ai')+') and approval email sent.':'🟠 Roadmap created ('+(data.keyword_source||'ai')+'), but Brevo email was not sent.'):'🔴 '+(data.error||'Demo failed.'); loadDemoProgress(); if(res.ok) window.open('/api/demo/review/'+data.campaign_id,'_blank');
+            const res=await fetch('/api/demo/campaign',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({domain_url:document.getElementById('project-domain').value,country:document.getElementById('project-country').value,language_code:document.getElementById('project-language').value,days:Number(document.getElementById('project-days').value),posts_per_day:Number(document.getElementById('project-posts-per-day').value),start_date:startDate,posting_times:postingTimes,target_platform:document.getElementById('project-platform').value,keyword_source:document.getElementById('project-keyword-source').value})}); const parsed=await readJson(res); const data=parsed.data||{}; status.innerText=parsed.ok?(data.email_sent?'🟢 Roadmap created ('+(data.keyword_source||'ai')+') and approval email sent.':'🟠 Roadmap created ('+(data.keyword_source||'ai')+'), but Brevo email was not sent.'):'🔴 '+(data.error||'Demo failed.'); loadDemoProgress(); if(parsed.ok) window.open('/api/demo/review/'+data.campaign_id,'_blank');
         }
         async function saveProjectResearch(e) {
             e.preventDefault(); const status=document.getElementById('project-research-status'); status.innerText='Saving project and researching the website...';
@@ -1626,8 +1626,8 @@
             await fetch('/api/projects/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(settings)});
             const postingTimes=[...document.querySelectorAll('.project-posting-time')].map(x=>x.value);
             const startDate=document.getElementById('project-start-date').value||new Date().toISOString().split('T')[0];
-            const res=await fetch('/api/research/ai-roadmap',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({domain_url:settings.domain_url,country:settings.target_country,language_code:settings.target_language,days:Number(document.getElementById('project-days').value),posts_per_day:Number(document.getElementById('project-posts-per-day').value),start_date:startDate,posting_times:postingTimes,target_platform:document.getElementById('project-platform').value,keyword_source:document.getElementById('project-keyword-source').value,workflow_mode:'manual'})}); const data=await res.json();
-            if(!res.ok){status.innerText='🔴 '+(data.error||'Website research failed.');return;} const srcLabel=data.keyword_source==='planner'?'Google Keyword Planner':'Normal AI keywords'; status.innerText=(data.email_sent?'🟢 ':'🟠 ')+'Roadmap used '+srcLabel+'. '+(data.email_sent?'Approval email sent.':'Brevo email not sent.'); const tbody=document.getElementById('automatic-roadmap-tbody'); tbody.innerHTML=(data.suggested_roadmap||[]).map(r=>`<tr><td><strong>${escapeHtml(r.topic)}</strong></td><td>${escapeHtml(r.keyword)}</td><td>${escapeHtml(r.supporting||'Related questions and long-tail variations will be assigned by research')}</td><td><a href="${r.target_link}" target="_blank">${escapeHtml(r.target_anchor||'Relevant page')}</a></td><td>${escapeHtml(r.competition||'')}${r.search_volume!==undefined&&r.search_volume!==null&&r.search_volume!==''?' — volume: '+r.search_volume:''}${r.difficulty?' — difficulty: '+r.difficulty:''}${r.keyword_source?' — '+escapeHtml(r.keyword_source):''}</td><td><button class="btn btn-purple" onclick="approveRoadmapPlan(${r.plan_id},this)">Approve Topic</button></td></tr>`).join(''); document.getElementById('automatic-roadmap-card').style.display='block';
+            const res=await fetch('/api/research/ai-roadmap',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({domain_url:settings.domain_url,country:settings.target_country,language_code:settings.target_language,days:Number(document.getElementById('project-days').value),posts_per_day:Number(document.getElementById('project-posts-per-day').value),start_date:startDate,posting_times:postingTimes,target_platform:document.getElementById('project-platform').value,keyword_source:document.getElementById('project-keyword-source').value,workflow_mode:'manual'})}); const parsed=await readJson(res); const data=parsed.data||{};
+            if(!parsed.ok){status.innerText='🔴 '+(data.error||'Website research failed.');return;} const srcLabel=data.keyword_source==='planner'?'Google Keyword Planner':'Normal AI keywords'; status.innerText=(data.email_sent?'🟢 ':'🟠 ')+'Roadmap used '+srcLabel+'. '+(data.email_sent?'Approval email sent.':'Brevo email not sent.'); const tbody=document.getElementById('automatic-roadmap-tbody'); tbody.innerHTML=(data.suggested_roadmap||[]).map(r=>`<tr><td><strong>${escapeHtml(r.topic)}</strong></td><td>${escapeHtml(r.keyword)}</td><td>${escapeHtml(r.supporting||'Related questions and long-tail variations will be assigned by research')}</td><td><a href="${r.target_link}" target="_blank">${escapeHtml(r.target_anchor||'Relevant page')}</a></td><td>${escapeHtml(r.competition||'')}${r.search_volume!==undefined&&r.search_volume!==null&&r.search_volume!==''?' — volume: '+r.search_volume:''}${r.difficulty?' — difficulty: '+r.difficulty:''}${r.keyword_source?' — '+escapeHtml(r.keyword_source):''}</td><td><button class="btn btn-purple" onclick="approveRoadmapPlan(${r.plan_id},this)">Approve Topic</button></td></tr>`).join(''); document.getElementById('automatic-roadmap-card').style.display='block';
         }
 
         async function approveRoadmapPlan(id,button) { const res=await fetch('/api/content-plans/'+id+'/approve',{method:'POST'}); const data=await res.json(); if(res.ok){button.innerText='Approved';button.disabled=true;}else alert(data.error||'Approval failed.'); }
@@ -1876,6 +1876,22 @@
             return (text || '').replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
         }
 
+        async function readJson(res) {
+            const text = await res.text();
+            const t = (text || '').trim();
+            if (!t) return { ok: false, status: res.status, data: { error: 'Empty response from server (HTTP ' + res.status + ').' } };
+            if (t.charAt(0) === '<' || t.indexOf('<html') !== -1 || t.indexOf('<!DOCTYPE') !== -1) {
+                const snippet = t.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 240);
+                return { ok: false, status: res.status, data: { success: false, error: 'Server returned HTML instead of JSON (HTTP ' + res.status + '). This is a PHP/Hostinger page, not Auto Blog data. Check data/php_error.log. Preview: ' + snippet } };
+            }
+            try {
+                const data = JSON.parse(t);
+                return { ok: res.ok, status: res.status, data: data };
+            } catch (e) {
+                return { ok: false, status: res.status, data: { error: 'Invalid JSON: ' + e.message + ' — ' + t.slice(0, 180) } };
+            }
+        }
+
         function updateCalendarDates() {
             const days = Number(document.getElementById('project-days').value);
             const perDay = Number(document.getElementById('project-posts-per-day').value);
@@ -1995,8 +2011,8 @@
             const startDate=document.getElementById('auto-project-start-date').value||new Date().toISOString().split('T')[0];
             const noEnd = document.getElementById('auto-project-no-end').checked;
             const res=await fetch('/api/auto-blog/start',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({domain_url:settings.domain_url,country:settings.target_country,language_code:settings.target_language,posts_per_day:Number(document.getElementById('auto-project-posts-per-day').value),start_date:startDate,end_date:document.getElementById('auto-project-end-date').value||null,no_end:noEnd?1:0,posting_times:postingTimes,target_platform:document.getElementById('auto-project-platform').value,keyword_source:'planner'})});
-            const data=await res.json();
-            if(!res.ok){status.innerText='🔴 '+(data.error||'Auto Blog start failed.');return;}
+            const parsed=await readJson(res); const data=parsed.data||{};
+            if(!parsed.ok){status.innerText='🔴 '+(data.error||'Auto Blog start failed.');return;}
             const item = data.item || {};
             let extra = '';
             if (item.html_path) extra = ' Open View in Auto Blog Queue: ' + item.html_path;
@@ -2019,8 +2035,8 @@
                 for (const item of items) {
                     status.innerText='Writing HTML: ' + item.title + ' ...';
                     const res = await fetch('/api/campaign-item/generate-html/' + item.id, {method:'POST'});
-                    const row = await res.json();
-                    if (res.ok && row.success) ok++; else fail++;
+                    const parsed = await readJson(res); const row = parsed.data||{};
+                    if (parsed.ok && row.success) ok++; else fail++;
                     loadAutoBlogStatus();
                 }
                 status.innerText='🟢 HTML step done. Created '+ok+', failed '+fail+'. HTML is in Auto Blog Queue (View). Still not posted. Click Run Auto Cron to schedule/publish HTML Ready rows.';
@@ -2031,11 +2047,11 @@
             status.innerText='Running Auto Cron now...';
             try {
                 const res = await fetch('/api/auto-blog/run', {method:'POST'});
-                const data = await res.json();
+                const parsed = await readJson(res); const data = parsed.data||{};
                 const auto = data.auto || {};
                 const msg = (data.message||'') + '\\nLast run: ' + (data.last_run_at||'') + '\\nHTML created this run: ' + (auto.html||0) + '\\nScheduled: ' + (auto.scheduled||0) + '\\nPublished: ' + (auto.published||0) + '\\nStill waiting HTML: ' + (auto.waiting_html||0);
-                alert(res.ok ? '✅ ' + msg : '🔴 ' + (data.error||'Failed'));
-                status.innerText = res.ok ? '🟢 ' + msg : '🔴 ' + (data.error||'Failed');
+                alert(parsed.ok ? '✅ ' + msg : '🔴 ' + (data.error||'Failed'));
+                status.innerText = parsed.ok ? '🟢 ' + msg : '🔴 ' + (data.error||'Failed');
                 loadAutoBlogStatus();
             } catch(e) { alert('Error: ' + e.message); }
         }

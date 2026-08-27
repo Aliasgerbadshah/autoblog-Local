@@ -63,9 +63,17 @@ try {
     require_once __DIR__ . '/includes/google_keyword_planner.php';
     require_once __DIR__ . '/includes/keyword_flow.php';
     require_once __DIR__ . '/includes/auto_daily.php';
-} catch (Exception $e) {
+} catch (Throwable $e) {
     http_response_code(500);
-    echo '<h1>AutoBlog Setup Error</h1><p>' . htmlspecialchars($e->getMessage()) . '</p><p>Check that all files are uploaded correctly and PHP version is 8.0+</p>';
+    $setupMsg = $e->getMessage() . ' in ' . basename($e->getFile()) . ':' . $e->getLine();
+    error_log('[SETUP] ' . $setupMsg);
+    $uri = $_SERVER['REQUEST_URI'] ?? '';
+    if (strpos($uri, '/api/') !== false) {
+        if (!headers_sent()) header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['success' => false, 'error' => 'PHP setup error: ' . $setupMsg], JSON_UNESCAPED_UNICODE);
+    } else {
+        echo '<h1>AutoBlog Setup Error</h1><p>' . htmlspecialchars($setupMsg) . '</p><p>Check that all files are uploaded correctly and PHP version is 8.0+</p>';
+    }
     exit;
 }
 
@@ -947,6 +955,7 @@ function handleApiRoute($uri) {
 
     // AI Research Roadmap (uses Chat API for research; DataForSEO optional)
     if ($uri === '/api/research/ai-roadmap' && $method === 'POST') {
+        @set_time_limit(180);
         $domain = trim($input['domain_url'] ?? '');
         $country = $input['country'] ?? 'India';
         $language = $input['language_code'] ?? 'en';
@@ -2316,6 +2325,12 @@ function handleApiRoute($uri) {
             if (!empty($chatVault['api_key'])) {
                 $usedListStr = implode(', ', array_merge($selectedTopics, array_map(fn($et) => $et['topic'] ?? '', $existingTopics)));
                 $countryNote = ($country !== 'India' && $country !== '') ? " Target country is $country — make topics specific to $country's market." : "";
+                $researchPrompt = "I need $researchCount UNIQUE article topics for the website $domain. I already have these topics covered: $usedListStr. Give me $research       $researchedTopics = [];
+        if ($researchCount > 0) {
+            $chatVault = SecurityVault::getApiCredentials($userId, 'chat_api');
+            if (!empty($chatVault['api_key'])) {
+                $usedListStr = implode(', ', array_merge($selectedTopics, array_map(fn($et) => $et['topic'] ?? '', $existingTopics)));
+                $countryNote = ($country !== 'India' && $country !== '') ? " Target country is $country — make topics specific to $country's market." : "";
                 $researchPrompt = "I need $researchCount UNIQUE article topics for the website $domain. I already have these topics covered: $usedListStr. Give me $researchCount completely different topics that are NOT similar to any of the above. Think broadly: different blogs, industry angles, tool reviews, case studies, comparisons, FAQs, myths, regional opportunities, technology trends, compliance, ROI analysis, workflow tips. Return ONLY a JSON array of strings, no other text. Example: [\"topic one\",\"topic two\"]$countryNote";
                 $chatResult = AIProviderClient::chat($chatVault, $researchPrompt);
                 if (!empty($chatResult['success']) && !empty($chatResult['content'])) {
@@ -2479,6 +2494,7 @@ function handleApiRoute($uri) {
 
     // ========== AUTO BLOG — isolated from Human Article Writer ==========
     if ($uri === '/api/auto-blog/start' && $method === 'POST') {
+        @set_time_limit(180);
         $domain = trim($input['domain_url'] ?? '');
         if ($domain === '') jsonResponse(['error' => 'Website URL is required.'], 400);
         $country = $input['country'] ?? 'India';

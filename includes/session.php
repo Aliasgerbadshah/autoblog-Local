@@ -15,7 +15,8 @@ function loginRequired() {
     startSession();
     if (!isset($_SESSION['user_id'])) {
         // Check if this is an API request
-        $isApi = strpos($_SERVER['REQUEST_URI'] ?? '', '/api/') === 0
+        $reqUri = $_SERVER['REQUEST_URI'] ?? '';
+        $isApi = strpos($reqUri, '/api/') !== false
             || (isset($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false)
             || (isset($_SERVER['CONTENT_TYPE']) && strpos($_SERVER['CONTENT_TYPE'], 'application/json') !== false);
 
