@@ -954,9 +954,31 @@ function saveCampaignHtmlFile($title, $articleInnerHtml, $itemId) {
     ];
 }
 
-function generateArticleHtmlFromCampaignItem($item, $userId, $activeSlot, $db, $contentAngle = '') {
-    @set_time_limit(180);
-    @ini_set('max_execution_time', '180');
+function articleLooksLikeDraftHtml($html) {
+    $h = (string)$html;
+    return (stripos($h, 'This section covers key practical aspects') !== false)
+        || (stripos($h, 'Keep a simple scorecard') !== false)
+        || (stripos($h, 'mapping the outcome you want from') !== false)
+        || (stripos($h, 'This draft will be replaced by Master HTML') !== false)
+        || (stripos($h, 'Do not treat this placeholder as the published article') !== false);
+}
+
+function relatedStockPhotoUrl($title, $keyword) {
+    $pool = [
+        'https://images.unsplash.com/photo-1480714378408-67cf0d13bc1b?auto=format&fit=crop&w=1200&q=80',
+        'https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=1200&q=80',
+        'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=1200&q=80',
+        'https://images.unsplash.com/photo-1551836022-d5d88e9218df?auto=format&fit=crop&w=1200&q=80',
+        'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80',
+        'https://images.unsplash.com/photo-1499750310107-5fef28a66643?auto=format&fit=crop&w=1200&q=80',
+    ];
+    $i = abs(crc32((string)$title . '|' . (string)$keyword)) % count($pool);
+    return $pool[$i];
+}
+
+function generateArticleHtmlFromCampaignItem($item, $userId, $activeSlot, $db, $contentAngle = '', $wantMaster = true) {
+    @set_time_limit(90);
+    @ini_set('max_execution_time', '90');
     $headings = json_decode($item['headings'] ?? '{}', true) ?: [];
     $kws = json_decode($item['keyword_data'] ?? '[]', true) ?: [];
     $links = json_decode($item['internal_links'] ?? '[]', true) ?: [];
@@ -981,6 +1003,17 @@ function generateArticleHtmlFromCampaignItem($item, $userId, $activeSlot, $db, $
         try { $db->prepare("UPDATE campaign_items SET article_status = 'Draft HTML', html_path = ?, last_error = ? WHERE id = ?")->execute([$earlyPath, 'Draft HTML saved. Chat API is writing the master article...', $item['id']]); } catch (Throwable $e) {}
     }
 
+    if (!$wantMaster) {
+        return [
+            'success' => true,
+            'html_path' => $earlyPath,
+            'html_file' => $earlyFile,
+            'used_chat_api' => false,
+            'featured_image' => '',
+            'error' => 'Draft HTML only. Click Write Master HTML for Chat + image.',
+        ];
+    }
+
     // Get Chat API credentials
     $stmt = $db->prepare('SELECT chat_credential_id, image_credential_id FROM user_workspace_slots WHERE user_id = ? AND slot_number = ?');
     $stmt->execute([$userId, $activeSlot]);
@@ -1003,18 +1036,20 @@ function generateArticleHtmlFromCampaignItem($item, $userId, $activeSlot, $db, $
         $h2List = implode(' | ', $h2s);
         $angleNote = $contentAngle ? "\nCONTENT ANGLE: $contentAngle" : '';
         $secList = implode(', ', $secondaryKws);
+        $secOnce = '';
+        foreach ($secondaryKws as $si => $sk) {
+            $secOnce .= '- Use "' . $sk . '" exactly once in H2 section ' . ($si + 2) . ".\n";
+        }
 
         $nowMonth = date('F');
         $nowYear = date('Y');
-        $prompt = "Write a complete, publication-ready HTML blog article about \"$title\".\n\nTITLE: $title\nH1: $h1\nH2 SECTIONS: $h2List\nPRIMARY KEYWORD (highest volume): $primaryKw\nSECONDARY KEYWORDS (use sparingly, max 4): $secList\nINTERNAL LINKS (weave naturally into the text — ONLY use these URLs, do NOT make up any):\n$intLinkList\nEXTERNAL REFERENCES (cite naturally — at least 4 required — ONLY use the URLs listed below, do NOT make up any Wikipedia, Moz, or other URLs):\n$extLinkList\n$angleNote\n\nREQUIREMENTS:\n- 1,800 to 2,200 words of original, researched content\n- Use semantic HTML: proper H1, H2, H3, H4, p, ul, li, table, figure, blockquote tags\n- CRITICAL: Keep paragraphs SHORT — strictly 45 to 50 words per paragraph. Every <p> tag must have between 45 and 50 words. Break long paragraphs into multiple short <p> tags. Readers skim; short paragraphs improve readability and mobile experience.\n- KEYWORD USE: Use the PRIMARY keyword naturally in the H1 and the first two paragraphs. Use each SECONDARY keyword at most twice, only where it fits the sentence. Do NOT stuff keywords. Do NOT invent extra target keywords.\n- Write in a natural, authoritative human voice - no AI cliches or banned phrases\n- Include a FAQ section at the end with 3 real questions and answers about $primaryKw\n- Include 1-2 internal links with natural anchor text to the client website pages listed in INTERNAL LINKS\n- MANDATORY: Include at least 4 external authority references using the URLs provided in EXTERNAL REFERENCES above. Do NOT make up any new URLs. Only use the URLs that are explicitly listed.\n- Also include up to 2 links to the client website pages listed in internal links\n- Add a comparison data table where relevant\n- Use current year $nowYear throughout the article. NEVER use outdated years like 2023 or older. Do NOT mention the current month ($nowMonth) in the H1 title or any heading. You may use the year in headings where it feels natural.\n- Do NOT include html/head/body tags - only the article content\n- Do NOT invent facts, statistics, or quotes\n- Do NOT make up URLs — ONLY use URLs from the INTERNAL LINKS and EXTERNAL REFERENCES lists provided above\n- Return ONLY the article HTML, no markdown fences";
+        $prompt = "Write a complete HTML blog article about \"$title\".\nTITLE: $title\nH1: $h1\nH2: $h2List\nPRIMARY KEYWORD (H1 + first paragraph only): $primaryKw\nSECONDARY KEYWORDS: $secList\n$secOnce INTERNAL LINKS:\n$intLinkList\nEXTERNAL URLS (use only these):\n$extLinkList\n$angleNote\nRULES:\n- 900 to 1,200 words. Finish the article.\n- Semantic HTML only: h1,h2,h3,p,ul,li,table. NO img/figure tags.\n- Short paragraphs (about 40-50 words).\n- Do NOT write the phrase \"This section covers key practical aspects\".\n- Do NOT copy a keyword-research table as the article body.\n- Do NOT repeat the primary keyword in every paragraph.\n- FAQ: 3 questions; mention a secondary keyword in one answer.\n- Year $nowYear. No month name in headings.\n- Return ONLY article HTML.";
 
         $chatResult = ['success' => false];
-        for ($chatTry = 1; $chatTry <= 2; $chatTry++) {
-            $chatResult = AIProviderClient::chat($chatVault, $prompt);
-            if (!empty($chatResult['success']) && !empty($chatResult['content']) && strlen(strip_tags($chatResult['content'])) > 400) {
-                break;
-            }
-            error_log("[HTML] Chat attempt {$chatTry} failed: " . ($chatResult['error'] ?? 'empty content'));
+        if ($wantMaster) {
+            $chatResult = AIProviderClient::chat($chatVault, $prompt, 35);
+        } else {
+            $chatResult = ['success' => false, 'error' => 'Draft-only write (no Chat on this request).'];
         }
         if (!empty($chatResult['success']) && !empty($chatResult['content'])) {
             $chatContent = AntiAiSanitizer::sanitizeText($chatResult['content']);
@@ -1022,7 +1057,13 @@ function generateArticleHtmlFromCampaignItem($item, $userId, $activeSlot, $db, $
             if (preg_match('/^```(?:html)?\s*\n(.+)\n```$/s', $chatContent, $m)) {
                 $chatContent = $m[1];
             }
-            $chatUsed = strlen(strip_tags($chatContent)) > 400;
+            $plainLen = strlen(strip_tags($chatContent));
+            $words = str_word_count(strip_tags($chatContent));
+            $chatUsed = ($plainLen > 800) && ($words >= 350) && !articleLooksLikeDraftHtml($chatContent);
+            if (!$chatUsed) {
+                $chatResult['error'] = 'Chat returned draft-like or too-short HTML (' . $words . ' words). Keeping Draft HTML.';
+                $chatContent = '';
+            }
         }
     }
 
@@ -1047,22 +1088,20 @@ function generateArticleHtmlFromCampaignItem($item, $userId, $activeSlot, $db, $
     }
 
     $featuredImgUrl = '';
-    $coreVisual = "Photorealistic photo related to $title, $keyword, outdoor digital signage, real scene, no text, no logos.";
+    $coreVisual = "Photorealistic editorial photo of the core idea of \"$title\" about $keyword. Real-world scene, natural light, no text, no logos.";
     $imgError = '';
-    if (!empty($imageVault['api_key'])) {
-        $thumbPrompt = $coreVisual . " Vertical 9:16 blog thumbnail, 1080x1920, photorealistic. No text, no logos.";
+    if ($chatUsed && !empty($imageVault['api_key'])) {
+        $thumbPrompt = $coreVisual . " Landscape blog thumbnail, no text, no logos.";
         $imgResult = AIProviderClient::image($imageVault, $thumbPrompt);
-        if (!empty($imgResult['success']) && !empty($imgResult['url']) && validateImageUrl($imgResult['url'])) {
+        if (!empty($imgResult['success']) && !empty($imgResult['url'])) {
             $featuredImgUrl = $imgResult['url'];
         } else {
             $imgError = $imgResult['error'] ?? 'Image API returned no URL';
             error_log('[Image Generation] Thumbnail failed: ' . $imgError);
         }
-    } else {
-        $imgError = 'Image API key missing';
     }
-    if ($featuredImgUrl === '') {
-        $featuredImgUrl = 'https://images.unsplash.com/photo-1480714378408-67cf0d13bc1b?auto=format&fit=crop&w=1200&q=80';
+    if ($chatUsed && $featuredImgUrl === '') {
+        $featuredImgUrl = relatedStockPhotoUrl($title, $keyword);
     }
 
     // Strip ALL images/figures from Chat API content to prevent duplicates
@@ -1078,36 +1117,13 @@ function generateArticleHtmlFromCampaignItem($item, $userId, $activeSlot, $db, $
     // Build the thumbnail HTML - NO gradient placeholder, always use real image or simple colored div
     $thumbHtml = '';
     $escKw = escapeHtml($keyword);
-    if ($featuredImgUrl) {
+    if ($chatUsed && $featuredImgUrl) {
         $escImgUrl = escapeHtml($featuredImgUrl);
         $thumbHtml = "<figure class=\"blog-thumbnail\" style=\"margin:0 0 24px 0;border-radius:12px;overflow:hidden;width:100%;\"><img class=\"blog-thumb-img\" data-kw=\"{$escKw}\" src=\"{$escImgUrl}\" alt=\"{$escKw} - Blog Thumbnail\" style=\"width:100%;display:block;object-fit:cover;\" loading=\"eager\"></figure>";
-    } else {
-        // No image generated after 5 attempts — use a simple solid color with icon (NOT gradient text)
-        $thumbHtml = "<figure class=\"blog-thumbnail\" style=\"margin:0 0 24px 0;border-radius:12px;overflow:hidden;width:100%;background:#1e293b;display:flex;align-items:center;justify-content:center;min-height:280px;\"><span style=\"font-size:4rem;\">📸</span></figure>";
+        $chatContent = insertThumbnailAfterH1($chatContent, $thumbHtml);
     }
-    $chatContent = insertThumbnailAfterH1($chatContent, $thumbHtml);
 
-    // ===== SECOND IMAGE: Content image after the 2nd H2 tag (16:9 landscape) =====
-    // Retry up to 3 times. Must be different from thumbnail.
-    $contentImgUrl = '';
-    if (!empty($imageVault['api_key']) && $featuredImgUrl) {
-        for ($imgAttempt2 = 1; $imgAttempt2 <= 1; $imgAttempt2++) {
-            $contentImgPrompt = $coreVisual . " Wide landscape 16:9 editorial photograph, 1200x675, same core concept, different camera angle. No text, no logos, no watermarks.";
-            $imgResult2 = AIProviderClient::image($imageVault, $contentImgPrompt);
-            if (!empty($imgResult2['success']) && !empty($imgResult2['url'])) {
-                if ($imgResult2['url'] !== $featuredImgUrl && validateImageUrl($imgResult2['url'])) {
-                    $contentImgUrl = $imgResult2['url'];
-                    break;
-                }
-            }
-        }
-    }
-    // Insert content image after the 2nd H2 tag
-    if ($contentImgUrl) {
-        $escContentImg = escapeHtml($contentImgUrl);
-        $contentImgHtml = "<figure style=\"margin:32px 0;border-radius:12px;overflow:hidden;\"><img src=\"{$escContentImg}\" alt=\"{$escKw} - Practical Overview\" style=\"width:100%;height:auto;display:block;object-fit:cover;max-height:420px;border-radius:12px;\" loading=\"lazy\"></figure>";
-        $chatContent = insertContentAfterSecondH2($chatContent, $contentImgHtml);
-    }
+    // One related photo only on MASTER HTML. Skip a second Image API call (causes 504).
 
     // Build the full HTML document
     $slug = slugify($title) . '-' . $item['id'];
@@ -1215,7 +1231,12 @@ CSS;
 </html>
 HTML;
 
-    $written = @file_put_contents($filePath, $fullHtml);
+    $tmpPath = $filePath . '.tmp';
+    $written = @file_put_contents($tmpPath, $fullHtml);
+    if ($written !== false && is_file($tmpPath) && filesize($tmpPath) > 400) {
+        @rename($tmpPath, $filePath);
+        $written = is_file($filePath) ? filesize($filePath) : false;
+    }
     if ($written === false || !is_file($filePath) || filesize($filePath) < 400) {
         $altDir = dirname(__DIR__) . '/published_posts/demo';
         ensureDir($altDir);
@@ -1241,7 +1262,7 @@ HTML;
         'html_file' => $filePath,
         'used_chat_api' => $chatUsed,
         'featured_image' => $featuredImgUrl,
-        'error' => ''
+        'error' => $chatUsed ? '' : ($chatError ?: 'Draft HTML only. Chat did not write master.')
     ];
 }
 
@@ -1254,12 +1275,22 @@ function generateFallbackArticleHtml($title, $keyword, $h1, $h2s, $h3s, $kws, $l
     $escKw = escapeHtml($keyword);
     $dateStr = date('F d, Y');
 
+    $kwNames = [];
+    foreach ((array)$kws as $row) {
+        $nm = trim((string)($row['keyword'] ?? ''));
+        if ($nm !== '') $kwNames[] = $nm;
+    }
+    if (!$kwNames) $kwNames = [$keyword];
+    $primaryName = $kwNames[0];
+    $secondaries = array_slice($kwNames, 1, 4);
+
     $sectionsHtml = '';
     foreach ($h2s as $i => $h2) {
         $escH2 = escapeHtml($h2);
-        $sectionContent = "<p>This section covers key practical aspects of $escKw that professionals and business owners need to understand. The following analysis draws on documented industry practices and verified operational data so the advice stays usable.</p>";
-        $sectionContent .= "<p>Start by mapping the outcome you want from $escKw, then list the smallest actions that move that outcome this week. Teams that skip this baseline usually publish generic advice and cannot measure whether the work actually helped.</p>";
-        $sectionContent .= "<p>Keep a simple scorecard: what you tried, what changed, and what you will stop doing. Review it every two weeks. That habit turns $escKw from a vague topic into an operating routine that compounds.</p>";
+        $focusKw = escapeHtml($secondaries[$i % max(1, count($secondaries))] ?? $primaryName);
+        $escPrimary = escapeHtml($primaryName);
+        $sectionContent = "<p>" . escapeHtml($h2) . " is a practical part of " . $escPrimary . ". This draft will be replaced by Master HTML from Chat API. Supporting term for this section: <strong>{$focusKw}</strong>.</p>";
+        $sectionContent .= "<p>Do not treat this placeholder as the published article. Planner keywords stay in the table below (primary plus secondaries). Chat must write original body copy that uses those terms naturally.</p>";
         if (isset($h3s[$i])) {
             $sectionContent .= "<h3>" . escapeHtml($h3s[$i]) . "</h3><p>Understanding the nuances of " . escapeHtml($h3s[$i]) . " is critical for building a sustainable long-term strategy around $escKw. Use examples from your own pipeline instead of invented statistics.</p>";
         }
@@ -1345,21 +1376,23 @@ function loadCampaignArticleContent($item) {
     return '';
 }
 
-function generateArticleHtmlReliable($item, $userId, $activeSlot, $db, $contentAngle = '') {
+function generateArticleHtmlReliable($item, $userId, $activeSlot, $db, $contentAngle = '', $wantMaster = true) {
     try {
-        $last = generateArticleHtmlFromCampaignItem($item, $userId, $activeSlot, $db, $contentAngle);
+        $last = generateArticleHtmlFromCampaignItem($item, $userId, $activeSlot, $db, $contentAngle, $wantMaster);
     } catch (Throwable $e) {
         error_log('[HTML] generate exception: ' . $e->getMessage());
         return ['success' => false, 'error' => $e->getMessage(), 'html_path' => '', 'html_file' => ''];
     }
     $file = $last['html_file'] ?? '';
+    if ($wantMaster && empty($last['used_chat_api'])) {
+        return $last;
+    }
     if (!empty($last['success']) && ($file === '' || validateGeneratedArticleFile($file) || (is_file($file) && filesize($file) > 400))) {
         $last['success'] = true;
         return $last;
     }
     if ($file && is_file($file) && filesize($file) > 400) {
         $last['success'] = true;
-        $last['error'] = '';
         return $last;
     }
     return $last;

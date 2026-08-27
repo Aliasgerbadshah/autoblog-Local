@@ -2391,9 +2391,9 @@ function handleApiRoute($uri) {
                 $stmt = $db->prepare('SELECT * FROM campaign_items WHERE id = ?');
                 $stmt->execute([$itemId]);
                 $freshItem = $stmt->fetch();
-                $htmlResult = generateArticleHtmlReliable($freshItem, $userId, $activeSlot, $db);
-                if (!empty($htmlResult['success'])) {
-                    $stmt = $db->prepare("UPDATE campaign_items SET article_status = 'HTML Ready', html_path = ? WHERE id = ?");
+                $htmlResult = generateArticleHtmlReliable($freshItem, $userId, $activeSlot, $db, '', false);
+                if (!empty($htmlResult['html_path'])) {
+                    $stmt = $db->prepare("UPDATE campaign_items SET article_status = 'Draft HTML', html_path = ? WHERE id = ?");
                     $stmt->execute([$htmlResult['html_path'], $itemId]);
                     $htmlToken = generateToken();
                     $stmt = $db->prepare('INSERT INTO approval_tokens (user_id, campaign_item_id, approval_type, token, created_at) VALUES (?, ?, ?, ?, ?)');
@@ -2538,7 +2538,7 @@ function handleApiRoute($uri) {
                     $it->execute([$made['item_id']]);
                     $item = $it->fetch();
                     if ($item && function_exists('generateHtmlForCampaignItem')) {
-                        $hr = generateHtmlForCampaignItem($item, $userId, $activeSlot, $db);
+                        $hr = generateHtmlForCampaignItem($item, $userId, $activeSlot, $db, false);
                         if (!empty($hr['html_path'])) {
                             $htmlMade = !empty($hr['success']) ? 1 : 0;
                             $item['html_path'] = $hr['html_path'];
@@ -2619,7 +2619,7 @@ function handleApiRoute($uri) {
         if (!function_exists('processAutoBlogCampaigns')) {
             jsonResponse(['success' => false, 'error' => 'Auto daily engine missing.'], 500);
         }
-        $autoRes = processAutoBlogCampaigns(8, 5);
+        $autoRes = processAutoBlogCampaigns(1, 3);
         if (function_exists('recordAutoCronRun')) {
             recordAutoCronRun('auto_blog_page', $autoRes, $userId);
         }

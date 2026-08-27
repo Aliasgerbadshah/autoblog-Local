@@ -26,7 +26,7 @@ class AIProviderClient {
                 $oneCreds['model'] = $candidate;
                 $oneCreds['model_pool'] = [];
                 $oneCreds['auto_model'] = false;
-                $last = self::chat($oneCreds, $prompt);
+                $last = self::chat($oneCreds, $prompt, $timeout);
                 if ($last['success'] ?? false) {
                     $last['used_model'] = $candidate;
                     return $last;
@@ -76,7 +76,7 @@ class AIProviderClient {
                 $payload = ['model' => $model, 'messages' => [['role' => 'user', 'content' => $prompt]], 'temperature' => 0.75];
             }
 
-            $result = curlPost($endpoint, $payload, $headers, 90);
+            $result = curlPost($endpoint, $payload, $headers, $timeout);
             $data = $result['data'] ?? [];
 
             if ($result['http_code'] >= 400) {
@@ -189,52 +189,9 @@ class AIProviderClient {
                 if (!empty($key)) {
                     $imageUrl .= "&key=" . urlencode($key);
                 }
-                // Pollinations generates image on-the-fly, so we need to actually fetch it
-                // to verify it works. Use a GET request with 30s timeout.
-                $ch = curl_init($imageUrl);
-                curl_setopt_array($ch, [
-                    CURLOPT_RETURNTRANSFER => true,
-                    CURLOPT_TIMEOUT => 30,
-                    CURLOPT_SSL_VERIFYPEER => false,
-                    CURLOPT_FOLLOWLOCATION => true,
-                    CURLOPT_USERAGENT => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/115.0.0.0',
-                ]);
-                $response = curl_exec($ch);
-                $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-                $contentType = curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
-                $curlErr = curl_error($ch);
-                curl_close($ch);
-                
-                if ($httpCode === 200 && $response && strlen($response) > 1000) {
-                    // Image was generated successfully — return the URL (not the data)
-                    return ['success' => true, 'url' => $imageUrl, 'error' => ''];
-                }
-                
-                // Image generation failed with user's model — try fallback to 'flux'
-                if ($imgModel !== 'flux') {
-                    error_log("[Pollinations Image] Model '$imgModel' failed (HTTP $httpCode, size " . strlen($response ?? '') . "). Retrying with 'flux'...");
-                    $fallbackUrl = "https://gen.pollinations.ai/image/" . urlencode($prompt) . "?model=flux&width={$width}&height={$height}&seed=" . rand(1000, 9999) . "&nologo=true";
-                    if (!empty($key)) {
-                        $fallbackUrl .= "&key=" . urlencode($key);
-                    }
-                    $ch2 = curl_init($fallbackUrl);
-                    curl_setopt_array($ch2, [
-                        CURLOPT_RETURNTRANSFER => true,
-                        CURLOPT_TIMEOUT => 30,
-                        CURLOPT_SSL_VERIFYPEER => false,
-                        CURLOPT_FOLLOWLOCATION => true,
-                        CURLOPT_USERAGENT => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/115.0.0.0',
-                    ]);
-                    $response2 = curl_exec($ch2);
-                    $httpCode2 = curl_getinfo($ch2, CURLINFO_HTTP_CODE);
-                    curl_close($ch2);
-                    
-                    if ($httpCode2 === 200 && $response2 && strlen($response2) > 1000) {
-                        return ['success' => true, 'url' => $fallbackUrl, 'error' => ''];
-                    }
-                }
-                
-                return ['success' => false, 'error' => "Pollinations image generation failed with model '$imgModel' (HTTP $httpCode). Response size: " . strlen($response ?? '') . " bytes. Try a different model name (flux, turbo, gptimage, flux-pro)."];
+                // Do not GET the image here. nginx 504s if Chat + image download exceeds ~60s.
+                // The browser (and Blogger) load this URL later.
+                return ['success' => true, 'url' => $imageUrl, 'error' => ''];
             }
 
             // OpenAI-compatible
@@ -242,7 +199,7 @@ class AIProviderClient {
             $headers = ['Authorization: Bearer ' . $key, 'Content-Type: application/json'];
             $payload = ['model' => $model, 'prompt' => $prompt, 'size' => $credentials['size'] ?? '1536x1024', 'n' => 1];
 
-            $result = curlPost($endpoint, $payload, $headers, 120);
+            $result = curlPost($endpoint, $payload, $headers, 15);
             $data = $result['data'] ?? [];
 
             if ($result['http_code'] >= 400) {

@@ -86,12 +86,14 @@ function inspectAutoItemHtml($item) {
     $content = ($htmlOk && function_exists('loadCampaignArticleContent')) ? loadCampaignArticleContent($item) : ($htmlOk ? (string)@file_get_contents($htmlPath) : '');
     $words = str_word_count(strip_tags($content));
     $hasImg = articleHasRealImage($content);
+    $isDraft = function_exists('articleLooksLikeDraftHtml') ? articleLooksLikeDraftHtml($content) : (stripos($content, 'This section covers key practical aspects') !== false);
+    $statusOk = in_array($item['article_status'] ?? '', ['HTML Ready', 'Final Article Approved'], true);
     return [
         'html_file' => $htmlPath,
         'html_ok' => $htmlOk,
         'words' => $words,
         'has_image' => $hasImg,
-        'ready' => $htmlOk && $words >= 200,
+        'ready' => $htmlOk && $words >= 350 && !$isDraft && $statusOk,
     ];
 }
 
@@ -168,12 +170,12 @@ function createNextAutoBlogDraft($job, $camp) {
     return ['created' => true, 'item_id' => $itemId, 'title' => $plan['title']];
 }
 
-function generateHtmlForCampaignItem($item, $userId, $slot, $db) {
+function generateHtmlForCampaignItem($item, $userId, $slot, $db, $wantMaster = true) {
     if (!function_exists('generateArticleHtmlReliable')) {
         return ['success' => false, 'error' => 'HTML engine missing'];
     }
     try {
-        $htmlResult = generateArticleHtmlReliable($item, $userId, $slot, $db);
+        $htmlResult = generateArticleHtmlReliable($item, $userId, $slot, $db, '', $wantMaster);
     } catch (Throwable $e) {
         return ['success' => false, 'error' => $e->getMessage()];
     }
