@@ -2038,7 +2038,7 @@
                     <td>Day ${x.day_number} / Slot ${x.post_number}</td>
                     <td><strong>${escapeHtml(x.title||'')}</strong></td>
                     <td>${formatPlannerKeywords(x)}</td>
-                    <td><span class="badge ${x.article_status==='Published'||x.article_status==='HTML Ready'||x.article_status==='Scheduled'?'badge-success':'badge-warning'}">${escapeHtml(x.article_status||'Not Created')}</span></td>
+                    <td><span class="badge ${x.article_status==='Published'||x.article_status==='HTML Ready'||x.article_status==='Scheduled'?'badge-success':'badge-warning'}">${escapeHtml(x.article_status||'Not Created')}</span>${x.article_status==='Draft HTML'?' <span style="font-size:0.72rem;color:#ef4444;">Chat/Image not applied</span>':''}</td>
                     <td>${escapeHtml(x.scheduled_date||'—')} ${escapeHtml(x.scheduled_time||'')}</td>
                     <td>${x.html_path?`<a href="${x.html_path}" target="_blank">View</a>`:'—'}</td>
                     <td>${x.html_retry_count||0}/8</td>

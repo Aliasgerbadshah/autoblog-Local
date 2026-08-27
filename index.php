@@ -2577,11 +2577,21 @@ function handleApiRoute($uri) {
         @set_time_limit(180);
         $slot = intval($item['slot_number'] ?? $activeSlot);
         $htmlResult = generateArticleHtmlReliable($item, $userId, $slot, $db);
-        if (!empty($htmlResult['success'])) {
-            $db->prepare("UPDATE campaign_items SET article_status = 'HTML Ready', html_path = ?, last_error = NULL WHERE id = ?")->execute([$htmlResult['html_path'], $itemId]);
-            jsonResponse(['success' => true, 'html_path' => $htmlResult['html_path'], 'title' => $item['title'], 'message' => 'HTML created for ' . $item['title']]);
+        $chatOk = !empty($htmlResult['used_chat_api']);
+        $st = $chatOk ? 'HTML Ready' : 'Draft HTML';
+        $err = $htmlResult['error'] ?? ($chatOk ? '' : 'Chat API did not write the master article. Draft HTML is on disk.');
+        if (!empty($htmlResult['html_path'])) {
+            $db->prepare("UPDATE campaign_items SET article_status = ?, html_path = ?, last_error = ?, html_retry_count = COALESCE(html_retry_count,0)+1 WHERE id = ?")->execute([$st, $htmlResult['html_path'], $chatOk ? null : $err, $itemId]);
+            jsonResponse([
+                'success' => $chatOk,
+                'html_path' => $htmlResult['html_path'],
+                'title' => $item['title'],
+                'used_chat_api' => $chatOk,
+                'article_status' => $st,
+                'message' => $chatOk ? ('Master HTML created for ' . $item['title']) : $err,
+                'error' => $chatOk ? '' : $err,
+            ], $chatOk ? 200 : 400);
         }
-        $err = $htmlResult['error'] ?? 'HTML generation failed';
         $db->prepare("UPDATE campaign_items SET last_error = ?, html_retry_count = COALESCE(html_retry_count,0)+1 WHERE id = ?")->execute([$err, $itemId]);
         jsonResponse(['success' => false, 'error' => $err, 'title' => $item['title']], 400);
     }

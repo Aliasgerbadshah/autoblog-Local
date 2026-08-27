@@ -978,7 +978,7 @@ function generateArticleHtmlFromCampaignItem($item, $userId, $activeSlot, $db, $
     $earlyPath = $saved['html_path'];
     $earlyFile = $saved['html_file'];
     if (!empty($item['id']) && $db) {
-        try { $db->prepare("UPDATE campaign_items SET article_status = 'HTML Ready', html_path = ?, last_error = NULL WHERE id = ?")->execute([$earlyPath, $item['id']]); } catch (Throwable $e) {}
+        try { $db->prepare("UPDATE campaign_items SET article_status = 'Draft HTML', html_path = ?, last_error = ? WHERE id = ?")->execute([$earlyPath, 'Draft HTML saved. Chat API is writing the master article...', $item['id']]); } catch (Throwable $e) {}
     }
 
     // Get Chat API credentials
@@ -990,6 +990,7 @@ function generateArticleHtmlFromCampaignItem($item, $userId, $activeSlot, $db, $
 
     $chatContent = '';
     $chatUsed = false;
+    $chatResult = ['success' => false, 'error' => 'Chat API not called'];
 
     $kws = array_slice(array_values($kws), 0, 5);
     $primaryKw = $kws[0]['keyword'] ?? $keyword;
@@ -1032,27 +1033,36 @@ function generateArticleHtmlFromCampaignItem($item, $userId, $activeSlot, $db, $
         $chatContent = validateAndFixExternalLinks($chatContent);
     }
 
-    // Fallback: generate structured content if Chat API not available
+    $chatError = '';
     if (!$chatUsed) {
         $chatContent = generateFallbackArticleHtml($title, $keyword, $h1, $h2s, $h3s, $kws, $links, $ext, $prompts);
+        if (empty($chatVault['api_key'])) {
+            $chatError = 'Chat API key missing. Master HTML was not written.';
+        } else {
+            $chatError = 'Chat API failed: ' . ($chatResult['error'] ?? 'empty content') . '. Draft HTML is shown until Chat succeeds.';
+        }
+        if (!empty($item['id']) && $db) {
+            try { $db->prepare("UPDATE campaign_items SET last_error = ? WHERE id = ?")->execute([$chatError, $item['id']]); } catch (Throwable $e) {}
+        }
     }
 
-    // Featured THUMBNAIL: first write a core-concept prompt from the blog, then generate the image.
     $featuredImgUrl = '';
-    $coreVisual = buildCoreConceptImagePrompt($item, $chatVault, $chatContent);
+    $coreVisual = "Photorealistic photo related to $title, $keyword, outdoor digital signage, real scene, no text, no logos.";
+    $imgError = '';
     if (!empty($imageVault['api_key'])) {
-        for ($imgAttempt = 1; $imgAttempt <= 3; $imgAttempt++) {
-            $thumbPrompt = $coreVisual . " Vertical 9:16 blog thumbnail, 1080x1920, photorealistic, related to this exact article. No text, no logos, no watermarks.";
-            $imgResult = AIProviderClient::image($imageVault, $thumbPrompt);
-            if (!empty($imgResult['success']) && !empty($imgResult['url'])) {
-                if (validateImageUrl($imgResult['url'])) {
-                    $featuredImgUrl = $imgResult['url'];
-                    break;
-                }
-                error_log("[Image Validation] Thumbnail attempt $imgAttempt URL not accessible: " . $imgResult['url']);
-            }
-            error_log("[Image Generation] Thumbnail attempt $imgAttempt failed: " . ($imgResult['error'] ?? 'unknown'));
+        $thumbPrompt = $coreVisual . " Vertical 9:16 blog thumbnail, 1080x1920, photorealistic. No text, no logos.";
+        $imgResult = AIProviderClient::image($imageVault, $thumbPrompt);
+        if (!empty($imgResult['success']) && !empty($imgResult['url']) && validateImageUrl($imgResult['url'])) {
+            $featuredImgUrl = $imgResult['url'];
+        } else {
+            $imgError = $imgResult['error'] ?? 'Image API returned no URL';
+            error_log('[Image Generation] Thumbnail failed: ' . $imgError);
         }
+    } else {
+        $imgError = 'Image API key missing';
+    }
+    if ($featuredImgUrl === '') {
+        $featuredImgUrl = 'https://images.unsplash.com/photo-1480714378408-67cf0d13bc1b?auto=format&fit=crop&w=1200&q=80';
     }
 
     // Strip ALL images/figures from Chat API content to prevent duplicates
@@ -1396,6 +1406,16 @@ function publishItemToSelectedPlatform($userId, $item, $platform, $scheduledStr 
                 'author' => 'ColorFiind Team',
                 'meta_description' => substr(strip_tags($articleContent), 0, 160),
                 'meta_keywords' => $item['primary_keyword'] ?? '',
+                'scheduled_date' => $scheduledStr,
+            ]);
+        } catch (Throwable $e) {
+            return ['success' => false, 'error' => 'Website blog publish failed: ' . $e->getMessage()];
+        }
+    }
+    $url = Publisher::publishLocal($userId, $title, slugify($title), $articleContent, 'General', $item['primary_keyword'] ?? '', '');
+    return ['success' => true, 'url' => $url, 'message' => 'Published locally.'];
+}
+           'meta_keywords' => $item['primary_keyword'] ?? '',
                 'scheduled_date' => $scheduledStr,
             ]);
         } catch (Throwable $e) {

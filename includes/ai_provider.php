@@ -7,7 +7,7 @@ require_once __DIR__ . '/helpers.php';
 
 class AIProviderClient {
 
-    public static function chat($credentials, $prompt) {
+    public static function chat($credentials, $prompt, $timeout = 55) {
         $provider = $credentials['provider'] ?? 'custom';
         $pool = $credentials['model_pool'] ?? [];
         $key = $credentials['api_key'] ?? '';
@@ -39,7 +39,7 @@ class AIProviderClient {
             if ($provider === 'gemini') {
                 $endpoint = $credentials['endpoint'] ?: "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent";
                 $payload = ['contents' => [['parts' => [['text' => $prompt]]]]];
-                $result = curlPost($endpoint . '?key=' . $key, $payload, ['Content-Type: application/json'], 90);
+                $result = curlPost($endpoint . '?key=' . $key, $payload, ['Content-Type: application/json'], $timeout);
                 $data = $result['data'] ?? [];
                 $content = $data['candidates'][0]['content']['parts'][0]['text'] ?? '';
                 if ($result['http_code'] >= 400) {
