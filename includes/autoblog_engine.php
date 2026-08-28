@@ -1037,14 +1037,20 @@ function generateArticleHtmlFromCampaignItem($item, $userId, $activeSlot, $db, $
         $h2List = implode(' | ', $h2s);
         $angleNote = $contentAngle ? "\nCONTENT ANGLE: $contentAngle" : '';
         $secList = implode(', ', $secondaryKws);
+        $kwByVolume = '';
+        foreach ($kws as $ki => $krow) {
+            $role = ($ki === 0) ? 'PRIMARY (highest search volume — main target)' : ('SECONDARY ' . $ki . ' (supporting)');
+            $kwByVolume .= '- ' . $role . ': "' . ($krow['keyword'] ?? '') . '" | monthly volume: ' . ($krow['volume'] ?? 'n/a') . ' | difficulty: ' . ($krow['difficulty'] ?? 'n/a') . ' | intent: ' . ($krow['intent'] ?? '') . "\n";
+        }
+        $h3List = implode(' | ', array_map('strval', is_array($h3s) ? $h3s : []));
         $secOnce = '';
         foreach ($secondaryKws as $si => $sk) {
-            $secOnce .= '- Use "' . $sk . '" exactly once in H2 section ' . ($si + 2) . ".\n";
+            $secOnce .= '- Use secondary keyword "' . $sk . '" naturally 1–2 times in H2 section ' . ($si + 2) . " (do not replace it with the primary).\n";
         }
 
         $nowMonth = date('F');
         $nowYear = date('Y');
-        $prompt = "Write a complete HTML blog article about \"$title\".\nTITLE: $title\nH1: $h1\nH2: $h2List\nPRIMARY KEYWORD (H1 + first paragraph only): $primaryKw\nSECONDARY KEYWORDS: $secList\n$secOnce INTERNAL LINKS:\n$intLinkList\nEXTERNAL URLS (use only these):\n$extLinkList\n$angleNote\nRULES:\n- 700 to 900 words. FINISH the full article in this response.\n- Semantic HTML only: h1,h2,h3,p,ul,li,table. NO img/figure tags.\n- Short paragraphs (about 40-50 words).\n- Do NOT write the phrase \"This section covers key practical aspects\".\n- Do NOT copy a keyword-research table as the article body.\n- Do NOT repeat the primary keyword in every paragraph.\n- FAQ: 3 questions; mention a secondary keyword in one answer.\n- Year $nowYear. No month name in headings.\n- Return ONLY article HTML.";
+        $prompt = "Write a publication-ready HTML magazine article (editorial theme) about \"$title\".\n\nTITLE: $title\nH1 (must include the PRIMARY keyword): $h1\nH2 SECTIONS (use these, in order): $h2List\nH3 SUPPORT: $h3List\n\nGOOGLE KEYWORD PLANNER TARGETS (exact volume — do NOT invent extra keywords or fake volumes):\n$kwByVolume\nKEYWORD PLACEMENT:\n- PRIMARY \"$primaryKw\" = highest volume. Use in: H1, first 40–60 words (direct answer), one H2 or H3, and the closing paragraph. Do NOT repeat it in every paragraph.\n$secOnce- Never stuff. Never invent keywords. Never paste a Keyword Research Data table as the article body.\n\nINTERNAL LINKS (weave 1–2 naturally with the given anchor text — ONLY these URLs):\n$intLinkList\nEXTERNAL REFERENCES (cite at least 3, ONLY these URLs, no invented Wikipedia/Moz links):\n$extLinkList\n$angleNote\n\nLENGTH: 1,000 to 1,200 words of original body copy. Finish the full article in this response.\n\nFORMAT / THEME (semantic HTML only: header, h1, h2, h3, p, ul, ol, li, table, blockquote, strong. NO img, figure, html, head, or body tags):\n1) <header> with <h1> then a one-sentence dek.\n2) Opening: AEO direct answer in the first paragraph (what it is + who it is for + the practical takeaway).\n3) Each H2: 2–4 short paragraphs (40–50 words each) that are precise and informative, not filler.\n4) At least TWO real <table>s: (a) comparison or decision matrix, (b) checklist / specs / steps. Tables must teach the topic, not list keywords.\n5) One short bullet list of key takeaways (GEO: quotable facts, named entities, clear definitions).\n6) FAQ as <h2>Frequently Asked Questions</h2> then 4 items: each <h3> is a real search-style question; <p> is a 2–3 sentence direct answer. Put one secondary keyword in one FAQ answer.\n7) Close with a practical next-step paragraph using the primary keyword once.\n\nSEO + AEO + GEO:\n- SEO: logical H1→H2→H3, primary in intro, secondaries in later sections, descriptive anchors, year $nowYear where natural.\n- AEO: answer-first, FAQ questions people actually ask, snippet-ready short definitions.\n- GEO: entity-clear writing (who/what/where), cite only the URLs above, no invented statistics or quotes.\n- Do NOT write \"This section covers key practical aspects\". No AI cliches. No month name ($nowMonth) in headings.\n- Return ONLY the article HTML.";
 
         $chatResult = ['success' => false];
         if ($wantMaster) {
