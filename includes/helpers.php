@@ -38,12 +38,15 @@ function nowString() {
 }
 
 function curlPost($url, $payload, $headers = [], $timeout = 12) {
+    $timeout = max(3, intval($timeout));
     $ch = curl_init($url);
     curl_setopt_array($ch, [
         CURLOPT_POST => true,
         CURLOPT_POSTFIELDS => is_array($payload) ? json_encode($payload) : $payload,
         CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_CONNECTTIMEOUT => min(8, $timeout),
         CURLOPT_TIMEOUT => $timeout,
+        CURLOPT_NOSIGNAL => 1,
         CURLOPT_HTTPHEADER => $headers,
         CURLOPT_SSL_VERIFYPEER => false,
     ]);

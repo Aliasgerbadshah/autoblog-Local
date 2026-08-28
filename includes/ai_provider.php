@@ -17,8 +17,9 @@ class AIProviderClient {
             return ['success' => false, 'error' => 'Chat API key is missing.'];
         }
 
-        // Gemini auto model pool
-        if ($provider === 'gemini' && !empty($credentials['auto_model']) && count($pool) > 1) {
+        // Gemini auto model pool — never loop on short Hostinger requests (nginx 504 at ~60s).
+        $allowPool = ($timeout >= 50) && (PHP_SAPI === 'cli');
+        if ($allowPool && $provider === 'gemini' && !empty($credentials['auto_model']) && count($pool) > 1) {
             $ordered = strlen($prompt) > 7000 ? $pool : array_reverse($pool);
             $last = ['success' => false, 'error' => 'No Gemini model succeeded.'];
             foreach ($ordered as $candidate) {
@@ -73,7 +74,7 @@ class AIProviderClient {
                 $payload = ['model' => $model, 'max_tokens' => 4000, 'messages' => [['role' => 'user', 'content' => $prompt]]];
             } else {
                 $headers = ['Authorization: Bearer ' . $key, 'Content-Type: application/json'];
-                $payload = ['model' => $model, 'messages' => [['role' => 'user', 'content' => $prompt]], 'temperature' => 0.75];
+                $payload = ['model' => $model, 'messages' => [['role' => 'user', 'content' => $prompt]], 'temperature' => 0.75, 'max_tokens' => 2200];
             }
 
             $result = curlPost($endpoint, $payload, $headers, $timeout);

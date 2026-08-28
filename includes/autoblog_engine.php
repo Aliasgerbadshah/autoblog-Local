@@ -977,8 +977,9 @@ function relatedStockPhotoUrl($title, $keyword) {
 }
 
 function generateArticleHtmlFromCampaignItem($item, $userId, $activeSlot, $db, $contentAngle = '', $wantMaster = true) {
-    @set_time_limit(90);
-    @ini_set('max_execution_time', '90');
+    $webLimit = (PHP_SAPI === 'cli') ? 90 : 45;
+    @set_time_limit($webLimit);
+    @ini_set('max_execution_time', (string)$webLimit);
     $headings = json_decode($item['headings'] ?? '{}', true) ?: [];
     $kws = json_decode($item['keyword_data'] ?? '[]', true) ?: [];
     $links = json_decode($item['internal_links'] ?? '[]', true) ?: [];
@@ -1043,11 +1044,20 @@ function generateArticleHtmlFromCampaignItem($item, $userId, $activeSlot, $db, $
 
         $nowMonth = date('F');
         $nowYear = date('Y');
-        $prompt = "Write a complete HTML blog article about \"$title\".\nTITLE: $title\nH1: $h1\nH2: $h2List\nPRIMARY KEYWORD (H1 + first paragraph only): $primaryKw\nSECONDARY KEYWORDS: $secList\n$secOnce INTERNAL LINKS:\n$intLinkList\nEXTERNAL URLS (use only these):\n$extLinkList\n$angleNote\nRULES:\n- 900 to 1,200 words. Finish the article.\n- Semantic HTML only: h1,h2,h3,p,ul,li,table. NO img/figure tags.\n- Short paragraphs (about 40-50 words).\n- Do NOT write the phrase \"This section covers key practical aspects\".\n- Do NOT copy a keyword-research table as the article body.\n- Do NOT repeat the primary keyword in every paragraph.\n- FAQ: 3 questions; mention a secondary keyword in one answer.\n- Year $nowYear. No month name in headings.\n- Return ONLY article HTML.";
+        $prompt = "Write a complete HTML blog article about \"$title\".\nTITLE: $title\nH1: $h1\nH2: $h2List\nPRIMARY KEYWORD (H1 + first paragraph only): $primaryKw\nSECONDARY KEYWORDS: $secList\n$secOnce INTERNAL LINKS:\n$intLinkList\nEXTERNAL URLS (use only these):\n$extLinkList\n$angleNote\nRULES:\n- 700 to 900 words. FINISH the full article in this response.\n- Semantic HTML only: h1,h2,h3,p,ul,li,table. NO img/figure tags.\n- Short paragraphs (about 40-50 words).\n- Do NOT write the phrase \"This section covers key practical aspects\".\n- Do NOT copy a keyword-research table as the article body.\n- Do NOT repeat the primary keyword in every paragraph.\n- FAQ: 3 questions; mention a secondary keyword in one answer.\n- Year $nowYear. No month name in headings.\n- Return ONLY article HTML.";
 
         $chatResult = ['success' => false];
         if ($wantMaster) {
-            $chatResult = AIProviderClient::chat($chatVault, $prompt, 35);
+            $chatVault['auto_model'] = false;
+            $chatVault['model_pool'] = [];
+            if (PHP_SAPI !== 'cli' && (($chatVault['provider'] ?? '') === 'pollinations')) {
+                $pm = strtolower(trim((string)($chatVault['model'] ?? '')));
+                if ($pm === '' || $pm === 'openai' || $pm === 'openai-large' || $pm === 'gpt-4o' || $pm === 'gpt-4o-mini') {
+                    $chatVault['model'] = 'openai-fast';
+                }
+            }
+            $chatTimeout = (PHP_SAPI === 'cli') ? 50 : 18;
+            $chatResult = AIProviderClient::chat($chatVault, $prompt, $chatTimeout);
         } else {
             $chatResult = ['success' => false, 'error' => 'Draft-only write (no Chat on this request).'];
         }
@@ -1088,20 +1098,23 @@ function generateArticleHtmlFromCampaignItem($item, $userId, $activeSlot, $db, $
     }
 
     $featuredImgUrl = '';
-    $coreVisual = "Photorealistic editorial photo of the core idea of \"$title\" about $keyword. Real-world scene, natural light, no text, no logos.";
     $imgError = '';
-    if ($chatUsed && !empty($imageVault['api_key'])) {
-        $thumbPrompt = $coreVisual . " Landscape blog thumbnail, no text, no logos.";
-        $imgResult = AIProviderClient::image($imageVault, $thumbPrompt);
-        if (!empty($imgResult['success']) && !empty($imgResult['url'])) {
-            $featuredImgUrl = $imgResult['url'];
-        } else {
-            $imgError = $imgResult['error'] ?? 'Image API returned no URL';
-            error_log('[Image Generation] Thumbnail failed: ' . $imgError);
+    // Hostinger nginx ~60s: never wait on HuggingFace/Gemini/OpenAI image (those use 15–180s).
+    // Pollinations is URL-only (no download). Anything else → related stock photo so the article is not empty.
+    if ($chatUsed) {
+        $imgProvider = strtolower((string)($imageVault['provider'] ?? ''));
+        if ($imgProvider === 'pollinations' && !empty($imageVault['api_key'])) {
+            $thumbPrompt = "Photorealistic editorial photo of the core idea of \"$title\" about $keyword. Real-world scene, natural light, no text, no logos. Landscape blog thumbnail.";
+            $imgResult = AIProviderClient::image($imageVault, $thumbPrompt);
+            if (!empty($imgResult['success']) && !empty($imgResult['url'])) {
+                $featuredImgUrl = $imgResult['url'];
+            } else {
+                $imgError = $imgResult['error'] ?? 'Image API returned no URL';
+            }
         }
-    }
-    if ($chatUsed && $featuredImgUrl === '') {
-        $featuredImgUrl = relatedStockPhotoUrl($title, $keyword);
+        if ($featuredImgUrl === '') {
+            $featuredImgUrl = relatedStockPhotoUrl($title, $keyword);
+        }
     }
 
     // Strip ALL images/figures from Chat API content to prevent duplicates
@@ -1257,7 +1270,7 @@ HTML;
     }
 
     return [
-        'success' => true,
+        'success' => $wantMaster ? $chatUsed : true,
         'html_path' => $htmlUrl,
         'html_file' => $filePath,
         'used_chat_api' => $chatUsed,

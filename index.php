@@ -2634,7 +2634,7 @@ function handleApiRoute($uri) {
         $stmt->execute([$itemId]);
         $item = $stmt->fetch();
         if (!$item || intval($item['camp_user_id']) !== intval($userId)) jsonResponse(['error' => 'Item not found.'], 404);
-        @set_time_limit(180);
+        @set_time_limit(45);
         $slot = intval($item['slot_number'] ?? $activeSlot);
         $htmlResult = generateArticleHtmlReliable($item, $userId, $slot, $db);
         $chatOk = !empty($htmlResult['used_chat_api']);
