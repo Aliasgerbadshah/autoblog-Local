@@ -7,11 +7,31 @@ require_once __DIR__ . '/helpers.php';
 
 class AIProviderClient {
 
+    public static function remapGeminiModel($model) {
+        $m = strtolower(trim((string)$model));
+        $m = preg_replace('#^models/#', '', $m);
+        $retired = [
+            'gemini-2.5-flash-lite' => 'gemini-3.5-flash-lite',
+            'gemini-2.5-flash' => 'gemini-3.5-flash',
+            'gemini-2.0-flash-lite' => 'gemini-3.5-flash-lite',
+            'gemini-2.0-flash' => 'gemini-3.5-flash-lite',
+            'gemini-2.0-flash-001' => 'gemini-3.5-flash-lite',
+            'gemini-2.0-flash-lite-001' => 'gemini-3.5-flash-lite',
+        ];
+        return $retired[$m] ?? ($model ?: 'gemini-3.5-flash-lite');
+    }
+
     public static function chat($credentials, $prompt, $timeout = 55) {
         $provider = $credentials['provider'] ?? 'custom';
         $pool = $credentials['model_pool'] ?? [];
         $key = $credentials['api_key'] ?? '';
-        $model = $credentials['model'] ?? ($provider === 'gemini' ? 'gemini-2.5-flash-lite' : 'gpt-4o-mini');
+        $model = $credentials['model'] ?? ($provider === 'gemini' ? 'gemini-3.5-flash-lite' : 'gpt-4o-mini');
+        if ($provider === 'gemini') {
+            $model = self::remapGeminiModel($model);
+            if (is_array($pool) && $pool) {
+                $pool = array_values(array_unique(array_map([self::class, 'remapGeminiModel'], $pool)));
+            }
+        }
 
         if (empty($key)) {
             return ['success' => false, 'error' => 'Chat API key is missing.'];
@@ -38,7 +58,11 @@ class AIProviderClient {
 
         try {
             if ($provider === 'gemini') {
-                $endpoint = $credentials['endpoint'] ?: "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent";
+                $savedEp = (string)($credentials['endpoint'] ?? '');
+                if ($savedEp !== '' && preg_match('/gemini-2\.[05]-flash/i', $savedEp)) {
+                    $savedEp = '';
+                }
+                $endpoint = $savedEp ?: "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent";
                 $payload = ['contents' => [['parts' => [['text' => $prompt]]]]];
                 $result = curlPost($endpoint . '?key=' . $key, $payload, ['Content-Type: application/json'], $timeout);
                 $data = $result['data'] ?? [];
