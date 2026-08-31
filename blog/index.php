@@ -42,6 +42,8 @@ if (file_exists($dbFile)) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo htmlspecialchars($cfg['site_name']); if ($category) echo ' — ' . htmlspecialchars($category); if ($search) echo ' — Search: ' . htmlspecialchars($search); ?></title>
     <meta name="description" content="<?php echo htmlspecialchars($cfg['site_tagline']); ?>">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="<?php echo htmlspecialchars(rtrim($cfg['site_url'], '/') . '/'); ?>">
     <link rel="alternate" type="application/rss+xml" title="<?php echo htmlspecialchars($cfg['site_name']); ?>" href="<?php echo $cfg['site_url']; ?>/rss.xml">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

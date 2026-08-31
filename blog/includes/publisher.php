@@ -112,6 +112,13 @@ class WebsitePublisher {
         }
         
         $fullUrl = $this->config['site_url'] . "/posts/{$year}/{$month}/{$slug}/";
+        if (!function_exists('recordInternalLinkRow')) {
+            $il = ($this->config['autoblog_root'] ?? '') . '/includes/internal_links.php';
+            if (is_file($il)) require_once $il;
+        }
+        if (function_exists('recordInternalLinkRow')) {
+            recordInternalLinkRow('website', $title, $fullUrl, is_array($tags) ? (string)($tags[0] ?? '') : (string)$tags, $isDraft ? 'scheduled' : 'published');
+        }
         
         return [
             'success' => true,
@@ -465,14 +472,15 @@ class WebsitePublisher {
         $rss .= '<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">' . "\n";
         $rss .= '<channel>' . "\n";
         $rss .= '<title>' . htmlspecialchars($cfg['site_name']) . '</title>' . "\n";
-        $rss .= '<link>' . $cfg['site_url'] . '</link>' . "\n";
+        $rss .= '<link>' . rtrim($cfg['site_url'], '/') . '/</link>' . "\n";
         $rss .= '<description>' . htmlspecialchars($cfg['site_tagline']) . '</description>' . "\n";
-        $rss .= '<atom:link href="' . $cfg['site_url'] . '/rss.xml" rel="self" type="application/rss+xml"/>' . "\n";
+        $rss .= '<atom:link href="' . rtrim($cfg['site_url'], '/') . '/rss.xml" rel="self" type="application/rss+xml"/>' . "\n";
         
         foreach ($posts as $p) {
+            $itemUrl = $this->absolutePostUrl($p['url'] ?? '');
             $rss .= '<item>' . "\n";
             $rss .= '<title>' . htmlspecialchars($p['title']) . '</title>' . "\n";
-            $rss .= '<link>' . $cfg['site_url'] . $p['url'] . '</link>' . "\n";
+            $rss .= '<link>' . $itemUrl . '</link>' . "\n";
             $rss .= '<description>' . htmlspecialchars($p['meta_description'] ?: substr(strip_tags($p['content_html'] ?? ''), 0, 200)) . '</description>' . "\n";
             $rss .= '<pubDate>' . date('r', strtotime($p['published_date'])) . '</pubDate>' . "\n";
             $rss .= '<author>' . htmlspecialchars($p['author'] ?? 'ColorFiind Team') . '</author>' . "\n";

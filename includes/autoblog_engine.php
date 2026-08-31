@@ -8,6 +8,7 @@ require_once __DIR__ . '/helpers.php';
 require_once __DIR__ . '/anti_ai_sanitizer.php';
 require_once __DIR__ . '/research_agent.php';
 require_once __DIR__ . '/ai_provider.php';
+require_once __DIR__ . '/internal_links.php';
 
 class BloggerOAuthHelper {
     public static function refreshAccessToken($clientId, $clientSecret, $refreshToken) {
@@ -963,17 +964,16 @@ function articleLooksLikeDraftHtml($html) {
         || (stripos($h, 'Do not treat this placeholder as the published article') !== false);
 }
 
-function relatedStockPhotoUrl($title, $keyword) {
-    $pool = [
-        'https://images.unsplash.com/photo-1480714378408-67cf0d13bc1b?auto=format&fit=crop&w=1200&q=80',
-        'https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=1200&q=80',
-        'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=1200&q=80',
-        'https://images.unsplash.com/photo-1551836022-d5d88e9218df?auto=format&fit=crop&w=1200&q=80',
-        'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80',
-        'https://images.unsplash.com/photo-1499750310107-5fef28a66643?auto=format&fit=crop&w=1200&q=80',
-    ];
-    $i = abs(crc32((string)$title . '|' . (string)$keyword)) % count($pool);
-    return $pool[$i];
+function buildTopicImagePrompt($title, $keyword, $h2s = []) {
+    $h2 = implode(', ', array_slice(array_map('strval', is_array($h2s) ? $h2s : []), 0, 3));
+    $subject = trim($title !== '' ? $title : $keyword);
+    return "Photorealistic landscape blog thumbnail that shows the MOTIVE of this topic, not a generic office. The picture must depict recognizable objects from: {$subject}. Topic keyword: {$keyword}. Example: if the topic is UI/UX color, show color palettes, app interface screens, design software, and vibrant UI color themes on a monitor. Related angles: {$h2}. Natural lighting, real scene, no text, no logos, no watermarks, no collage.";
+}
+
+function relatedStockPhotoUrl($title, $keyword, $h2s = []) {
+    $prompt = buildTopicImagePrompt($title, $keyword, $h2s);
+    $seed = abs(crc32((string)$title . '|' . (string)$keyword)) % 9999;
+    return 'https://gen.pollinations.ai/image/' . rawurlencode($prompt) . '?model=flux&width=1280&height=720&nologo=true&seed=' . $seed;
 }
 
 function generateArticleHtmlFromCampaignItem($item, $userId, $activeSlot, $db, $contentAngle = '', $wantMaster = true) {
@@ -984,6 +984,19 @@ function generateArticleHtmlFromCampaignItem($item, $userId, $activeSlot, $db, $
     $kws = json_decode($item['keyword_data'] ?? '[]', true) ?: [];
     $links = json_decode($item['internal_links'] ?? '[]', true) ?: [];
     $ext = json_decode($item['external_links'] ?? '[]', true) ?: [];
+    $domainUrl = '';
+    try {
+        if (!empty($item['campaign_id']) && $db) {
+            $cs = $db->prepare('SELECT domain_url, target_platform FROM campaigns WHERE id = ?');
+            $cs->execute([$item['campaign_id']]);
+            $campRow = $cs->fetch();
+            $domainUrl = $campRow['domain_url'] ?? '';
+        }
+    } catch (Throwable $e) {}
+    $plat = $item['target_platform'] ?? 'blogger';
+    if (function_exists('mergeRelatedLinksIntoPlan')) {
+        $links = mergeRelatedLinksIntoPlan($links, $item['title'] ?? '', $item['primary_keyword'] ?? '', $plat, $domainUrl);
+    }
     $prompts = json_decode($item['image_prompts'] ?? '[]', true) ?: [];
 
     $title = $item['title'] ?? 'Untitled Article';
@@ -1428,7 +1441,11 @@ function publishItemToSelectedPlatform($userId, $item, $platform, $scheduledStr 
         $vault = SecurityVault::getApiCredentials($userId, 'blogger_api');
         $blogId = $vault['blogger_blog_id'] ?? '';
         if (empty($blogId)) return ['success' => false, 'error' => 'Blogger Blog ID is missing in Vault.'];
-        return Publisher::publishBlogger($userId, $blogId, $title, $articleContent, $vault['client_id'] ?? '', $vault['client_secret'] ?? '', $vault['refresh_token'] ?? '', $scheduledStr);
+        $res = Publisher::publishBlogger($userId, $blogId, $title, $articleContent, $vault['client_id'] ?? '', $vault['client_secret'] ?? '', $vault['refresh_token'] ?? '', $scheduledStr);
+        if (!empty($res['success']) && !empty($res['url']) && function_exists('recordInternalLinkRow')) {
+            recordInternalLinkRow('blogger', $title, $res['url'], $item['primary_keyword'] ?? '', !empty($scheduledStr) ? 'scheduled' : 'published');
+        }
+        return $res;
     }
     if ($platform === 'wordpress') {
         $vault = SecurityVault::getApiCredentials($userId, 'wordpress_api');
@@ -1436,7 +1453,11 @@ function publishItemToSelectedPlatform($userId, $item, $platform, $scheduledStr 
     }
     if ($platform === 'website') {
         if (function_exists('publishToWebsiteBlog')) {
-            return publishToWebsiteBlog($item, $title, $articleContent, $scheduledStr);
+            $res = publishToWebsiteBlog($item, $title, $articleContent, $scheduledStr);
+            if (!empty($res['success']) && !empty($res['url']) && function_exists('recordInternalLinkRow')) {
+                recordInternalLinkRow('website', $title, $res['url'], $item['primary_keyword'] ?? '', !empty($scheduledStr) ? 'scheduled' : 'published');
+            }
+            return $res;
         }
         $pubFile = dirname(__DIR__) . '/blog/includes/publisher.php';
         $alt = dirname(__DIR__, 2) . '/blog/includes/publisher.php';

@@ -1570,6 +1570,9 @@ function handleApiRoute($uri) {
         }
         
         if ($result && !empty($result['success'])) {
+            if (function_exists('recordInternalLinkRow') && !empty($result['url'])) {
+                recordInternalLinkRow($platform === 'website' ? 'website' : 'blogger', $title, $result['url'], $item['primary_keyword'] ?? '', 'published');
+            }
             // Update item status
             $stmt = $db->prepare("UPDATE campaign_items SET article_status = 'Published' WHERE id = ?");
             $stmt->execute([$itemId]);
@@ -2216,6 +2219,19 @@ function handleApiRoute($uri) {
     if ($uri === '/api/topics-csv/sync' && $method === 'POST') {
         $count = syncTopicsCsv();
         jsonResponse(['success' => true, 'count' => $count, 'message' => "CSV synced with $count topics."]);
+    }
+
+    if (preg_match('#^/api/internal-links/(blogger|website)/download$#', $uri, $m) && $method === 'GET') {
+        $plat = $m[1];
+        $path = function_exists('internalLinksCsvPath') ? internalLinksCsvPath($plat) : (__DIR__ . '/data/internal_links_' . $plat . '.csv');
+        if (!is_file($path)) {
+            $fp = @fopen($path, 'w');
+            if ($fp) { fputcsv($fp, ['Title', 'URL', 'Keyword', 'Status', 'Platform', 'Updated']); fclose($fp); }
+        }
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename="internal_links_' . $plat . '_' . date('Y-m-d') . '.csv"');
+        readfile($path);
+        exit;
     }
 
     // ========== CUSTOM TOPICS CSV — User-provided topics for blog generation ==========
