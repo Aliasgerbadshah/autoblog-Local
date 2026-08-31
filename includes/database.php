@@ -133,6 +133,8 @@ function initAutoblogDB() {
     try { $db->exec('ALTER TABLE campaigns ADD COLUMN no_end INTEGER DEFAULT 0'); } catch (Exception $e) {}
     try { $db->exec('ALTER TABLE campaign_items ADD COLUMN html_retry_count INTEGER DEFAULT 0'); } catch (Exception $e) {}
     try { $db->exec('ALTER TABLE campaign_items ADD COLUMN last_error TEXT'); } catch (Exception $e) {}
+    try { $db->exec('ALTER TABLE campaign_items ADD COLUMN schedule_email_sent INTEGER DEFAULT 0'); } catch (Exception $e) {}
+    try { $db->exec('ALTER TABLE campaign_items ADD COLUMN topic_source TEXT'); } catch (Exception $e) {}
     try { $db->exec('ALTER TABLE scheduled_queue ADD COLUMN retry_count INTEGER DEFAULT 0'); } catch (Exception $e) {}
     try { $db->exec('ALTER TABLE scheduled_queue ADD COLUMN campaign_item_id INTEGER'); } catch (Exception $e) {}
 

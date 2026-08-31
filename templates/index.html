@@ -652,15 +652,16 @@
         <div id="tab-auto-blog" class="tab-content">
             <div class="card" style="border-top:4px solid #8b5cf6;">
                 <div class="card-header"><h2 class="card-title">🤖 Auto Blog — Daily Create, Check, Post</h2></div>
-                <p style="color:var(--text-muted);margin-bottom:12px;">This is not Human Article Writer. Pick start date, optional end date (or No end date), posts per day, and destination. While <strong>Active</strong> it creates one day of posts from Custom Topics, gets keywords from Keyword Planner only, writes HTML, then uses Blogger scheduling. It does not stop until you set Inactive or the end date.</p>
+                <p style="color:var(--text-muted);margin-bottom:12px;">This is not Human Article Writer. You start <strong>once</strong>. After that the software does the rest every day until you <strong>Set Inactive</strong> or the end date is reached. No end date = it keeps running daily.</p>
                 <div style="background:var(--inner-bg);border:1px solid var(--border-light);border-radius:12px;padding:14px 16px;margin-bottom:16px;font-size:0.85rem;line-height:1.6;">
-                    <strong>Start does not post to Blogger.</strong> HTML is not on the Dashboard Published list. Look at <strong>Auto Blog Queue</strong> below.
+                    <strong>How Auto Blog actually works</strong>
                     <ul style="margin:8px 0 0 18px;color:var(--text-muted);">
-                        <li><strong>Start Auto Blog Campaign</strong> turns the job Active and creates <em>today’s first Draft HTML</em> from Custom Topics + Keyword Planner (no Chat — so nginx does not 504). You should see a row in Auto Blog Queue. Click <strong>View</strong> for the draft, then <strong>Master HTML</strong> for Chat + image.</li>
-                        <li>It does <strong>not</strong> publish live. Blogger / website post happens later when status is <strong>HTML Ready</strong> (Chat article, not Draft) and you click <strong>Run Auto Cron</strong> (or Hostinger cron runs).</li>
-                        <li>If schedule date/time is in the future, Blogger gets a scheduled post (<code>publishDate</code>). If the time is already past, it publishes now.</li>
-                        <li><strong>Generate HTML Now</strong> / <strong>Master HTML</strong> writes one Chat article at a time. Do not run two at once (Hostinger 60s nginx timeout).</li>
-                        <li><strong>Set Active / Inactive</strong> pause or resume an existing job. Use Start first if the badge says Not started.</li>
+                        <li><strong>Start once.</strong> Example: 2 blogs per day at 6:00 pm and 8:30 pm. You do not click Master HTML and you do not click Run Auto Cron every day.</li>
+                        <li><strong>1 hour before each time</strong> the software writes Master HTML (Chat + related image), then schedules that exact time on Blogger (<code>publishDate</code>) or Website Blog.</li>
+                        <li>At 5:00 pm it prepares the 6:00 pm post. At 7:30 pm it prepares the 8:30 pm post. Blogger/Website then go live at the scheduled time.</li>
+                        <li>You get a <strong>blog email</strong> with date, time, platform, remaining custom topics, and the Master HTML itself — not a “campaign started” confirmation.</li>
+                        <li>Custom Topics are used first. If that list is empty, it researches a <em>new</em> topic that is not related to previous blogs (same idea as Human Article Writer) and <strong>does not stop</strong>.</li>
+                        <li>PHP on Hostinger cannot wake itself. Keep this dashboard open, <em>or</em> paste the tick URL below into Hostinger Cron Jobs <strong>once</strong> (every 5 minutes). That is the clock — not a daily button.</li>
                     </ul>
                 </div>
                 <form onsubmit="startAutoBlogCampaign(event)">
@@ -691,14 +692,13 @@
                         <div id="auto-calendar-dates-display" style="margin-top:12px;"></div>
                     </div>
                     <button type="submit" class="btn btn-purple" style="margin-top:14px;">🚀 Start Auto Blog Campaign</button>
-                    <button type="button" class="btn btn-accent" style="margin-left:8px" onclick="generateAutoHtmlNow()">⚡ Generate HTML Now</button>
-                    <button type="button" class="btn" style="background:#0f172a;margin-left:8px" onclick="runAutoCronNow()">⏱️ Run Auto Cron</button>
+                    <button type="button" class="btn btn-danger" style="margin-left:8px" onclick="toggleAutoBlog(false)">⏹ Stop (Inactive)</button>
                 </form>
                 <div id="auto-project-status" style="margin-top:12px;font-weight:700;"></div>
             </div>
             <div class="card" id="auto-cron-status-card">
-                <div class="card-header"><h2 class="card-title">⏱️ Cron Health</h2></div>
-                <div id="auto-cron-health" style="font-size:0.9rem;line-height:1.7;color:var(--text-muted);">Loading cron status...</div>
+                <div class="card-header"><h2 class="card-title">⏱️ Auto Blog worker</h2></div>
+                <div id="auto-cron-health" style="font-size:0.9rem;line-height:1.7;color:var(--text-muted);">Loading worker status...</div>
             </div>
             <div class="card">
                 <div class="card-header">
@@ -707,7 +707,7 @@
                 </div>
                 <table>
                     <thead><tr><th>Day/Slot</th><th>Blog</th><th>Keywords (volume / difficulty)</th><th>Article Status</th><th>Schedule</th><th>HTML</th><th>Tries</th><th>Last check / error</th></tr></thead>
-                    <tbody id="auto-progress-tbody"><tr><td colspan="8">No Auto Blog campaign yet. Fill the form above and start one. This table is where the HTML appears — not Dashboard Published, and not Blogger until cron schedules it.</td></tr></tbody>
+                    <tbody id="auto-progress-tbody"><tr><td colspan="8">No Auto Blog campaign yet. Start once. Topics appear here; Master HTML is written 1 hour before each posting time.</td></tr></tbody>
                 </table>
             </div>
         </div>
@@ -1184,6 +1184,9 @@
                 const data = await res.json();
                 const summary = Array.isArray(data) ? data : (data.summary || []);
                 const services = data.services || {};
+
+                if (services.blogger_api) {
+                    if (services.blogger_api.blogger_blog_id) document.getElementById('v-blog-id').value = servi| {};
 
                 if (services.blogger_api) {
                     if (services.blogger_api.blogger_blog_id) document.getElementById('v-blog-id').value = services.blogger_api.blogger_blog_id;
@@ -2006,7 +2009,7 @@
         async function startAutoBlogCampaign(e) {
             e.preventDefault();
             const status=document.getElementById('auto-project-status');
-            status.innerText='Starting Auto Blog campaign (no email approval)...';
+            status.innerText='Starting Auto Blog (topics only — Master HTML waits until 1 hour before each time)...';
             const settings={domain_url:document.getElementById('auto-project-domain').value,target_country:document.getElementById('auto-project-country').value,target_language:document.getElementById('auto-project-language').value,destination_platform:document.getElementById('auto-project-platform').value,chat_credential_id:document.getElementById('auto-project-chat-account').value,image_credential_id:document.getElementById('auto-project-image-account').value,seo_credential_id:document.getElementById('auto-project-seo-account').value,blogger_credential_id:document.getElementById('auto-project-blogger-account').value};
             await fetch('/api/projects/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(settings)});
             const postingTimes=[...document.querySelectorAll('.auto-project-posting-time')].map(x=>x.value);
@@ -2015,47 +2018,23 @@
             const res=await fetch('/api/auto-blog/start',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({domain_url:settings.domain_url,country:settings.target_country,language_code:settings.target_language,posts_per_day:Number(document.getElementById('auto-project-posts-per-day').value),start_date:startDate,end_date:document.getElementById('auto-project-end-date').value||null,no_end:noEnd?1:0,posting_times:postingTimes,target_platform:document.getElementById('auto-project-platform').value,keyword_source:'planner'})});
             const parsed=await readJson(res); const data=parsed.data||{};
             if(!parsed.ok){status.innerText='🔴 '+(data.error||'Auto Blog start failed.');return;}
-            const item = data.item || {};
-            let extra = '';
-            if (item.html_path) extra = ' Open View in Auto Blog Queue: ' + item.html_path;
-            status.innerText='🟢 '+(data.message||'Auto Blog is Active. Nothing posted to Blogger yet.')+extra;
+            status.innerText='🟢 '+(data.message||'Auto Blog is Active.');
+            startAutoBlogHeartbeat();
             loadAutoBlogStatus();
-            if (data.created && !data.html && !item.html_path) await generateAutoHtmlNow();
-            else if (!data.created) status.innerText='🟠 '+(data.message||'Job is Active but no draft was created. Add Custom Topics, Test Keyword Planner, then Start again. Nothing was posted.');
         }
-        async function generateAutoHtmlNow() {
-            const status=document.getElementById('auto-project-status');
-            status.innerText='Writing HTML from drafts (one article at a time)...';
-            try {
-                const data = await (await fetch('/api/auto-blog/status')).json();
-                if (!data.campaign) { status.innerText='🔴 No Auto Blog campaign. Start one first.'; return; }
-                const all = data.items||[];
-                if (!all.length) { status.innerText='🟠 Auto Blog Queue is empty. Start did not create a draft (need Custom Topics + working Keyword Planner). Nothing was posted to Blogger.'; loadAutoBlogStatus(); return; }
-                const items = all.filter(x => !x.html_path || ['Not Created','Regenerating HTML','Draft HTML'].includes(x.article_status));
-                if (!items.length) { status.innerText='🟢 Queue already has HTML files. They are NOT live on Blogger yet. Open View in Auto Blog Queue, then click Run Auto Cron to schedule/publish.'; loadAutoBlogStatus(); return; }
-                let ok=0, fail=0;
-                for (const item of items) {
-                    status.innerText='Writing HTML: ' + item.title + ' ...';
-                    const res = await fetch('/api/campaign-item/generate-html/' + item.id, {method:'POST'});
-                    const parsed = await readJson(res); const row = parsed.data||{};
-                    if (parsed.ok && row.success) ok++; else fail++;
-                    loadAutoBlogStatus();
-                }
-                status.innerText='🟢 HTML step done. Created '+ok+', failed '+fail+'. HTML is in Auto Blog Queue (View). Still not posted. Click Run Auto Cron to schedule/publish HTML Ready rows.';
-            } catch(e) { status.innerText='🔴 HTML error: '+e.message; }
-        }
+        async function generateAutoHtmlNow() { loadAutoBlogStatus(); }
         async function runAutoCronNow() {
-            const status=document.getElementById('auto-project-status');
-            status.innerText='Running Auto Cron now...';
             try {
-                const res = await fetch('/api/auto-blog/run', {method:'POST'});
-                const parsed = await readJson(res); const data = parsed.data||{};
-                const auto = data.auto || {};
-                const msg = (data.message||'') + '\\nLast run: ' + (data.last_run_at||'') + '\\nHTML created this run: ' + (auto.html||0) + '\\nScheduled: ' + (auto.scheduled||0) + '\\nPublished: ' + (auto.published||0) + '\\nStill waiting HTML: ' + (auto.waiting_html||0);
-                alert(parsed.ok ? '✅ ' + msg : '🔴 ' + (data.error||'Failed'));
-                status.innerText = parsed.ok ? '🟢 ' + msg : '🔴 ' + (data.error||'Failed');
+                await fetch('/api/auto-blog/run', {method:'POST'});
                 loadAutoBlogStatus();
-            } catch(e) { alert('Error: ' + e.message); }
+            } catch(e) {}
+        }
+        let _autoBlogHeartbeat = null;
+        function startAutoBlogHeartbeat() {
+            if (_autoBlogHeartbeat) return;
+            _autoBlogHeartbeat = setInterval(async () => {
+                try { await fetch('/api/auto-blog/run', {method:'POST'}); loadAutoBlogStatus(); } catch(e) {}
+            }, 120000);
         }
         async function loadAutoBlogStatus() {
             const health = document.getElementById('auto-cron-health');
@@ -2070,23 +2049,26 @@
                 const jobOn = Number(job.enabled||0)===1;
                 const st = document.getElementById('auto-job-state');
                 if (st) { st.className = 'badge ' + (jobOn?'badge-success':'badge-warning'); st.innerText = jobOn ? 'Active' : (job.id ? 'Inactive' : 'Not started'); }
-
-                health.innerHTML = `<p><strong>Last cron run:</strong> ${escapeHtml(String(last))} ${working ? '<span class="badge badge-success">Working (ran in last 15 min)</span>' : '<span class="badge badge-warning">Not seen recently — click Run Auto Cron Now</span>'}</p>
-                    <p>Source: ${escapeHtml(cron.last_source||'—')} · HTML created last run: ${cron.last_html||0} · Scheduled: ${cron.last_scheduled||0} · Published: ${cron.last_published||0} · Failures: ${cron.last_failed||0}</p>
-                    <p style="margin-top:8px;">Approve in Human Article Writer writes HTML in that click. This timestamp only changes when cron / Run Cron Now runs.</p>`;
+                if (jobOn) startAutoBlogHeartbeat();
+                const tickUrl = data.tick_url || cron.tick_url || '';
+                const left = data.custom_topics_left;
+                health.innerHTML = `<p><strong>Last worker run:</strong> ${escapeHtml(String(last))} ${working ? '<span class="badge badge-success">Running (last 15 min)</span>' : '<span class="badge badge-warning">Idle — keep this tab open, or set the Hostinger tick URL once</span>'}</p>
+                    <p>Source: ${escapeHtml(cron.last_source||'—')} · Master HTML last run: ${cron.last_html||0} · Scheduled: ${cron.last_scheduled||0} · Published: ${cron.last_published||0} · Failures: ${cron.last_failed||0} · Custom topics left: ${left===undefined?'—':left}</p>
+                    <p style="margin-top:8px;">Pattern: 1 hour before each posting time → Master HTML → schedule that exact time → email you the article with date, time, platform, and remaining custom topics.</p>
+                    ${tickUrl?`<p style="margin-top:10px;font-size:0.8rem;"><strong>Hostinger Cron Jobs (set once):</strong><br><code style="word-break:break-all;">*/5 * * * * wget -q -O - "${escapeHtml(tickUrl)}"</code></p>`:''}`;
                 const items = data.items || [];
-                if (!items.length) { body.innerHTML = '<tr><td colspan="8">Queue is empty. Start does not post to Blogger. If you just clicked Start, add topics in Custom Topics and confirm Keyword Planner Test works, then Start again. HTML appears in this table, not on Dashboard Published.</td></tr>'; return; }
+                if (!items.length) { body.innerHTML = '<tr><td colspan="8">Queue is empty until Start (or until start date). Master HTML is not written until 1 hour before the posting time.</td></tr>'; return; }
                 body.innerHTML = items.map(x => `<tr>
                     <td>Day ${x.day_number} / Slot ${x.post_number}</td>
                     <td><strong>${escapeHtml(x.title||'')}</strong></td>
                     <td>${formatPlannerKeywords(x)}</td>
-                    <td><span class="badge ${x.article_status==='Published'||x.article_status==='HTML Ready'||x.article_status==='Scheduled'?'badge-success':'badge-warning'}">${escapeHtml(x.article_status||'Not Created')}</span>${x.article_status==='Draft HTML'?' <span style="font-size:0.72rem;color:#ef4444;">Chat/Image not applied</span>':''}</td>
+                    <td><span class="badge ${x.article_status==='Published'||x.article_status==='HTML Ready'||x.article_status==='Scheduled'?'badge-success':'badge-warning'}">${escapeHtml(x.article_status||'Not Created')}</span>${x.article_status==='Not Created'?' <span style="font-size:0.72rem;color:var(--text-muted);">waits until 1 hour before</span>':''}</td>
                     <td>${escapeHtml(x.scheduled_date||'—')} ${escapeHtml(x.scheduled_time||'')}</td>
-                    <td>${x.html_path?`<a href="${x.html_path}" target="_blank">View</a>`:'—'}${x.article_status!=='Published'&&x.article_status!=='Scheduled'?` <button class="btn btn-purple" style="font-size:0.7rem;padding:3px 8px;" onclick="rewriteMasterHtml(${x.id})">Master HTML</button>`:''}</td>
+                    <td>${x.html_path?`<a href="${x.html_path}" target="_blank">View</a>`:'—'}</td>
                     <td>${x.html_retry_count||0}/8</td>
-                    <td style="max-width:280px;font-size:0.78rem;color:${x.last_error?'#ef4444':'var(--text-muted)'}">${escapeHtml(x.last_error||'OK')}</td>
+                    <td style="max-width:280px;font-size:0.78rem;color:${x.last_error?'#b45309':'var(--text-muted)'}">${escapeHtml(x.last_error||'OK')}</td>
                 </tr>`).join('');
-            } catch(e) { health.innerText = 'Could not load cron status: ' + e.message; }
+            } catch(e) { health.innerText = 'Could not load worker status: ' + e.message; }
         }
         updateAutoCalendarDates();
         loadAutoBlogStatus();

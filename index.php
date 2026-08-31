@@ -2523,12 +2523,12 @@ function handleApiRoute($uri) {
         $campaignId = $db->lastInsertId();
         saveAutoBlogJob($userId, $activeSlot, $campaignId, $domain, $country, $language, 0, $perDay, $startDate, $postingTimes, $targetPlatform, 'planner', $endDate, $noEnd, 1);
         $created = 0;
-        $htmlMade = 0;
         $errors = [];
-        $itemOut = null;
+        $queued = [];
         $today = date('Y-m-d');
-        $startIsFuture = ($startDate > $today);
-        if ($startIsFuture) {
+        $timesLabel = implode(', ', array_map('strval', (array)$postingTimes));
+        $endLabel = $noEnd ? 'no end date (runs daily until you Set Inactive)' : ('until ' . ($endDate ?: 'the end date'));
+        if ($startDate > $today) {
             jsonResponse([
                 'success' => true,
                 'campaign_id' => $campaignId,
@@ -2538,64 +2538,43 @@ function handleApiRoute($uri) {
                 'errors' => [],
                 'keyword_source' => 'planner',
                 'item' => null,
-                'message' => 'Auto Blog is Active. Nothing was posted to Blogger. Start date is ' . $startDate . ' (after today). The first draft is created on that date when cron / Run Auto Cron runs. Look at Auto Blog Queue — it stays empty until then.',
+                'tick_url' => function_exists('autoBlogTickUrl') ? autoBlogTickUrl() : '',
+                'custom_topics_left' => function_exists('countCustomTopicsRemaining') ? countCustomTopicsRemaining() : 0,
+                'message' => 'Auto Blog is Active. Start date is ' . $startDate . '. From that day the software writes Master HTML 1 hour before each posting time (' . $timesLabel . '), schedules it on ' . strtoupper($targetPlatform) . ', and emails you the article with date, time, platform, and remaining custom topics. ' . ucfirst($endLabel) . '. Do not click Master HTML or Run Auto Cron.',
             ]);
         }
-        if (function_exists('createNextAutoBlogDraft')) {
+        if (function_exists('ensureTodayAutoDrafts')) {
             $camp = $db->query('SELECT * FROM campaigns WHERE id = ' . intval($campaignId))->fetch();
             $jobRow = $db->prepare('SELECT * FROM auto_blog_jobs WHERE user_id = ? AND slot_number = ?');
             $jobRow->execute([$userId, $activeSlot]);
             $job = $jobRow->fetch();
             if ($camp && $job) {
-                $made = createNextAutoBlogDraft($job, $camp);
-                if (!empty($made['created'])) {
-                    $created = 1;
-                    $it = $db->prepare('SELECT * FROM campaign_items WHERE id = ?');
-                    $it->execute([$made['item_id']]);
-                    $item = $it->fetch();
-                    if ($item && function_exists('generateHtmlForCampaignItem')) {
-                        $hr = generateHtmlForCampaignItem($item, $userId, $activeSlot, $db, false);
-                        if (!empty($hr['html_path'])) {
-                            $htmlMade = !empty($hr['success']) ? 1 : 0;
-                            $item['html_path'] = $hr['html_path'];
-                            $item['article_status'] = $hr['article_status'] ?? ($htmlMade ? 'HTML Ready' : 'Draft HTML');
-                            if (!$htmlMade) $errors[] = $hr['error'] ?? 'Chat API did not write Master HTML. Draft HTML is on disk.';
-                        } else {
-                            $errors[] = $hr['error'] ?? 'HTML failed';
-                        }
-                    }
-                    $itemOut = $item ? [
-                        'id' => $item['id'],
-                        'title' => $item['title'] ?? '',
-                        'html_path' => $item['html_path'] ?? '',
-                        'article_status' => $item['article_status'] ?? 'Not Created',
-                        'scheduled_date' => $item['scheduled_date'] ?? '',
-                        'scheduled_time' => $item['scheduled_time'] ?? '',
-                    ] : null;
-                } elseif (!empty($made['error'])) {
-                    $errors[] = $made['error'];
-                } elseif (($made['reason'] ?? '') === 'today_full') {
-                    $errors[] = 'Today already has the planned number of Auto Blog drafts.';
+                $batch = ensureTodayAutoDrafts($job, $camp, $perDay);
+                foreach ($batch['created'] as $made) {
+                    $created++;
+                    $queued[] = ['id' => $made['item_id'], 'title' => $made['title'], 'scheduled_time' => $made['scheduled_time'] ?? ''];
                 }
+                $errors = array_merge($errors, $batch['errors'] ?? []);
             }
         }
-        $msg = 'Auto Blog is Active. Nothing was posted to Blogger yet. ';
-        if ($created && !empty($itemOut['html_path'])) {
-            $msg .= 'First draft is in Auto Blog Queue. Open View to see the HTML file. Click Run Auto Cron to schedule/publish it to ' . strtoupper($targetPlatform) . ' at ' . ($itemOut['scheduled_date'] ?? '') . ' ' . ($itemOut['scheduled_time'] ?? '') . '.';
-        } elseif ($created) {
-            $msg .= 'Draft row was created but HTML is missing. Click Generate HTML Now, then look at Auto Blog Queue.';
-        } else {
-            $msg .= implode(' ', $errors) ?: 'No draft was created. Add topics in Custom Topics, confirm Keyword Planner Test works, then click Start again.';
-        }
+        $left = function_exists('countCustomTopicsRemaining') ? countCustomTopicsRemaining() : 0;
+        $msg = 'Auto Blog is Active. ' . $created . ' topic(s) queued for today at ' . $timesLabel . ' on ' . strtoupper($targetPlatform) . '. ';
+        $msg .= 'Master HTML is written 1 hour before each time, then scheduled, then emailed to you with the article (not a confirmation). ';
+        $msg .= 'Custom topics left: ' . $left . '. If they run out, the software researches a new topic not related to previous blogs and does not stop. ';
+        $msg .= ucfirst($endLabel) . '. You do not need to click Master HTML or Run Auto Cron. Keep this tab open, or set the Hostinger tick URL once (shown on this page).';
+        if ($errors) $msg .= ' Note: ' . implode(' ', $errors);
         jsonResponse([
             'success' => true,
             'campaign_id' => $campaignId,
             'created' => $created,
-            'html' => $htmlMade,
+            'html' => 0,
             'posted' => false,
             'errors' => $errors,
             'keyword_source' => 'planner',
-            'item' => $itemOut,
+            'queued' => $queued,
+            'item' => $queued[0] ?? null,
+            'tick_url' => function_exists('autoBlogTickUrl') ? autoBlogTickUrl() : '',
+            'custom_topics_left' => $left,
             'message' => $msg,
         ]);
     }
@@ -2627,7 +2606,14 @@ function handleApiRoute($uri) {
             $stmt->execute([$userId, $activeSlot]);
             $job = $stmt->fetch() ?: null;
         } catch (Throwable $e) {}
-        jsonResponse(['campaign' => $campaign, 'items' => $items, 'cron' => $cron, 'job' => $job]);
+        jsonResponse([
+            'campaign' => $campaign,
+            'items' => $items,
+            'cron' => $cron,
+            'job' => $job,
+            'tick_url' => function_exists('autoBlogTickUrl') ? autoBlogTickUrl() : '',
+            'custom_topics_left' => function_exists('countCustomTopicsRemaining') ? countCustomTopicsRemaining() : 0,
+        ]);
     }
 
     if ($uri === '/api/auto-blog/run' && $method === 'POST') {

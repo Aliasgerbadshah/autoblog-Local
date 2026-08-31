@@ -2,11 +2,14 @@
 /**
  * Automated daily blogging (no email approval). Isolated from Human Article Writer.
  *
- * Each cron tick (and Run Auto Cron):
- *  1) If job is Active and inside start/end (or no end): create today's missing drafts
- *     from Custom Topics + Keyword Planner only.
- *  2) Write HTML for ONE missing draft (Hostinger time limit).
- *  3) Schedule/publish drafts that already have HTML.
+ * Pattern after Start (once):
+ *  - Job stays Active until Inactive or end date.
+ *  - Each day: create the planned number of topic rows (Custom Topics first).
+ *  - 1 hour before each posting time: write Master HTML, schedule it on the
+ *    chosen platform for that exact time, then email the Master HTML
+ *    (date, time, platform, remaining custom topics). Not a confirmation mail.
+ *  - If custom topics run out: research a new topic not related to previous
+ *    blogs (same idea as Human Article Writer) and keep going.
  */
 
 function articleHasRealImage($html) {
@@ -21,6 +24,59 @@ function articleHasRealImage($html) {
         }
     }
     return false;
+}
+
+function autoBlogPrepareLeadSeconds() {
+    return 3600;
+}
+
+function autoBlogLockPath() {
+    $dir = dirname(__DIR__) . '/data';
+    if (!is_dir($dir)) @mkdir($dir, 0755, true);
+    return $dir . '/auto_blog.lock';
+}
+
+function autoBlogCronSecretPath() {
+    $dir = dirname(__DIR__) . '/data';
+    if (!is_dir($dir)) @mkdir($dir, 0755, true);
+    return $dir . '/cron_secret.txt';
+}
+
+function getAutoBlogCronSecret() {
+    $path = autoBlogCronSecretPath();
+    if (is_file($path)) {
+        $s = trim((string)@file_get_contents($path));
+        if ($s !== '') return $s;
+    }
+    $s = bin2hex(random_bytes(16));
+    @file_put_contents($path, $s);
+    return $s;
+}
+
+function autoBlogTickUrl() {
+    $base = defined('APP_BASE_URL') ? rtrim(APP_BASE_URL, '/') : '';
+    return $base . '/cron/tick.php?key=' . urlencode(getAutoBlogCronSecret());
+}
+
+function withAutoBlogLock($callback) {
+    $path = autoBlogLockPath();
+    $fp = @fopen($path, 'c');
+    if (!$fp) return $callback();
+    if (!flock($fp, LOCK_EX | LOCK_NB)) {
+        fclose($fp);
+        return [
+            'processed' => 0, 'published' => 0, 'scheduled' => 0, 'html' => 0, 'created' => 0,
+            'skipped_ready' => 0, 'waiting_html' => 0, 'waiting_window' => 0, 'emailed' => 0,
+            'errors' => [], 'items' => [], 'busy' => true,
+            'message' => 'Auto Blog worker is already running. Next tick continues.',
+        ];
+    }
+    try {
+        return $callback();
+    } finally {
+        flock($fp, LOCK_UN);
+        fclose($fp);
+    }
 }
 
 function recordAutoCronRun($source, $result, $userId = null) {
@@ -76,6 +132,7 @@ function getLatestAutoCronStatus($userId = null) {
         'last_scheduled' => intval($latest['scheduled'] ?? 0),
         'last_failed' => intval($latest['failed'] ?? 0),
         'cron_is_working' => $latest ? (strtotime($latest['ran_at']) > time() - 900) : false,
+        'tick_url' => function_exists('autoBlogTickUrl') ? autoBlogTickUrl() : '',
         'runs' => $rows,
     ];
 }
@@ -107,6 +164,85 @@ function autoJobIsInWindow($job, $today) {
     return $today <= $end;
 }
 
+function autoItemScheduleTs($item) {
+    $date = trim((string)($item['scheduled_date'] ?? ''));
+    $time = trim((string)($item['scheduled_time'] ?? '10:00'));
+    if ($date === '') $date = date('Y-m-d');
+    if (strlen($time) === 5) $time .= ':00';
+    $ts = strtotime($date . ' ' . $time);
+    return $ts ?: false;
+}
+
+function autoItemIsInPrepareWindow($item, $now = null) {
+    $now = $now ?? time();
+    $ts = autoItemScheduleTs($item);
+    if ($ts === false) return true;
+    return $now >= ($ts - autoBlogPrepareLeadSeconds());
+}
+
+function countCustomTopicsRemaining() {
+    if (!function_exists('readCustomTopicsList')) return 0;
+    return count(readCustomTopicsList());
+}
+
+function researchFreshAutoTopic($userId, $domain, $country, $language) {
+    $db = getDB();
+    $existing = function_exists('getAllUsedTopics') ? getAllUsedTopics($db, $userId) : [];
+    $usedList = [];
+    foreach (array_slice($existing, -40) as $row) {
+        $t = trim((string)($row['topic'] ?? ''));
+        if ($t !== '') $usedList[] = $t;
+    }
+    $usedStr = $usedList ? implode('; ', $usedList) : '(none yet)';
+    $chat = [];
+    try {
+        $chat = class_exists('SecurityVault') ? (SecurityVault::getApiCredentials($userId, 'chat_api') ?: []) : [];
+    } catch (Throwable $e) {
+        $chat = [];
+    }
+    $candidates = [];
+    if (!empty($chat['api_key']) && class_exists('AIProviderClient')) {
+        $year = date('Y');
+        $prompt = "I need 1 UNIQUE article topic for the website $domain in country $country, language $language, year $year. "
+            . "It must NOT be related to any of these previous blog titles: $usedStr. "
+            . "Pick a different angle (how-to, comparison, mistakes, tools, case study, FAQ, ROI, workflow, beginner vs advanced). "
+            . "Do not invent search volume. Return ONLY JSON: {\"title\":\"...\"}";
+        try {
+            $res = AIProviderClient::chat($chat, $prompt, 18);
+            if (!empty($res['success']) && !empty($res['content'])) {
+                $raw = trim(str_replace(['```json', '```'], '', $res['content']));
+                $decoded = json_decode($raw, true);
+                if (is_array($decoded) && !empty($decoded['title'])) $candidates[] = trim($decoded['title']);
+                if (is_string($decoded)) $candidates[] = trim($decoded);
+                if (!$candidates && preg_match('/"title"\s*:\s*"([^"]+)"/', $raw, $m)) $candidates[] = trim($m[1]);
+            }
+        } catch (Throwable $e) {
+            error_log('[AutoBlog] topic research chat failed: ' . $e->getMessage());
+        }
+    }
+    $seed = parse_url($domain, PHP_URL_HOST) ?: $domain;
+    $seed = preg_replace('/^www\./', '', (string)$seed);
+    $angles = [
+        "Practical $seed workflow checklist " . date('Y'),
+        "Common $seed mistakes teams still make",
+        "$seed tools comparison for real projects",
+        "How beginners start with $seed without wasting budget",
+        "Advanced $seed techniques after the basics",
+        "$seed ROI measurement that actually holds up",
+        "Case-style $seed decisions for small teams",
+        "$seed FAQ people search before they buy",
+    ];
+    $candidates = array_merge($candidates, $angles);
+    foreach ($candidates as $title) {
+        $title = trim((string)$title);
+        if (strlen($title) < 8) continue;
+        if (function_exists('isTopicDuplicate') && isTopicDuplicate($title, $title, $existing)) continue;
+        return ['success' => true, 'title' => $title, 'source' => 'research'];
+    }
+    $fallback = $seed . ' unique angle ' . date('Y-m-d H:i');
+    return ['success' => true, 'title' => $fallback, 'source' => 'research'];
+}
+
 function createNextAutoBlogDraft($job, $camp) {
     $db = getDB();
     $today = date('Y-m-d');
@@ -125,9 +261,15 @@ function createNextAutoBlogDraft($job, $camp) {
         return ['created' => false, 'reason' => 'today_full'];
     }
 
+    $topicSource = 'custom';
     $topic = function_exists('takeNextCustomTopic') ? takeNextCustomTopic() : '';
     if ($topic === '') {
-        return ['created' => false, 'error' => 'No custom topics left. Add topics in Custom Topics. Auto Blog does not invent AI topics.'];
+        $fresh = researchFreshAutoTopic($userId, $domain, $country, $language);
+        if (empty($fresh['success']) || empty($fresh['title'])) {
+            return ['created' => false, 'error' => 'Could not research a new topic. Chat API may be down. Job stays Active and will retry.'];
+        }
+        $topic = $fresh['title'];
+        $topicSource = 'research';
     }
 
     $plan = [
@@ -141,7 +283,7 @@ function createNextAutoBlogDraft($job, $camp) {
     ];
     $kwRes = requirePlannerKeywordsOnPlan($plan, $userId, $country, $language, true);
     if (empty($kwRes['success'])) {
-        if (function_exists('writeCustomTopicsList') && function_exists('readCustomTopicsList')) {
+        if ($topicSource === 'custom' && function_exists('writeCustomTopicsList') && function_exists('readCustomTopicsList')) {
             $rest = readCustomTopicsList();
             array_unshift($rest, $topic);
             writeCustomTopicsList($rest);
@@ -159,15 +301,51 @@ function createNextAutoBlogDraft($job, $camp) {
     } catch (Throwable $e) {}
 
     $now = function_exists('nowString') ? nowString() : date('Y-m-d H:i:s');
-    $stmt = $db->prepare('INSERT INTO campaign_items (campaign_id, day_number, post_number, title, primary_keyword, keyword_data, internal_links, external_links, headings, image_prompts, video_url, plan_status, article_status, scheduled_date, scheduled_time, target_platform, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
-    $stmt->execute([
-        $camp['id'], $dayNumber, $postNum, $plan['title'], $plan['primary_keyword'],
-        json_encode($plan['keywords']), json_encode($plan['internal_links']), json_encode($plan['external_links']),
-        json_encode($plan['headings']), json_encode($plan['image_prompts']), '',
-        'Approved', 'Not Created', $today, $schedTime, $platform, $now
-    ]);
+    $stmt = $db->prepare('INSERT INTO campaign_items (campaign_id, day_number, post_number, title, primary_keyword, keyword_data, internal_links, external_links, headings, image_prompts, video_url, plan_status, article_status, scheduled_date, scheduled_time, target_platform, created_at, topic_source) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+    try {
+        $stmt->execute([
+            $camp['id'], $dayNumber, $postNum, $plan['title'], $plan['primary_keyword'],
+            json_encode($plan['keywords']), json_encode($plan['internal_links']), json_encode($plan['external_links']),
+            json_encode($plan['headings']), json_encode($plan['image_prompts']), '',
+            'Approved', 'Not Created', $today, $schedTime, $platform, $now, $topicSource
+        ]);
+    } catch (Throwable $e) {
+        $stmt = $db->prepare('INSERT INTO campaign_items (campaign_id, day_number, post_number, title, primary_keyword, keyword_data, internal_links, external_links, headings, image_prompts, video_url, plan_status, article_status, scheduled_date, scheduled_time, target_platform, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+        $stmt->execute([
+            $camp['id'], $dayNumber, $postNum, $plan['title'], $plan['primary_keyword'],
+            json_encode($plan['keywords']), json_encode($plan['internal_links']), json_encode($plan['external_links']),
+            json_encode($plan['headings']), json_encode($plan['image_prompts']), '',
+            'Approved', 'Not Created', $today, $schedTime, $platform, $now
+        ]);
+    }
     $itemId = $db->lastInsertId();
-    return ['created' => true, 'item_id' => $itemId, 'title' => $plan['title']];
+    if (function_exists('addTopicToJsonFile')) {
+        addTopicToJsonFile($plan['title'], $plan['primary_keyword'], $domain, 'pending', $camp['id']);
+    }
+    if (function_exists('addTopicToCsv')) {
+        addTopicToCsv($plan['title'], $plan['primary_keyword'], $domain, 'pending', $camp['id'], $now);
+    }
+    try {
+        $db->prepare('INSERT OR IGNORE INTO created_blog_topics (user_id, title, primary_keyword, domain_url, campaign_id, created_at) VALUES (?, ?, ?, ?, ?, ?)')
+            ->execute([$userId, $plan['title'], $plan['primary_keyword'], $domain, $camp['id'], $now]);
+    } catch (Throwable $e) {}
+    return ['created' => true, 'item_id' => $itemId, 'title' => $plan['title'], 'topic_source' => $topicSource, 'scheduled_time' => $schedTime];
+}
+
+function ensureTodayAutoDrafts($job, $camp, $maxCreate = 3) {
+    $made = [];
+    $errors = [];
+    for ($i = 0; $i < $maxCreate; $i++) {
+        $row = createNextAutoBlogDraft($job, $camp);
+        if (!empty($row['created'])) {
+            $made[] = $row;
+            continue;
+        }
+        if (($row['reason'] ?? '') === 'today_full') break;
+        if (!empty($row['error'])) $errors[] = $row['error'];
+        break;
+    }
+    return ['created' => $made, 'errors' => $errors];
 }
 
 function generateHtmlForCampaignItem($item, $userId, $slot, $db, $wantMaster = true) {
@@ -193,7 +371,66 @@ function generateHtmlForCampaignItem($item, $userId, $slot, $db, $wantMaster = t
     return $htmlResult;
 }
 
+function buildAutoScheduledBlogEmail($item, $pub, $status, $platform, $scheduledStr, $customLeft) {
+    $title = escapeHtml($item['title'] ?? 'Untitled');
+    $kw = escapeHtml($item['primary_keyword'] ?? '');
+    $plat = strtoupper((string)$platform);
+    $url = escapeHtml($pub['url'] ?? '');
+    $source = (($item['topic_source'] ?? '') === 'research')
+        ? 'Custom topics were exhausted. This topic was researched and is not related to previous blogs.'
+        : 'Topic taken from your Custom Topics list.';
+    $article = function_exists('loadCampaignArticleContent') ? loadCampaignArticleContent($item) : '';
+    if ($article === '') $article = '<p>Master HTML file could not be inlined. Open the View link in Auto Blog Queue.</p>';
+    $preview = (defined('APP_BASE_URL') ? rtrim(APP_BASE_URL, '/') : '') . ($item['html_path'] ?? '');
+    $leftNote = intval($customLeft) . ' custom topic(s) still available after this post.';
+    $when = escapeHtml($scheduledStr);
+    $statusLabel = ($status === 'Published') ? 'Published now' : 'Scheduled';
+
+    return '<!DOCTYPE html><html><head><meta charset="utf-8"></head>'
+        . '<body style="font-family:Arial,Helvetica,sans-serif;background:#f8fafc;color:#0f172a;margin:0;padding:0;">'
+        . '<div style="max-width:760px;margin:0 auto;padding:24px;">'
+        . '<h1 style="font-size:1.4rem;margin:0 0 8px 0;">Master HTML is ready and ' . escapeHtml($statusLabel) . '</h1>'
+        . '<p style="color:#475569;margin:0 0 16px 0;">This is the blog that will go live — not a confirmation notice.</p>'
+        . '<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:16px 18px;margin-bottom:18px;font-size:0.92rem;">'
+        . '<p style="margin:0 0 6px 0;"><strong>Title:</strong> ' . $title . '</p>'
+        . '<p style="margin:0 0 6px 0;"><strong>Date and time:</strong> ' . $when . ' (Asia/Kolkata)</p>'
+        . '<p style="margin:0 0 6px 0;"><strong>Platform:</strong> ' . $plat . '</p>'
+        . '<p style="margin:0 0 6px 0;"><strong>Primary keyword:</strong> ' . $kw . '</p>'
+        . ($url ? '<p style="margin:0 0 6px 0;"><strong>URL:</strong> <a href="' . $url . '">' . $url . '</a></p>' : '')
+        . '<p style="margin:0 0 6px 0;"><strong>Custom topics left:</strong> ' . escapeHtml($leftNote) . '</p>'
+        . '<p style="margin:0;"><strong>Topic source:</strong> ' . escapeHtml($source) . '</p>'
+        . '</div>'
+        . ($preview ? '<p style="margin:0 0 16px 0;"><a href="' . escapeHtml($preview) . '" style="color:#1b57f6;font-weight:700;">Open Master HTML preview</a></p>' : '')
+        . '<div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:14px;padding:20px;">' . $article . '</div>'
+        . '</div></body></html>';
+}
+
+function sendAutoScheduledBlogMail($userId, $item, $pub, $status, $platform, $scheduledStr) {
+    if (!function_exists('sendApprovalEmail')) {
+        $mailer = __DIR__ . '/mailer.php';
+        if (is_file($mailer)) require_once $mailer;
+    }
+    if (!function_exists('sendApprovalEmail')) return false;
+    $left = countCustomTopicsRemaining();
+    $whenLabel = $scheduledStr;
+    $subject = 'Scheduled ' . strtoupper((string)$platform) . ' · ' . $whenLabel . ' · ' . ($item['title'] ?? 'Blog');
+    $html = buildAutoScheduledBlogEmail($item, $pub, $status, $platform, $scheduledStr, $left);
+    return sendApprovalEmail($userId, $subject, $html);
+}
+
+function markAutoScheduleEmailSent($db, $itemId) {
+    try {
+        $db->prepare('UPDATE campaign_items SET schedule_email_sent = 1 WHERE id = ?')->execute([$itemId]);
+    } catch (Throwable $e) {}
+}
+
 function processAutoBlogCampaigns($htmlLimit = 1, $publishLimit = 5) {
+    return withAutoBlogLock(function () use ($htmlLimit, $publishLimit) {
+        return processAutoBlogCampaignsUnlocked($htmlLimit, $publishLimit);
+    });
+}
+
+function processAutoBlogCampaignsUnlocked($htmlLimit = 1, $publishLimit = 5) {
     @set_time_limit(180);
     @ini_set('max_execution_time', '180');
     $db = getDB();
@@ -207,8 +444,11 @@ function processAutoBlogCampaigns($htmlLimit = 1, $publishLimit = 5) {
         'created' => 0,
         'skipped_ready' => 0,
         'waiting_html' => 0,
+        'waiting_window' => 0,
+        'emailed' => 0,
         'errors' => [],
         'items' => [],
+        'custom_topics_left' => countCustomTopicsRemaining(),
     ];
 
     $jobs = [];
@@ -233,6 +473,7 @@ function processAutoBlogCampaigns($htmlLimit = 1, $publishLimit = 5) {
                 $end = $job['end_date'] ?? '';
                 if (intval($job['no_end'] ?? 1) === 0 && $end && $today > $end) {
                     try { $db->prepare('UPDATE auto_blog_jobs SET enabled = 0 WHERE id = ?')->execute([$job['id']]); } catch (Throwable $e) {}
+                    try { $db->prepare("UPDATE campaigns SET status = 'Paused' WHERE id = ?")->execute([$job['campaign_id'] ?? 0]); } catch (Throwable $e) {}
                     $out['errors'][] = 'Reached end date. Job set Inactive.';
                 }
                 continue;
@@ -269,23 +510,24 @@ function processAutoBlogCampaigns($htmlLimit = 1, $publishLimit = 5) {
         $job = $camp['_job'] ?? null;
 
         if ($job && (time() - $started) < 80) {
-            $made = createNextAutoBlogDraft($job, $camp);
-            if (!empty($made['created'])) {
+            $batch = ensureTodayAutoDrafts($job, $camp, max(1, intval($job['posts_per_day'] ?: 1)));
+            foreach ($batch['created'] as $made) {
                 $out['created']++;
-                $out['items'][] = ['id' => $made['item_id'], 'title' => $made['title'], 'action' => 'draft_created'];
-            } elseif (!empty($made['error'])) {
-                $out['errors'][] = $made['error'];
-                try { $db->prepare('UPDATE auto_blog_jobs SET last_error = ? WHERE id = ?')->execute([$made['error'], $job['id']]); } catch (Throwable $e) {}
+                $out['items'][] = ['id' => $made['item_id'], 'title' => $made['title'], 'action' => 'topic_queued', 'scheduled_time' => $made['scheduled_time'] ?? ''];
+            }
+            foreach ($batch['errors'] as $err) {
+                $out['errors'][] = $err;
+                try { $db->prepare('UPDATE auto_blog_jobs SET last_error = ? WHERE id = ?')->execute([$err, $job['id']]); } catch (Throwable $e) {}
             }
         }
 
-        $itemsStmt = $db->prepare("SELECT * FROM campaign_items WHERE campaign_id = ? AND article_status NOT IN ('Published','Scheduled') ORDER BY day_number, post_number");
+        $itemsStmt = $db->prepare("SELECT * FROM campaign_items WHERE campaign_id = ? AND article_status NOT IN ('Published','Scheduled') ORDER BY scheduled_date, scheduled_time, post_number");
         $itemsStmt->execute([$camp['id']]);
         $items = $itemsStmt->fetchAll();
 
         foreach ($items as $item) {
             if ((time() - $started) > 150) {
-                $out['errors'][] = 'Stopped this run to stay under Hostinger time limit. Next cron continues.';
+                $out['errors'][] = 'Stopped this run to stay under Hostinger time limit. Next worker tick continues.';
                 break 2;
             }
 
@@ -294,11 +536,23 @@ function processAutoBlogCampaigns($htmlLimit = 1, $publishLimit = 5) {
                 $item['plan_status'] = 'Approved';
             }
 
+            if (!autoItemIsInPrepareWindow($item)) {
+                $out['waiting_window']++;
+                $ts = autoItemScheduleTs($item);
+                $when = $ts ? date('Y-m-d H:i', $ts - autoBlogPrepareLeadSeconds()) : '';
+                $db->prepare("UPDATE campaign_items SET last_error = ? WHERE id = ?")->execute([
+                    'Waiting. Master HTML + schedule start 1 hour before ' . ($item['scheduled_time'] ?? '') . ($when ? " (worker begins $when)" : ''),
+                    $item['id']
+                ]);
+                $out['items'][] = ['id' => $item['id'], 'title' => $item['title'], 'action' => 'waiting_1h_window'];
+                continue;
+            }
+
             $check = inspectAutoItemHtml($item);
             $ready = $check['ready'];
 
             if (!$ready && $htmlDid < $htmlLimit) {
-                $htmlResult = generateHtmlForCampaignItem($item, $userId, $slot, $db);
+                $htmlResult = generateHtmlForCampaignItem($item, $userId, $slot, $db, true);
                 $htmlDid++;
                 if (!empty($htmlResult['success'])) {
                     $out['html']++;
@@ -306,7 +560,7 @@ function processAutoBlogCampaigns($htmlLimit = 1, $publishLimit = 5) {
                     $item['article_status'] = 'HTML Ready';
                     $check = inspectAutoItemHtml($item);
                     $ready = $check['ready'];
-                    $out['items'][] = ['id' => $item['id'], 'title' => $item['title'], 'action' => 'html'];
+                    $out['items'][] = ['id' => $item['id'], 'title' => $item['title'], 'action' => 'master_html'];
                 } else {
                     $msg = $htmlResult['error'] ?? 'HTML generation failed';
                     $out['errors'][] = $item['title'] . ': ' . $msg;
@@ -316,7 +570,7 @@ function processAutoBlogCampaigns($htmlLimit = 1, $publishLimit = 5) {
                 }
             } elseif (!$ready) {
                 $out['waiting_html']++;
-                $msg = 'HTML not generated yet. Cron will write the next missing HTML on the following run.';
+                $msg = 'Inside the 1-hour window. Master HTML will be written on the next worker tick.';
                 $db->prepare("UPDATE campaign_items SET last_error = ? WHERE id = ?")->execute([$msg, $item['id']]);
                 continue;
             } else {
@@ -331,13 +585,14 @@ function processAutoBlogCampaigns($htmlLimit = 1, $publishLimit = 5) {
             if (strlen($schedTime) === 5) $schedTime .= ':00';
             $scheduledStr = $schedDate . ' ' . $schedTime;
             $future = strtotime($scheduledStr) > time() + 90;
+            $itemPlatform = $item['target_platform'] ?: $platform;
 
-            $useBloggerSchedule = ($platform === 'blogger' && $future);
+            $useBloggerSchedule = ($itemPlatform === 'blogger' && $future);
             $pub = publishItemToSelectedPlatform(
                 $userId,
                 $item,
-                $platform,
-                $useBloggerSchedule ? $scheduledStr : ($platform === 'website' && $future ? $scheduledStr : null)
+                $itemPlatform,
+                $useBloggerSchedule ? $scheduledStr : ($itemPlatform === 'website' && $future ? $scheduledStr : null)
             );
             $pubDid++;
             $out['processed']++;
@@ -347,6 +602,16 @@ function processAutoBlogCampaigns($htmlLimit = 1, $publishLimit = 5) {
                 if ($status === 'Scheduled') $out['scheduled']++;
                 else $out['published']++;
                 $out['items'][] = ['id' => $item['id'], 'title' => $item['title'], 'action' => strtolower($status), 'url' => $pub['url'] ?? ''];
+                $already = intval($item['schedule_email_sent'] ?? 0);
+                if (!$already) {
+                    $mailed = sendAutoScheduledBlogMail($userId, $item, $pub, $status, $itemPlatform, $scheduledStr);
+                    if ($mailed) {
+                        markAutoScheduleEmailSent($db, $item['id']);
+                        $out['emailed']++;
+                    } else {
+                        $out['errors'][] = 'Scheduled, but blog email did not send for ' . $item['title'];
+                    }
+                }
             } else {
                 $msg = $pub['error'] ?? ($pub['message'] ?? 'publish failed');
                 $db->prepare("UPDATE campaign_items SET last_error = ? WHERE id = ?")->execute([$msg, $item['id']]);
@@ -356,7 +621,26 @@ function processAutoBlogCampaigns($htmlLimit = 1, $publishLimit = 5) {
         }
     }
 
-    $out['message'] = 'Auto cron: drafts ' . $out['created'] . ', HTML ' . $out['html'] . ', scheduled ' . $out['scheduled'] . ', published ' . $out['published'] . ', waiting HTML ' . $out['waiting_html'] . ', errors ' . count($out['errors']) . '.';
+    try {
+        if (function_exists('getBlogPublisher')) {
+            list($wpub, $wpubErr) = getBlogPublisher();
+            if (!$wpubErr && $wpub && method_exists($wpub, 'publishScheduled')) {
+                $wpRes = $wpub->publishScheduled();
+                if (!empty($wpRes['published'])) $out['published'] += intval($wpRes['published']);
+            }
+        }
+    } catch (Throwable $e) {}
+
+    $out['custom_topics_left'] = countCustomTopicsRemaining();
+    $out['message'] = 'Auto Blog: topics queued ' . $out['created']
+        . ', Master HTML ' . $out['html']
+        . ', scheduled ' . $out['scheduled']
+        . ', published ' . $out['published']
+        . ', emailed ' . $out['emailed']
+        . ', waiting 1-hour window ' . $out['waiting_window']
+        . ', waiting HTML ' . $out['waiting_html']
+        . ', custom topics left ' . $out['custom_topics_left']
+        . ', errors ' . count($out['errors']) . '.';
     return $out;
 }
 

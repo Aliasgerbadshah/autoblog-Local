@@ -72,29 +72,28 @@ chmod 777 public_html/published_posts/
 
 **No manual configuration needed!** The app automatically detects your domain from the server headers. If you need to override it, set the `APP_BASE_URL` environment variable in Hostinger.
 
-### Step 4: Set Up Cron Jobs
+### Step 4: Set Up Cron Jobs (once — not a daily click)
+
+PHP cannot wake itself on Hostinger. Set this **once** in hPanel. You do **not** click Run Auto Cron every day.
 
 1. Go to **Hostinger hPanel** → **Advanced** → **Cron Jobs**
-2. Add these cron jobs (dashboard lives in `public_html/sub_apps/`):
+2. Open the **Auto Blog** tab after login. Copy the **Hostinger Cron Jobs (set once)** wget line (it includes a secret key).
+3. Add that one job every 5 minutes. Example:
 
-**Auto Blog daily worker (writes HTML + hands posts to Blogger scheduler):**
 ```
-*/5 * * * * php /home/yourusername/public_html/sub_apps/cron/daily_autoblog.php
+*/5 * * * * wget -q -O - "https://apps.colorfiind.com/cron/tick.php?key=YOUR_SECRET"
 ```
 
-**Scheduler (due queue + website scheduled posts):**
+That clock writes Master HTML **1 hour before** each posting time, schedules Blogger/Website for the exact time, and emails the article.
+
+Optional extras (Human Article Writer / due queue):
+
 ```
 */5 * * * * php /home/yourusername/public_html/sub_apps/cron/scheduler.php
-```
-
-**Approval Timer (Human Article Writer only — emails + HTML after approve):**
-```
 */5 * * * * php /home/yourusername/public_html/sub_apps/cron/approval_timer.php
 ```
 
-Replace `yourusername` with your actual Hostinger username.
-
-**How to check cron is working:** open the **Auto Blog** tab. Click **Run Auto Cron Now**. **Last cron run** must change to the current time. Approve in Human Article Writer is a different path — that writes HTML in the same click and does not update Last cron run.
+**How to check the worker:** Auto Blog tab → **Last worker run** should update within 5–15 minutes after the Hostinger job is saved (or while the dashboard tab is left open).
 
 ### Step 5: Access Your Application
 
