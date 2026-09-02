@@ -1698,7 +1698,13 @@
                 const statEl = document.getElementById('stat-custom-topics');
                 if (statEl) statEl.innerText = ctCount;
                 const bannerEl = document.getElementById('custom-topics-available-banner');
-                if (bannerEl) bannerEl.innerText = ctCount > 0 ? '📝 ' + ctCount + ' Custom Topics Availa     async function loadPosts() {
+                if (bannerEl) bannerEl.innerText = ctCount > 0 ? '📝 ' + ctCount + ' Custom Topics Available' : '';
+                const ctCountEl = document.getElementById('custom-topics-count');
+                if (ctCountEl) ctCountEl.innerText = ctCount;
+            } catch (e) {}
+        }
+
+        async function loadPosts() {
             try {
                 const res = await fetch('/api/autoblog/posts');
                 const posts = await res.json();
@@ -2061,15 +2067,6 @@
                     <td style="max-width:280px;font-size:0.78rem;color:${x.last_error?'#b45309':'var(--text-muted)'}">${escapeHtml(x.last_error||'OK')}</td>
                 </tr>`).join('');
             } catch(e) { health.innerText = 'Could not load worker status: ' + e.message; }
-        }
-        updateAutoCalendarDates();
-        loadAutoBlogStatus();
-
-        startDashRefresh();
-    </script>
-</body>
-</html>
-h.innerText = 'Could not load worker status: ' + e.message; }
         }
         updateAutoCalendarDates();
         loadAutoBlogStatus();
