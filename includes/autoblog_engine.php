@@ -964,16 +964,50 @@ function articleLooksLikeDraftHtml($html) {
         || (stripos($h, 'Do not treat this placeholder as the published article') !== false);
 }
 
+function shortTopicImagePrompt($title, $keyword) {
+    $subject = trim((string)($title !== '' ? $title : $keyword));
+    $subject = preg_replace('/\s+/', ' ', $subject);
+    if (strlen($subject) > 80) $subject = substr($subject, 0, 80);
+    $kw = trim((string)$keyword);
+    $motive = $subject;
+    $low = strtolower($subject . ' ' . $kw);
+    if (strpos($low, 'ui') !== false || strpos($low, 'ux') !== false || strpos($low, 'color') !== false) {
+        $motive = $subject . ', color palettes, app UI screens, design theme on a monitor';
+    }
+    return 'Photorealistic blog thumbnail of ' . $motive . '. Real objects from the topic, natural light, no text, no logos';
+}
+
 function buildTopicImagePrompt($title, $keyword, $h2s = []) {
-    $h2 = implode(', ', array_slice(array_map('strval', is_array($h2s) ? $h2s : []), 0, 3));
-    $subject = trim($title !== '' ? $title : $keyword);
-    return "Photorealistic landscape blog thumbnail that shows the MOTIVE of this topic, not a generic office. The picture must depict recognizable objects from: {$subject}. Topic keyword: {$keyword}. Example: if the topic is UI/UX color, show color palettes, app interface screens, design software, and vibrant UI color themes on a monitor. Related angles: {$h2}. Natural lighting, real scene, no text, no logos, no watermarks, no collage.";
+    return shortTopicImagePrompt($title, $keyword);
 }
 
 function relatedStockPhotoUrl($title, $keyword, $h2s = []) {
-    $prompt = buildTopicImagePrompt($title, $keyword, $h2s);
+    $prompt = shortTopicImagePrompt($title, $keyword);
     $seed = abs(crc32((string)$title . '|' . (string)$keyword)) % 9999;
-    return 'https://gen.pollinations.ai/image/' . rawurlencode($prompt) . '?model=flux&width=1280&height=720&nologo=true&seed=' . $seed;
+    return 'https://image.pollinations.ai/prompt/' . rawurlencode($prompt) . '?model=flux&width=1280&height=720&nologo=true&seed=' . $seed;
+}
+
+function topicPhotoFallbackUrl($title, $keyword) {
+    $q = trim((string)($keyword !== '' ? $keyword : $title));
+    $q = preg_replace('/[^a-zA-Z0-9 ]+/', ' ', $q);
+    $q = trim(preg_replace('/\s+/', ',', $q));
+    if ($q === '') $q = 'design,color,workspace';
+    return 'https://loremflickr.com/1280/720/' . rawurlencode($q) . '?lock=' . (abs(crc32($q)) % 9999);
+}
+
+function pickArticleThumbnailUrl($imageVault, $title, $keyword) {
+    $prompt = shortTopicImagePrompt($title, $keyword);
+    $provider = strtolower((string)($imageVault['provider'] ?? ''));
+    $hasKey = !empty($imageVault['api_key']);
+    if ($hasKey && in_array($provider, ['pollinations', 'openai', 'openrouter', 'custom'], true)) {
+        try {
+            $imgResult = AIProviderClient::image($imageVault, $prompt);
+            if (!empty($imgResult['success']) && !empty($imgResult['url']) && stripos($imgResult['url'], 'http') === 0) {
+                return $imgResult['url'];
+            }
+        } catch (Throwable $e) {}
+    }
+    return relatedStockPhotoUrl($title, $keyword);
 }
 
 function generateArticleHtmlFromCampaignItem($item, $userId, $activeSlot, $db, $contentAngle = '', $wantMaster = true) {
@@ -1118,19 +1152,10 @@ function generateArticleHtmlFromCampaignItem($item, $userId, $activeSlot, $db, $
 
     $featuredImgUrl = '';
     $imgError = '';
-    // Hostinger nginx ~60s: never wait on HuggingFace/Gemini/OpenAI image (those use 15–180s).
-    // Pollinations is URL-only (no download). Anything else → related stock photo so the article is not empty.
+    $fallbackImgUrl = topicPhotoFallbackUrl($title, $keyword);
+    // URL-only Image API (Pollinations/OpenAI). Never wait on HuggingFace/Gemini binary (504).
     if ($chatUsed) {
-        $imgProvider = strtolower((string)($imageVault['provider'] ?? ''));
-        if ($imgProvider === 'pollinations' && !empty($imageVault['api_key'])) {
-            $thumbPrompt = "Photorealistic editorial photo of the core idea of \"$title\" about $keyword. Real-world scene, natural light, no text, no logos. Landscape blog thumbnail.";
-            $imgResult = AIProviderClient::image($imageVault, $thumbPrompt);
-            if (!empty($imgResult['success']) && !empty($imgResult['url'])) {
-                $featuredImgUrl = $imgResult['url'];
-            } else {
-                $imgError = $imgResult['error'] ?? 'Image API returned no URL';
-            }
-        }
+        $featuredImgUrl = pickArticleThumbnailUrl($imageVault ?: [], $title, $keyword);
         if ($featuredImgUrl === '') {
             $featuredImgUrl = relatedStockPhotoUrl($title, $keyword);
         }
@@ -1232,23 +1257,28 @@ CSS;
         document.addEventListener('error', function(e) {
             if (e.target.tagName !== 'IMG') return;
             var img = e.target;
+            var tried = parseInt(img.getAttribute('data-tried') || '0', 10);
+            var fb = img.getAttribute('data-fallback') || '';
+            if (fb && tried < 1) {
+                img.setAttribute('data-tried', '1');
+                img.src = fb;
+                return;
+            }
+            if (img.classList.contains('blog-thumb-img') && tried < 2) {
+                img.setAttribute('data-tried', '2');
+                var kw = (img.getAttribute('data-kw') || 'design color').replace(/[^a-zA-Z0-9 ]/g, ' ').trim().replace(/\s+/g, ',');
+                img.src = 'https://loremflickr.com/1280/720/' + encodeURIComponent(kw || 'design') + '?lock=3';
+                return;
+            }
             if (img.classList.contains('blog-thumb-img')) {
                 var fig = img.parentElement;
-                var kw = img.getAttribute('data-kw') || '';
+                var kw2 = img.getAttribute('data-kw') || '';
                 var div = document.createElement('div');
                 div.className = 'thumb-placeholder';
-                div.textContent = kw || 'Blog Thumbnail';
+                div.textContent = kw2 || 'Blog Thumbnail';
                 if (fig) { img.style.display = 'none'; fig.insertBefore(div, img.nextSibling); }
             } else {
                 img.style.display = 'none';
-                var fig = img.closest('figure');
-                if (fig && !fig.querySelector('.img-fallback')) {
-                    var div2 = document.createElement('div');
-                    div2.className = 'img-fallback';
-                    div2.style.cssText = 'background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:20px;text-align:center;color:#94a3b8;font-size:0.85rem;';
-                    div2.textContent = 'Image could not be loaded';
-                    fig.appendChild(div2);
-                }
             }
         }, true);
     </script>

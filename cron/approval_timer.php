@@ -13,10 +13,16 @@
 
 // SAPI guard removed — Hostinger runs PHP as CGI/fPM, not CLI.
 // Allow execution from both cron and web triggers.
-if (php_sapi_name() !== 'cli' && php_sapi_name() !== 'cgi-fcgi' && php_sapi_name() !== 'fpm-fcgi') {
-    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-        http_response_code(405);
-        die('Method not allowed. Use POST to trigger approval timer.');
+$cli = (php_sapi_name() === 'cli');
+if (!$cli) {
+    require_once __DIR__ . '/../includes/database.php';
+    require_once __DIR__ . '/../includes/auto_daily.php';
+    $key = (string)($_GET['key'] ?? $_POST['key'] ?? '');
+    $secret = function_exists('getAutoBlogCronSecret') ? getAutoBlogCronSecret() : '';
+    $okKey = ($secret !== '' && hash_equals($secret, $key));
+    if (!$okKey && ($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
+        http_response_code(403);
+        die('Forbidden. Use the cron wget URL from Auto Blog, or POST from the dashboard.');
     }
 }
 

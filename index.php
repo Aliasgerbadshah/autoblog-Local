@@ -2612,6 +2612,7 @@ function handleApiRoute($uri) {
             'cron' => $cron,
             'job' => $job,
             'tick_url' => function_exists('autoBlogTickUrl') ? autoBlogTickUrl() : '',
+            'cron_urls' => function_exists('autoBlogAllCronUrls') ? autoBlogAllCronUrls() : [],
             'custom_topics_left' => function_exists('countCustomTopicsRemaining') ? countCustomTopicsRemaining() : 0,
         ]);
     }

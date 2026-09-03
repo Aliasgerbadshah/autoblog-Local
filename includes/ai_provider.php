@@ -217,7 +217,7 @@ class AIProviderClient {
                 $width = 1024;
                 $height = 1024;
                 $seed = rand(1000, 9999);
-                $imageUrl = "https://gen.pollinations.ai/image/" . urlencode($prompt) . "?model={$imgModel}&width={$width}&height={$height}&seed={$seed}&nologo=true";
+                $imageUrl = "https://image.pollinations.ai/prompt/" . rawurlencode($prompt) . "?model={$imgModel}&width={$width}&height={$height}&seed={$seed}&nologo=true";
                 if (!empty($key)) {
                     $imageUrl .= "&key=" . urlencode($key);
                 }

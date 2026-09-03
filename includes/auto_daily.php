@@ -58,6 +58,16 @@ function autoBlogTickUrl() {
     return $base . '/cron/tick.php?key=' . urlencode(getAutoBlogCronSecret());
 }
 
+function autoBlogAllCronUrls() {
+    $base = defined('APP_BASE_URL') ? rtrim(APP_BASE_URL, '/') : '';
+    $key = urlencode(getAutoBlogCronSecret());
+    return [
+        'tick' => $base . '/cron/tick.php?key=' . $key,
+        'scheduler' => $base . '/cron/scheduler.php?key=' . $key,
+        'approval_timer' => $base . '/cron/approval_timer.php?key=' . $key,
+    ];
+}
+
 function withAutoBlogLock($callback) {
     $path = autoBlogLockPath();
     $fp = @fopen($path, 'c');

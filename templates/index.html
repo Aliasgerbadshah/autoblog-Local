@@ -2049,6 +2049,7 @@
                 if (st) { st.className = 'badge ' + (jobOn?'badge-success':'badge-warning'); st.innerText = jobOn ? 'Active' : (job.id ? 'Inactive' : 'Not started'); }
                 if (jobOn) startAutoBlogHeartbeat();
                 const tickUrl = data.tick_url || cron.tick_url || '';
+                const cronUrls = data.cron_urls || {};
                 const left = data.custom_topics_left;
                 health.innerHTML = `<p><strong>Last worker run:</strong> ${escapeHtml(String(last))} ${working ? '<span class="badge badge-success">Running (last 15 min)</span>' : '<span class="badge badge-warning">Idle — keep this tab open, or set the Hostinger tick URL once</span>'}</p>
                     <p>Source: ${escapeHtml(cron.last_source||'—')} · Master HTML last run: ${cron.last_html||0} · Scheduled: ${cron.last_scheduled||0} · Published: ${cron.last_published||0} · Failures: ${cron.last_failed||0} · Custom topics left: ${left===undefined?'—':left}</p>
@@ -2063,6 +2064,19 @@
                     <td><span class="badge ${x.article_status==='Published'||x.article_status==='HTML Ready'||x.article_status==='Scheduled'?'badge-success':'badge-warning'}">${escapeHtml(x.article_status||'Not Created')}</span>${x.article_status==='Not Created'?' <span style="font-size:0.72rem;color:var(--text-muted);">waits until 1 hour before</span>':''}</td>
                     <td>${escapeHtml(x.scheduled_date||'—')} ${escapeHtml(x.scheduled_time||'')}</td>
                     <td>${x.html_path?`<a href="${x.html_path}" target="_blank">View</a>`:'—'}</td>
+                    <td>${x.html_retry_count||0}/8</td>
+                    <td style="max-width:280px;font-size:0.78rem;color:${x.last_error?'#b45309':'var(--text-muted)'}">${escapeHtml(x.last_error||'OK')}</td>
+                </tr>`).join('');
+            } catch(e) { health.innerText = 'Could not load worker status: ' + e.message; }
+        }
+        updateAutoCalendarDates();
+        loadAutoBlogStatus();
+
+        startDashRefresh();
+    </script>
+</body>
+</html>
+—'}</td>
                     <td>${x.html_retry_count||0}/8</td>
                     <td style="max-width:280px;font-size:0.78rem;color:${x.last_error?'#b45309':'var(--text-muted)'}">${escapeHtml(x.last_error||'OK')}</td>
                 </tr>`).join('');
