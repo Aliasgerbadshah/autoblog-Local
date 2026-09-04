@@ -98,12 +98,13 @@ class AIProviderClient {
                 $payload = ['model' => $model, 'max_tokens' => 4000, 'messages' => [['role' => 'user', 'content' => $prompt]]];
             } else {
                 $headers = ['Authorization: Bearer ' . $key, 'Content-Type: application/json'];
-                $payload = ['model' => $model, 'messages' => [['role' => 'user', 'content' => $prompt]], 'temperature' => 0.75];
-                // Newer OpenAI models (gpt-5, o1, o3, gpt-4.1) reject max_tokens.
-                $needsCompletionTokens = ($provider === 'openai') || preg_match('/gpt-5|gpt-4\\.1|\\bo[1-9]\\b/i', (string)$model);
+                $payload = ['model' => $model, 'messages' => [['role' => 'user', 'content' => $prompt]]];
+                $isOpenAI = ($provider === 'openai') || (is_string($endpoint) && strpos($endpoint, 'api.openai.com') !== false);
+                $needsCompletionTokens = $isOpenAI || preg_match('/gpt-5|gpt-4\.1|\bo[1-9]\b/i', (string)$model);
                 if ($needsCompletionTokens) {
                     $payload['max_completion_tokens'] = 2200;
                 } else {
+                    $payload['temperature'] = 0.75;
                     $payload['max_tokens'] = 2200;
                 }
             }

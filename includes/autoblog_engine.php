@@ -967,14 +967,10 @@ function articleLooksLikeDraftHtml($html) {
 function shortTopicImagePrompt($title, $keyword) {
     $subject = trim((string)($title !== '' ? $title : $keyword));
     $subject = preg_replace('/\s+/', ' ', $subject);
-    if (strlen($subject) > 80) $subject = substr($subject, 0, 80);
-    $kw = trim((string)$keyword);
-    $motive = $subject;
-    $low = strtolower($subject . ' ' . $kw);
-    if (strpos($low, 'ui') !== false || strpos($low, 'ux') !== false || strpos($low, 'color') !== false) {
-        $motive = $subject . ', color palettes, app UI screens, design theme on a monitor';
-    }
-    return 'Photorealistic blog thumbnail of ' . $motive . '. Real objects from the topic, natural light, no text, no logos';
+    if (strlen($subject) > 90) $subject = substr($subject, 0, 90);
+    return 'Photorealistic photograph of this topic: ' . $subject
+        . '. Show the real-world people, objects, or place from the title. '
+        . 'Do not show a computer monitor, laptop screen, TV, phone UI, or app mockup. No text, no logos.';
 }
 
 function buildTopicImagePrompt($title, $keyword, $h2s = []) {
@@ -999,10 +995,12 @@ function pickArticleThumbnailUrl($imageVault, $title, $keyword) {
     $prompt = shortTopicImagePrompt($title, $keyword);
     $provider = strtolower((string)($imageVault['provider'] ?? ''));
     $hasKey = !empty($imageVault['api_key']);
-    if ($hasKey && in_array($provider, ['pollinations', 'openai', 'openrouter', 'custom'], true)) {
+    // Web request: only Pollinations URL-only. OpenAI/HF/Gemini image HTTP causes nginx 504 and leaves Draft HTML.
+    $allowSlowImage = (PHP_SAPI === 'cli');
+    if ($hasKey && ($provider === 'pollinations' || ($allowSlowImage && in_array($provider, ['openai', 'openrouter', 'custom'], true)))) {
         try {
             $imgResult = AIProviderClient::image($imageVault, $prompt);
-            if (!empty($imgResult['success']) && !empty($imgResult['url']) && stripos($imgResult['url'], 'http') === 0) {
+            if (!empty($imgResult['success']) && !empty($imgResult['url']) && (stripos($imgResult['url'], 'http') === 0 || str_starts_with($imgResult['url'], 'data:image/'))) {
                 return $imgResult['url'];
             }
         } catch (Throwable $e) {}
@@ -1109,7 +1107,14 @@ function generateArticleHtmlFromCampaignItem($item, $userId, $activeSlot, $db, $
                     $chatVault['model'] = 'openai-fast';
                 }
             }
-            $chatTimeout = (PHP_SAPI === 'cli') ? 50 : 18;
+            $chatProv = strtolower((string)($chatVault['provider'] ?? ''));
+            if (PHP_SAPI === 'cli') {
+                $chatTimeout = 50;
+            } elseif ($chatProv === 'openai' || $chatProv === 'gemini' || $chatProv === 'anthropic') {
+                $chatTimeout = 32;
+            } else {
+                $chatTimeout = 18;
+            }
             $chatResult = AIProviderClient::chat($chatVault, $prompt, $chatTimeout);
         } else {
             $chatResult = ['success' => false, 'error' => 'Draft-only write (no Chat on this request).'];

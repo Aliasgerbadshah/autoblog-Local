@@ -699,6 +699,15 @@
             <div class="card" id="auto-cron-status-card">
                 <div class="card-header"><h2 class="card-title">⏱️ Auto Blog worker</h2></div>
                 <div id="auto-cron-health" style="font-size:0.9rem;line-height:1.7;color:var(--text-muted);">Loading worker status...</div>
+                <div id="auto-cron-commands" style="margin-top:14px;padding:12px 14px;background:var(--inner-bg);border:1px solid var(--border-light);border-radius:10px;font-size:0.82rem;line-height:1.6;">
+                    <p style="font-weight:800;margin:0 0 8px 0;">Hostinger Cron Jobs — copy all 3 (every 5 minutes, once)</p>
+                    <p style="margin:8px 0 4px 0;"><strong>1. Auto Blog</strong></p>
+                    <code id="cron-line-tick" style="display:block;word-break:break-all;">Loading…</code>
+                    <p style="margin:10px 0 4px 0;"><strong>2. Human Article Writer</strong></p>
+                    <code id="cron-line-timer" style="display:block;word-break:break-all;">Loading…</code>
+                    <p style="margin:10px 0 4px 0;"><strong>3. Due queue</strong></p>
+                    <code id="cron-line-sched" style="display:block;word-break:break-all;">Loading…</code>
+                </div>
             </div>
             <div class="card">
                 <div class="card-header">
@@ -2051,10 +2060,18 @@
                 const tickUrl = data.tick_url || cron.tick_url || '';
                 const cronUrls = data.cron_urls || {};
                 const left = data.custom_topics_left;
-                health.innerHTML = `<p><strong>Last worker run:</strong> ${escapeHtml(String(last))} ${working ? '<span class="badge badge-success">Running (last 15 min)</span>' : '<span class="badge badge-warning">Idle — keep this tab open, or set the Hostinger tick URL once</span>'}</p>
-                    <p>Source: ${escapeHtml(cron.last_source||'—')} · Master HTML last run: ${cron.last_html||0} · Scheduled: ${cron.last_scheduled||0} · Published: ${cron.last_published||0} · Failures: ${cron.last_failed||0} · Custom topics left: ${left===undefined?'—':left}</p>
-                    <p style="margin-top:8px;">Pattern: 1 hour before each posting time → Master HTML → schedule that exact time → email you the article with date, time, platform, and remaining custom topics.</p>
-                    ${tickUrl?`<p style="margin-top:10px;font-size:0.8rem;"><strong>Hostinger Cron Jobs (set once):</strong><br><code style="word-break:break-all;">*/5 * * * * wget -q -O - "${escapeHtml(tickUrl)}"</code></p>`:''}`;
+                const badge = working ? '<span class="badge badge-success">Running (last 15 min)</span>' : '<span class="badge badge-warning">Idle — set the 3 Hostinger wget jobs below</span>';
+                health.innerHTML = '<p><strong>Last worker run:</strong> ' + escapeHtml(String(last)) + ' ' + badge + '</p>'
+                    + '<p>Source: ' + escapeHtml(cron.last_source||'—') + ' · Master HTML last run: ' + (cron.last_html||0) + ' · Scheduled: ' + (cron.last_scheduled||0) + ' · Published: ' + (cron.last_published||0) + ' · Failures: ' + (cron.last_failed||0) + ' · Custom topics left: ' + (left===undefined?'—':left) + '</p>'
+                    + '<p style="margin-top:8px;">Pattern: 1 hour before each posting time → Master HTML → schedule that exact time → email you the article.</p>';
+                function fillCronLine(id, url) {
+                    const el = document.getElementById(id);
+                    if (!el) return;
+                    el.textContent = url ? ('*/5 * * * * wget -q -O - "' + url + '"') : 'Save/refresh Auto Blog after uploading the latest zip.';
+                }
+                fillCronLine('cron-line-tick', cronUrls.tick || tickUrl);
+                fillCronLine('cron-line-timer', cronUrls.approval_timer);
+                fillCronLine('cron-line-sched', cronUrls.scheduler);
                 const items = data.items || [];
                 if (!items.length) { body.innerHTML = '<tr><td colspan="8">Queue is empty until Start (or until start date). Master HTML is not written until 1 hour before the posting time.</td></tr>'; return; }
                 body.innerHTML = items.map(x => `<tr>
@@ -2064,19 +2081,6 @@
                     <td><span class="badge ${x.article_status==='Published'||x.article_status==='HTML Ready'||x.article_status==='Scheduled'?'badge-success':'badge-warning'}">${escapeHtml(x.article_status||'Not Created')}</span>${x.article_status==='Not Created'?' <span style="font-size:0.72rem;color:var(--text-muted);">waits until 1 hour before</span>':''}</td>
                     <td>${escapeHtml(x.scheduled_date||'—')} ${escapeHtml(x.scheduled_time||'')}</td>
                     <td>${x.html_path?`<a href="${x.html_path}" target="_blank">View</a>`:'—'}</td>
-                    <td>${x.html_retry_count||0}/8</td>
-                    <td style="max-width:280px;font-size:0.78rem;color:${x.last_error?'#b45309':'var(--text-muted)'}">${escapeHtml(x.last_error||'OK')}</td>
-                </tr>`).join('');
-            } catch(e) { health.innerText = 'Could not load worker status: ' + e.message; }
-        }
-        updateAutoCalendarDates();
-        loadAutoBlogStatus();
-
-        startDashRefresh();
-    </script>
-</body>
-</html>
-—'}</td>
                     <td>${x.html_retry_count||0}/8</td>
                     <td style="max-width:280px;font-size:0.78rem;color:${x.last_error?'#b45309':'var(--text-muted)'}">${escapeHtml(x.last_error||'OK')}</td>
                 </tr>`).join('');
