@@ -157,15 +157,25 @@ class BacklinkPublisher {
         $res = bkHttp('POST', 'https://gql.hashnode.com',
             ['Authorization: ' . $token, 'Content-Type: application/json', 'Accept: application/json'],
             json_encode($payload), 30);
+        if (in_array($res['http_code'], [401, 403])) {
+            return ['success' => false, 'error' => 'Hashnode API: token rejected (HTTP ' . $res['http_code'] . '). Check the Personal Access Token.'];
+        }
         $data = $res['data'] ?? [];
         if (!empty($data['errors'])) {
-            return ['success' => false, 'error' => 'Hashnode API: ' . ($data['errors'][0]['message'] ?? 'unknown error')];
+            return ['success' => false, 'error' => 'Hashnode API: ' . ($data['errors'][0]['message'] ?? substr((string)$res['raw'], 0, 250))];
         }
-        $url = $data['data']['publishPost']['post']['url'] ?? '';
-        if (in_array($res['http_code'], [200, 201])) {
-            return ['success' => true, 'url' => $url];
+        $pp = $data['data']['publishPost'] ?? null;
+        if ($pp === null || !is_array($pp)) {
+            return ['success' => false, 'error' => 'Hashnode API returned no result — post was NOT created. Raw: ' . substr((string)$res['raw'], 0, 300)];
         }
-        return ['success' => false, 'error' => 'Hashnode API (' . $res['http_code'] . '): ' . substr((string)$res['raw'], 0, 300)];
+        if (array_key_exists('ok', $pp) && empty($pp['ok'])) {
+            return ['success' => false, 'error' => 'Hashnode API: post was NOT created (ok=false). Raw: ' . substr((string)$res['raw'], 0, 300)];
+        }
+        $url = $pp['post']['url'] ?? '';
+        if ($url === '') {
+            return ['success' => false, 'error' => 'Hashnode API: no post URL came back — post may not be live. Raw: ' . substr((string)$res['raw'], 0, 300)];
+        }
+        return ['success' => true, 'url' => $url];
     }
 
     /**

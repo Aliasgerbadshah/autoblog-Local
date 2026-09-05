@@ -141,8 +141,16 @@ class BacklinkMaker {
             $st2->execute([$jobId]);
             $res = BacklinkPublisher::publish($target, $post['title'], $contentHtml, $imageUrl);
             if (!empty($res['success'])) {
+                $pubUrl = trim((string)($res['url'] ?? ''));
+                if ($pubUrl === '') {
+                    // Safety: never mark "Published" without a real URL
+                    $st3 = $db->prepare("UPDATE jobs SET status = 'Failed', error_message = ? WHERE id = ?");
+                    $st3->execute(['Publisher said success but returned NO post URL — the post was likely not created. Re-run and check the error text.'], $jobId);
+                    addRunLog("FAILED {$target['name']} (no URL returned): {$post['title']}");
+                    return ['id' => $jobId, 'status' => 'Failed', 'title' => $post['title'], 'error_message' => 'No post URL returned — post likely not created.'];
+                }
                 $st3 = $db->prepare("UPDATE jobs SET status = 'Published', published_url = ?, posted_at = datetime('now') WHERE id = ?");
-                $st3->execute([$res['url'] ?? '', $jobId]);
+                $st3->execute([$pubUrl, $jobId]);
                 $st4 = $db->prepare("UPDATE targets SET last_posted_at = datetime('now'), post_count = post_count + 1 WHERE id = ?");
                 $st4->execute([$target['id']]);
                 addRunLog("Published to {$target['name']}: {$post['title']} → " . ($res['url'] ?? ''));
