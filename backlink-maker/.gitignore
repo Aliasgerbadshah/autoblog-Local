@@ -1,0 +1,10 @@
+# runtime data (never commit)
+backlink_maker.db
+backlink_maker.db-wal
+backlink_maker.db-shm
+data_maker.log
+data/
+
+# generated packages (keep folder placeholder only)
+packages/*
+!packages/index.html
