@@ -433,6 +433,7 @@ async function loadTargets() {
         <td>${t.post_count}</td>
         <td><div class="switch ${t.is_active ? 'on' : ''}" onclick="toggleTarget(${t.id})"></div></td>
         <td style="white-space:nowrap">
+          ${t.publish_mode === 'api' ? `<button class="btn sm ghost" onclick="testTarget(${t.id})">🔌 Test</button>` : ''}
           <button class="btn sm ghost" onclick="editTarget(${t.id})">Edit</button>
           <button class="btn sm bad" onclick="delTarget(${t.id})">✕</button>
         </td>
@@ -491,6 +492,29 @@ async function toggleTarget(id) {
   const t = targets.find(x => x.id === id); if (!t) return;
   await api('/api/targets/' + id, 'PUT', { is_active: t.is_active ? 0 : 1 });
   loadTargets();
+}
+async function testTarget(id) {
+  toast('Testing connection… (runs on the live server)');
+  const d = await api('/api/targets/' + id + '/test', 'POST', {});
+  let msg = d.message || d.error || 'No response';
+  const extras = [];
+  if (d.endpoint) extras.push('endpoint: ' + d.endpoint);
+  if (d.http_code) extras.push('HTTP ' + d.http_code);
+  if (d.final_url && d.final_url !== d.endpoint) extras.push('final_url: ' + d.final_url);
+  if (d.content_type) extras.push('type: ' + d.content_type);
+  if (d.response_start) extras.push('response: ' + String(d.response_start).slice(0, 200).replace(/<[^>]+>/g, ''));
+  if (extras.length) msg += '\n\n' + extras.join('\n');
+  if (d.success) toast('✅ ' + msg);
+  else {
+    // long diagnostic → alert box so the full text is readable
+    const box = document.createElement('div');
+    box.className = 'modal-bg show';
+    box.innerHTML = `<div class="modal"><h3 style="margin-bottom:10px">🔌 Connection test result</h3><pre class="code" style="max-height:50vh">${esc(msg)}</pre><div style="margin-top:14px"><button class="btn" onclick="this.closest('.modal-bg').remove()">OK</button> ${d.error ? '<button class="btn ghost" id="copyDiag">📋 Copy for support</button>' : ''}</div></div>`;
+    document.body.appendChild(box);
+    box.addEventListener('click', (e) => { if (e.target === box) box.remove(); });
+    const cb = box.querySelector('#copyDiag');
+    if (cb) cb.onclick = async () => { await navigator.clipboard.writeText(msg); cb.textContent = '✅ Copied'; };
+  }
 }
 async function delTarget(id) {
   if (!confirm('Remove this website from the backlink list?')) return;

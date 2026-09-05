@@ -205,6 +205,112 @@ class BacklinkPublisher {
         return trim($md);
     }
 
+    /**
+     * Test a target's API connection — runs on the deployed server and shows
+     * exactly what the platform's API answers (so problems are diagnosable).
+     */
+    public static function testTarget(array $target) {
+        $platform = $target['platform'] ?? '';
+        $cred = json_decode($target['credential_json'] ?? '{}', true) ?: [];
+        if (SANDBOX_MODE) {
+            return ['success' => false, 'error' => 'Connection tests run on your deployed server, not in the preview sandbox.'];
+        }
+        switch ($platform) {
+            case 'hashnode':  return self::diagnoseHashnode($cred);
+            case 'blogger':   return self::diagnoseBlogger($cred);
+            case 'wordpress': return self::diagnoseWordpress($cred);
+            case 'ghost':     return self::diagnoseGhost($cred);
+            default:          return ['success' => false, 'error' => 'No connection test for platform: ' . $platform];
+        }
+    }
+
+    public static function diagnoseHashnode(array $cred) {
+        $token = trim($cred['personal_token'] ?? '');
+        $pubId = trim($cred['publication_id'] ?? '');
+        if (empty($token)) return ['success' => false, 'error' => 'No Personal Access Token saved yet — paste it in the Backlink Websites panel first.'];
+        if (empty($pubId)) return ['success' => false, 'error' => 'No Publication ID saved yet — paste it in the Backlink Websites panel first.'];
+
+        $out = ['endpoint' => 'https://gql.hashnode.com', 'http_code' => 0, 'final_url' => '', 'content_type' => '', 'response_start' => ''];
+        $ch = curl_init('https://gql.hashnode.com');
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => json_encode(['query' => 'query { me { id username } }']),
+            CURLOPT_HTTPHEADER => ['Content-Type: application/json', 'Accept: application/json', 'Authorization: ' . $token],
+            CURLOPT_TIMEOUT => 20,
+            CURLOPT_SSL_VERIFYPEER => false,
+            CURLOPT_USERAGENT => 'Mozilla/5.0 (AutoBacklink diagnostic)',
+        ]);
+        $raw = curl_exec($ch);
+        $out['http_code'] = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $out['final_url'] = (string)curl_getinfo($ch, CURLINFO_EFFECTIVE_URL);
+        $out['content_type'] = (string)curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
+        $out['response_start'] = substr((string)$raw, 0, 400);
+        $curlErr = curl_error($ch);
+        curl_close($ch);
+        if ($raw === false) {
+            return $out + ['success' => false, 'error' => 'Could not reach the Hashnode API at all: ' . $curlErr];
+        }
+        $data = json_decode((string)$raw, true);
+        if (is_array($data)) {
+            if (!empty($data['errors'])) {
+                return $out + ['success' => false, 'error' => 'Hashnode API answered (JSON) with error: ' . ($data['errors'][0]['message'] ?? 'unknown')];
+            }
+            if (!empty($data['data']['me'])) {
+                return $out + ['success' => true, 'message' => '✅ Connected as @' . ($data['data']['me']['username'] ?? '?') . ' — token works. Next, make sure the Publication ID belongs to the blog you expect (Dashboard → Posts shows which blog a post lands in).'];
+            }
+            return $out + ['success' => false, 'error' => 'Hashnode API answered (JSON) but no user found: ' . substr((string)$raw, 0, 300)];
+        }
+        // API answered with a WEB PAGE (HTML) instead of JSON
+        $why = 'The Hashnode API endpoint answered with a WEB PAGE (HTML) instead of an API answer. This is NOT a content problem. Most common causes: (1) the account needs a Pro subscription for API access, or (2) the endpoint redirected to the website — check the final_url below. Send me this whole test result and I will pinpoint it.';
+        return $out + ['success' => false, 'error' => $why];
+    }
+
+    public static function diagnoseBlogger(array $cred) {
+        $rf = self::refreshBloggerToken($cred['client_id'] ?? '', $cred['client_secret'] ?? '', $cred['refresh_token'] ?? '');
+        if (!$rf['success']) return ['success' => false, 'error' => 'Blogger OAuth failed: ' . $rf['error']];
+        $blogId = trim($cred['blog_id'] ?? '');
+        $res = bkHttp('GET', "https://www.googleapis.com/blogger/v3/blogs/$blogId", ['Authorization: Bearer ' . $rf['access_token']], null, 15);
+        $data = $res['data'] ?? [];
+        if ($res['success'] && !empty($data['id'])) {
+            return ['success' => true, 'message' => '✅ Blogger connected — blog "' . ($data['name'] ?? $blogId) . '" is accessible. Auto-posting should work.'];
+        }
+        return ['success' => false, 'error' => 'Blogger OAuth works, but Blog ID ' . $blogId . ' is not accessible (' . $res['http_code'] . '): ' . ($data['error']['message'] ?? substr((string)$res['raw'], 0, 200))];
+    }
+
+    public static function diagnoseWordpress(array $cred) {
+        $site = rtrim(trim($cred['site_url'] ?? ''), '/');
+        $user = trim($cred['username'] ?? '');
+        $pass = trim($cred['app_password'] ?? '');
+        if (!$site || !$user || !$pass) return ['success' => false, 'error' => 'WordPress site URL, username and application password are all needed.'];
+        $ch = curl_init($site . '/wp-json/wp/v2/users/me');
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 15,
+            CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
+            CURLOPT_USERPWD => "$user:$pass", CURLOPT_SSL_VERIFYPEER => false,
+        ]);
+        $raw = curl_exec($ch);
+        $code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        $data = json_decode((string)$raw, true);
+        if (in_array($code, [200, 201]) && !empty($data['name'])) {
+            return ['success' => true, 'message' => '✅ WordPress connected as ' . $data['name'] . ' — auto-posting should work.'];
+        }
+        return ['success' => false, 'error' => 'WordPress login failed (HTTP ' . $code . '). Check the Application Password (WP admin → Users → Profile).'];
+    }
+
+    public static function diagnoseGhost(array $cred) {
+        $site = rtrim(trim($cred['site_url'] ?? ''), '/');
+        $key = trim($cred['admin_key'] ?? '');
+        if (!$site || !$key) return ['success' => false, 'error' => 'Ghost site URL and Admin API key are both needed.'];
+        $res = bkHttp('GET', $site . '/ghost/api/admin/site/', ['Authorization: Token ' . $key], null, 15);
+        $data = $res['data'] ?? [];
+        if (in_array($res['http_code'], [200, 201]) && !empty($data['name'])) {
+            return ['success' => true, 'message' => '✅ Ghost connected — site "' . $data['name'] . '" is accessible. Auto-posting should work.'];
+        }
+        return ['success' => false, 'error' => 'Ghost connection failed (HTTP ' . $res['http_code'] . '): ' . substr((string)$res['raw'], 0, 250)];
+    }
+
     // ---------------- Webhook (Make/Zapier/anything) ----------------
 
     public static function publishWebhook(array $cred, $title, $html) {

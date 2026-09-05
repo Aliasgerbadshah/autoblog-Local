@@ -164,6 +164,15 @@ function handleApi($uri, $method, $input) {
         $db = getDB();
         bkJson($db->query('SELECT * FROM targets ORDER BY id DESC')->fetchAll());
     }
+    if (preg_match('#^/api/targets/(\d+)/test$#', $uri, $m) && $method === 'POST') {
+        $db = getDB();
+        $st = $db->prepare('SELECT * FROM targets WHERE id = ?');
+        $st->execute([intval($m[1])]);
+        $t = $st->fetch();
+        if (!$t) bkJson(['error' => 'Target not found.'], 404);
+        $res = BacklinkPublisher::testTarget($t);
+        bkJson($res, $res['success'] ? 200 : 400);
+    }
     if (preg_match('#^/api/targets/(\d+)$#', $uri, $m)) {
         $id = intval($m[1]);
         $db = getDB();
