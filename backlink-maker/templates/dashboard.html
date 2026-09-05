@@ -173,6 +173,7 @@
               <option value="blogger">Blogger</option>
               <option value="wordpress">WordPress</option>
               <option value="ghost">Ghost</option>
+              <option value="hashnode">Hashnode</option>
               <option value="webhook">Webhook (Make/Zapier)</option>
             </select>
             <div id="cred-blogger" style="display:none">
@@ -189,6 +190,10 @@
             <div id="cred-ghost" style="display:none">
               <label class="f">GHOST SITE URL</label><input id="c-ghostsite" placeholder="https://mysite.com">
               <label class="f">ADMIN API KEY</label><input id="c-ghostkey" placeholder="…-…">
+            </div>
+            <div id="cred-hashnode" style="display:none">
+              <label class="f">PUBLICATION ID</label><input id="c-hashpub" placeholder="from your Hashnode dashboard URL">
+              <label class="f">PERSONAL ACCESS TOKEN</label><input id="c-hashtoken" placeholder="hashnode.com → Settings → Developer">
             </div>
             <div id="cred-webhook" style="display:none">
               <label class="f">WEBHOOK URL</label><input id="c-hookurl" placeholder="https://hook.make.com/…">
@@ -438,7 +443,7 @@ function resetTargetForm() {
   ['t-id', 't-name', 't-url', 't-niche', 't-notes'].forEach(id => $(id).value = '');
   $('t-type').value = 'blog'; $('t-mode').value = 'manual'; $('t-interval').value = 7;
   $('targetFormTitle').textContent = '➕ Add backlink website';
-  ['c-blogid', 'c-clientid', 'c-clientsecret', 'c-refreshtoken', 'c-wpsite', 'c-wpuser', 'c-wppass', 'c-ghostsite', 'c-ghostkey', 'c-hookurl'].forEach(id => $(id).value = '');
+  ['c-blogid', 'c-clientid', 'c-clientsecret', 'c-refreshtoken', 'c-wpsite', 'c-wpuser', 'c-wppass', 'c-ghostsite', 'c-ghostkey', 'c-hashpub', 'c-hashtoken', 'c-hookurl'].forEach(id => $(id).value = '');
   toggleCredFields();
 }
 function editTarget(id) {
@@ -450,6 +455,7 @@ function editTarget(id) {
   $('c-blogid').value = c.blog_id || ''; $('c-clientid').value = c.client_id || ''; $('c-clientsecret').value = c.client_secret || ''; $('c-refreshtoken').value = c.refresh_token || '';
   $('c-wpsite').value = c.site_url || ''; $('c-wpuser').value = c.username || ''; $('c-wppass').value = c.app_password || '';
   $('c-ghostsite').value = c.site_url || ''; $('c-ghostkey').value = c.admin_key || '';
+  $('c-hashpub').value = c.publication_id || ''; $('c-hashtoken').value = c.personal_token || '';
   $('c-hookurl').value = c.webhook_url || '';
   $('targetFormTitle').textContent = '✏️ Edit: ' + t.name;
   toggleCredFields();
@@ -458,13 +464,14 @@ function editTarget(id) {
 function toggleCredFields() {
   $('credWrap').style.display = $('t-mode').value === 'api' ? '' : 'none';
   const p = $('t-platform').value;
-  ['blogger', 'wordpress', 'ghost', 'webhook'].forEach(x => $('cred-' + x).style.display = x === p ? '' : 'none');
+  ['blogger', 'wordpress', 'ghost', 'hashnode', 'webhook'].forEach(x => $('cred-' + x).style.display = x === p ? '' : 'none');
 }
 function collectCreds() {
   const p = $('t-platform').value;
   if (p === 'blogger') return { blog_id: $('c-blogid').value, client_id: $('c-clientid').value, client_secret: $('c-clientsecret').value, refresh_token: $('c-refreshtoken').value };
   if (p === 'wordpress') return { site_url: $('c-wpsite').value, username: $('c-wpuser').value, app_password: $('c-wppass').value };
   if (p === 'ghost') return { site_url: $('c-ghostsite').value, admin_key: $('c-ghostkey').value };
+  if (p === 'hashnode') return { publication_id: $('c-hashpub').value, personal_token: $('c-hashtoken').value };
   return { webhook_url: $('c-hookurl').value };
 }
 async function saveTarget() {

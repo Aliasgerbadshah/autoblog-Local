@@ -133,6 +133,68 @@ class BacklinkPublisher {
         return ['success' => false, 'error' => 'Ghost API (' . $res['http_code'] . '): ' . substr((string)$res['raw'], 0, 300)];
     }
 
+    // ---------------- Hashnode (GraphQL publishPost) ----------------
+
+    public static function publishHashnode(array $cred, $title, $html) {
+        $token = trim($cred['personal_token'] ?? '');
+        $pubId = trim($cred['publication_id'] ?? '');
+        if (empty($token) || empty($pubId)) {
+            return ['success' => false, 'error' => 'Hashnode needs a Personal Access Token AND a Publication ID. Get the token at hashnode.com → (your avatar) → Settings → Developer. The Publication ID is in your Hashnode dashboard URL.'];
+        }
+        // Hashnode fetches images itself — relative /packages/... URLs must be absolute
+        if (defined('APP_BASE_URL') && APP_BASE_URL) {
+            $html = str_replace('src="/', 'src="' . APP_BASE_URL . '/', $html);
+        }
+        $md = self::htmlToMarkdown($html);
+        $payload = [
+            'query' => 'mutation ($input: PublishPostInput!) { publishPost(input: $input) { post { url } } }',
+            'variables' => ['input' => [
+                'publicationId' => $pubId,
+                'title' => $title,
+                'contentMarkdown' => $md,
+            ]],
+        ];
+        $res = bkHttp('POST', 'https://gql.hashnode.com',
+            ['Authorization: ' . $token, 'Content-Type: application/json', 'Accept: application/json'],
+            json_encode($payload), 30);
+        $data = $res['data'] ?? [];
+        if (!empty($data['errors'])) {
+            return ['success' => false, 'error' => 'Hashnode API: ' . ($data['errors'][0]['message'] ?? 'unknown error')];
+        }
+        $url = $data['data']['publishPost']['post']['url'] ?? '';
+        if (in_array($res['http_code'], [200, 201])) {
+            return ['success' => true, 'url' => $url];
+        }
+        return ['success' => false, 'error' => 'Hashnode API (' . $res['http_code'] . '): ' . substr((string)$res['raw'], 0, 300)];
+    }
+
+    /**
+     * Lightweight HTML → Markdown for Hashnode (our content is structured:
+     * h1/h2/p/a/img/figure/ul/li/strong/em).
+     */
+    public static function htmlToMarkdown($html) {
+        $md = (string)$html;
+        $md = preg_replace('/<figure[^>]*>(.*?)<\/figure>/is', '$1', $md);
+        $md = preg_replace('/<img[^>]*src="([^"]*)"[^>]*alt="([^"]*)"[^>]*\/?>/i', '![$2]($1)', $md);
+        $md = preg_replace('/<img[^>]*alt="([^"]*)"[^>]*src="([^"]*)"[^>]*\/?>/i', '![$1]($2)', $md);
+        $md = preg_replace('/<img[^>]*src="([^"]*)"[^>]*\/?>/i', '![]($1)', $md);
+        $md = preg_replace('/<h1[^>]*>.*?<\/h1>/is', '', $md); // title is separate in Hashnode
+        $md = preg_replace('/<h2[^>]*>(.*?)<\/h2>/is', "\n\n## $1\n\n", $md);
+        $md = preg_replace('/<h3[^>]*>(.*?)<\/h3>/is', "\n\n### $1\n\n", $md);
+        $md = preg_replace('/<li[^>]*>(.*?)<\/li>/is', "- $1\n", $md);
+        $md = preg_replace('/<\/?(ul|ol)[^>]*>/i', '', $md);
+        $md = preg_replace('/<a[^>]*href="([^"]*)"[^>]*>(.*?)<\/a>/is', '[$2]($1)', $md);
+        $md = preg_replace('/<strong[^>]*>(.*?)<\/strong>/is', '**$1**', $md);
+        $md = preg_replace('/<b[^>]*>(.*?)<\/b>/is', '**$1**', $md);
+        $md = preg_replace('/<em[^>]*>(.*?)<\/em>/is', '*$1*', $md);
+        $md = preg_replace('/<p[^>]*>(.*?)<\/p>/is', "$1\n\n", $md);
+        $md = preg_replace('/<(br|hr)\s*\/?>/i', "\n\n", $md);
+        $md = preg_replace('/<[^>]+>/', '', $md);
+        $md = html_entity_decode($md, ENT_QUOTES, 'UTF-8');
+        $md = preg_replace('/\n{3,}/', "\n\n", $md);
+        return trim($md);
+    }
+
     // ---------------- Webhook (Make/Zapier/anything) ----------------
 
     public static function publishWebhook(array $cred, $title, $html) {
@@ -162,6 +224,7 @@ class BacklinkPublisher {
             case 'blogger':   return self::publishBlogger($cred, $title, $html, $imageUrl);
             case 'wordpress': return self::publishWordpress($cred, $title, $html);
             case 'ghost':     return self::publishGhost($cred, $title, $html);
+            case 'hashnode':  return self::publishHashnode($cred, $title, $html);
             case 'webhook':   return self::publishWebhook($cred, $title, $html);
             default:          return ['success' => false, 'error' => 'Unsupported platform: ' . $platform];
         }

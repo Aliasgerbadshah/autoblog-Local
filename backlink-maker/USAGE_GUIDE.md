@@ -77,6 +77,7 @@ Click **Save** → repeat for every website. Toggle the switch to pause/resume a
 - **Blogger**: Blog ID (from blogger.com/about) + Client ID + Client Secret + Refresh Token (Google OAuth)
 - **WordPress**: site URL + username + Application Password (WP admin → Users → Profile → Application Passwords → Generate)
 - **Ghost**: site URL + Admin API key
+- **Hashnode**: Publication ID (shown in your Hashnode dashboard URL) + Personal Access Token (hashnode.com → your avatar → Settings → Developer). Note: Hashnode's API is for sites you OWN a Hashnode blog on — Hashnode is NOT a Ghost site, don't pick Ghost for it.
 - **Webhook**: the URL (Make/Zapier hook)
 
 ## STEP 6 — Test it (one time only)
