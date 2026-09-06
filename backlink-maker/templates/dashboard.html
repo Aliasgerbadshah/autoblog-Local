@@ -510,9 +510,11 @@ function collectCreds() {
   if (p === 'ghost') return { site_url: $('c-ghostsite').value, admin_key: $('c-ghostkey').value };
   if (p === 'hashnode') return { publication_id: $('c-hashpub').value, personal_token: $('c-hashtoken').value };
   if (p === 'wix') {
+    let su = $('t-url').value.trim();
+    if (su && !/^https?:\/\//i.test(su)) su = 'https://' + su;
     return {
       site_id: $('c-wixsite').value, client_id: $('c-wixcid').value, client_secret: $('c-wixcs').value,
-      instance_id: $('c-wixinst').value, access_token: $('c-wixtok').value, site_url: $('t-url').value,
+      instance_id: $('c-wixinst').value, access_token: $('c-wixtok').value, site_url: su,
     };
   }
   return { webhook_url: $('c-hookurl').value };

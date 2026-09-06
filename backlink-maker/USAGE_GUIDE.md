@@ -1,116 +1,148 @@
 # 📖 How to Use AutoBacklink — Step by Step
 
-Follow these steps once to set up. After that, your daily work is ~1 minute per manual site.
+Set this up once. After that: auto sites post by themselves, and manual sites take ~1 minute each with the **Copy & Paste Studio**.
 
 ---
 
 ## STEP 1 — Install it on Hostinger
 
 1. **hPanel → Websites → Manage** (your subdomain, e.g. `backlinks.yourdomain.com`)
-2. Go to **File Manager** (or upload via FTP) and open the subdomain's document root
-   (usually `public_html/` for a subdomain that has its own folder)
-3. **Upload the `backlink-maker` folder** (unzipped) there
-4. In File Manager: right-click the `packages` folder → **Permissions** → set to **777**
-   (everything else stays as it is)
-5. **hPanel → Advanced → Cron Jobs** → add:
+2. **File Manager** (or FTP) → open the subdomain's document root (usually `public_html/`)
+3. **Upload the `backlink-maker` folder** (unzipped), replacing the old one
+4. Right-click the `packages` folder → **Permissions** → **777** (everything else unchanged)
+5. **hPanel → Advanced → Cron Jobs** → add this ONE line (replace YOURUSERNAME):
    ```
-   0 6 * * *
-   php /home/YOURUSERNAME/public_html/backlink-maker/cron/daily.php
+   */30 * * * *
+   php /home/YOURUSERNAME/public_html/backlink-maker/cron/backlink-30min.php
    ```
-   (replace YOURUSERNAME with your Hostinger username; change `0 6` to your preferred hour:minute — must match the time you set in the Auto Runner panel)
+   This runs the software every 30 minutes, so each website's own **timer** (Site Panels) fires at the exact hour you choose.
+   (You can keep the old daily cron instead — pacing still works, but timers are then approximate.)
 
 ## STEP 2 — First visit (one time only)
 
 1. Open your subdomain in the browser
-2. You'll see the **Setup screen** → create your username + password → done
+2. **Setup screen** → create username + password → done
 3. Next visits: just the login page
 
 ## STEP 3 — API Keys (paste your AI keys)
 
 Open the **API Keys** panel:
 
-1. **Chat API** (writes the content):
-   - Provider: pick what you use (Google Gemini / OpenAI / HuggingFace / Pollinations…)
-   - Paste the API key, enter the model name (e.g. `gemini-2.5-flash-lite`)
-   - Click **Save** → click **Test** (should say ✅ connection successful)
+1. **Chat API** (writes the content): pick provider, paste key, model name (e.g. `gemini-2.5-flash-lite`) → **Save** → **Test** (should say ✅)
 2. **Image API** (creates the image for each post): same idea
-   - (These are the same keys/providers AutoBlog uses — you can paste the same ones)
+   (Same keys/providers AutoBlog uses — paste the same ones.)
 
-> **No keys yet?** The software still works in *template mode* (ready-made content + fallback image) so you can test everything. Real AI content starts the moment you save a key.
+> **No keys yet?** Everything still works in *template mode* (ready-made content + fallback image). Real AI content starts the moment you save a key.
 
-## STEP 4 — Auto Runner (the brain settings, one time only)
+## STEP 4 — Auto Runner (the brain, one time)
 
 Open the **Auto Runner** panel:
 
-1. **MAIN SITE URL** — the website that RECEIVES the backlinks (e.g. `https://yourwebsite.com`) — every post links to it
-2. **ANCHOR TEXT POOL** — 4–8 phrases, one per line. Example:
-   ```
-   YourBrandName
-   your main keyword phrase
-   their complete guide
-   this resource
-   ```
-   (The software rotates them automatically and never repeats one twice in a row on the same site.)
-3. **YOUR OWN TOPICS** (optional) — topics you specifically want covered, one per line. These are used FIRST, then the AI invents fresh ones (never repeating any topic ever).
-4. **POSTS PER DAY** (start with 5) and **RUN TIME** (e.g. 06:00)
-5. Click **Save**
-
-⚠️ The cron job from Step 1 is what makes it run daily — without it, you must press **Run Now** each day.
+1. **MAIN SITE URL** — the site that RECEIVES the backlinks (e.g. `https://yourwebsite.com`). Every post links to it.
+2. **ANCHOR TEXT POOL** — 4–8 phrases, one per line (your brand name, your keyword, "their complete guide", "this resource"…). Rotated automatically, never repeated twice in a row on the same site.
+3. **YOUR OWN TOPICS** (optional) — topics you specifically want, one per line. Used first; then fresh ones are invented (never repeated).
+4. **Save** (the old global "posts per day / run time" settings are now per-site — see Site Panels)
 
 ## STEP 5 — Add your backlink websites
 
-Open the **Backlink Websites** panel → the form on the right:
+Open **Backlink Websites** → form on the right:
 
 | Field | What to enter |
 |---|---|
-| Name | Anything you remember (e.g. "My Blogger 2", "DesignDirectory") |
+| Name | Anything you remember ("My Wix Blog", "DesignDirectory") |
 | Site URL | `https://that-site.com` |
 | Type | Blog / Directory / Forum / Q&A / Social / Review |
-| Posting mode | **Manual** = you paste (99% of sites) · **Auto via API** = software posts by itself (only if you OWN the site: Blogger/WordPress/Ghost/Webhook) |
-| Niche | What that site is about (helps content fit) |
-| Every N days | Minimum days between posts on that site (default 7) |
-| Account notes | Your handle/username there, which section to post in — shown in the instructions |
+| Posting mode | **Manual** = you paste (use Copy Studio) · **Auto via API** = software posts itself (only sites you OWN) |
+| Niche | What the site is about (helps content + topic matching) |
+| Every N days | Minimum gap between posts (default 7) |
+| Account notes | Your handle there, which section to post in |
 
-Click **Save** → repeat for every website. Toggle the switch to pause/resume any site.
+**If Auto via API**, pick the platform:
 
-**If you choose Auto via API**, fill the credentials:
-- **Blogger**: Blog ID (from blogger.com/about) + Client ID + Client Secret + Refresh Token (Google OAuth)
-- **WordPress**: site URL + username + Application Password (WP admin → Users → Profile → Application Passwords → Generate)
+- **Wix Blog (+Community)** → see the full Wix walkthrough in STEP 6 below
+- **Blogger**: Blog ID (blogger.com/about) + Client ID + Client Secret + Refresh Token
+- **WordPress**: site URL + username + Application Password (WP admin → Users → Profile → Application Passwords)
 - **Ghost**: site URL + Admin API key
-- **Hashnode**: Publication ID (shown in your Hashnode dashboard URL) + Personal Access Token (hashnode.com → your avatar → Settings → Developer). Note: Hashnode's API is for sites you OWN a Hashnode blog on — Hashnode is NOT a Ghost site, don't pick Ghost for it.
-- **Webhook**: the URL (Make/Zapier hook)
+- **Hashnode**: Publication ID + Personal Access Token — ⚠️ **Hashnode made API posting paid (Pro) in May 2026**. If you don't have Pro: keep Hashnode in **Manual mode** and use the **Copy & Paste Studio** (STEP 7).
+- **Webhook**: your Make/Zapier URL
 
-## STEP 6 — Test it (one time only)
+## STEP 6 — Wix setup (the new one, ~10 minutes)
 
-1. In **Auto Runner** → press **▶ Run now**
-2. Open **Paste Queue** — you should see 1 package per due website:
-   - 📋 **Copy Title** → paste into the site's title field
-   - 📋 **Copy Body (HTML)** → paste into the site's editor (use **Plain Text** version if the editor can't take HTML)
-   - 🖼 **Download Image** → upload it on that site (place it at the top)
-   - 📖 *Instructions* (expand) — exact steps for that site's type, with your saved notes
-   - **✅ Mark as posted** → paste the LIVE URL of the post you just published
-3. Open **Link Health** — your link now appears there (dofollow status checks after deployment)
+Wix lets us **auto-post blog drafts/posts AND auto-comment in your community (Wix Groups)**.
 
-## 📅 Your daily routine (after setup)
+1. **Create a Wix app** (one time):
+   - Go to **dev.wix.com** (Wix Developer) with your Wix account
+   - **Create a new app** (any name, e.g. "my-auto")
+   - Open the app → **OAuth** tab → copy the **App ID** (= Client ID) and the **App secret key** (= Client Secret)
+2. **Find your Site ID**: open your Wix dashboard — the URL looks like
+   `wix.com/dashboard/<THIS-PART-is-your-site-id>/...` — copy that part.
+3. **In Backlink Websites** → Edit your Wix site → Platform: **Wix Blog (+Community)**:
+   - **Site ID** ← the UUID from step 2
+   - **OAuth Client ID / Client Secret** ← from step 1
+   - (Instance ID: only if Wix asks for it — it's in Dev Center → your app → **Instances**)
+   - **Save**
+4. **Community (Groups)**: make sure your Wix site has the **Groups/Communities app** installed (site editor → Apps). Leave "Community / Group" on **auto** — the software picks the first group and remembers it — or click **↻ Load groups** to choose.
+5. **Test it**:
+   - **🔌 Test connection** → should say ✅ Blog API reachable + your groups listed
+   - **🧪 Create a DRAFT post** → open Wix → **Blog → Posts → Drafts** — you should see "AutoBacklink draft test…". If you see it, auto-posting works.
+   - **🔎 Find topics + prepare our comments** → each topic shows as a link + the question + *our* prepared answer (editable) + **📩 Post this comment** button. **Nothing posts until you click.**
 
-- **Automatic sites**: nothing. The cron posts them every day by itself.
-- **Manual sites** (~1 min each): open **Paste Queue** → for each package: copy title → copy body → upload image → submit on that site → **Mark as posted** + paste the URL.
-- That's it. The system picks new sites each day (never posts to the same site more often than its interval, never repeats topics or anchors).
+The software handles all the Wix details automatically: tokens expire every 4 hours (auto-refreshed), images are imported into Wix Media first, and the post content uses Wix's own rich format (with a fallback).
 
-## 🧠 Things to know (how the system thinks)
+## STEP 7 — Site Panels (one panel per website) ⭐ New tab
 
-- **Max 10 posts/day** hard limit; you choose 1–10
+Open **🎛 Site Panels** — every website gets its own card:
+
+**Blog box**
+- **Mode**: ⚡ Full auto (posts as soon as it's due) · ⏰ Scheduled (posts at the timer time) · 📋 Manual (you paste from Copy Studio)
+- **Posts per day** (1–5) + **Minimum gap in days** (the gap wins if it's bigger — safety)
+- **Post time (HH:MM)** — with the 30-min cron, it posts at that exact hour
+- **🧪 Draft Test** (Wix) + **🔌 Test connection**
+
+**Community box (Wix sites)**
+- **Enable** switch → auto commenting starts
+- **Comments per day** (1–3, bot-safe) + **Comment time**
+- **Group** picker (auto = first group)
+- **🔎 Find topics + prepare our comments** — see the question, edit our answer, click Post
+- **🚀 Post one comment now** — picks the best-matching topic, writes a useful answer with your link, posts it
+
+**Copy & Paste Studio (top of the tab)** — for sites without a working API (Hashnode etc.):
+1. Pick your site → **✨ Generate post now**
+2. You get the **complete article**: title + image + body with your link inside
+3. **Copy Title / Copy Body (rich) / Copy Body (plain) / Copy Markdown (best for Hashnode) / Download Image**
+4. Paste into the site, publish, then **✅ I pasted it — I have the live URL** → paste the URL → the backlink is tracked in **Link Health** (dofollow check included)
+
+## STEP 8 — Test it
+
+1. **Auto Runner → ▶ Run now** (bypasses timers: does everything that's due right now)
+2. Watch **Overview** (jobs + run log) and **Site Panels** (last posted / last comment)
+3. Wix: open **Blog → Drafts/Posts** and your **Groups** feed to see the results
+
+## 📅 Your daily routine after setup
+
+- **Wix (blog + community)**: nothing. It posts at its timer and comments 1–3×/day by itself.
+- **Other auto sites (Blogger/WordPress/Ghost)**: nothing.
+- **Manual sites** (~1 min each): **Site Panels → Copy Studio** → generate → copy → paste → mark posted.
+
+## 🧠 How the system thinks
+
+- **Max 10 posts/day** total across all sites; each site follows its OWN pace (posts/day + minimum gap)
 - Each post: 300–500 words, **exactly ONE link** to your main site, placed naturally
-- Every post gets a different angle (listicle / review / how-to / roundup / trend / use-case / FAQ) → nothing looks copy-pasted
-- **Link Health**: red `nofollow` or dead links = tell me, and we adjust that site
-- If a site starts rejecting posts (CAPTCHAs, spam filters), toggle it OFF in Backlink Websites — don't force it
+- Different angle every post (listicle / review / how-to / roundup / trend / FAQ) → nothing looks copy-pasted
+- Community comments: **useful, 1–3 sentences, one natural mention of your site** — never the same topic twice, 1–3/day so it reads human, not bot
+- **Link Health**: red nofollow/dead = we adjust that site
 
 ## ❓ Troubleshooting
 
 | Problem | Fix |
 |---|---|
-| Nothing appears in Paste Queue | Check Backlink Websites: sites ON? Interval passed? → press **Run Now** |
-| "Chat API" test fails | Wrong key/provider/model — re-check the API Keys panel |
-| Image is a plain gradient | Image API key not saved (or failed) — check API Keys → Test |
-| Blogger auto-post fails | OAuth credentials wrong/expired — re-generate the refresh token |
-| Cron didn't run | hPanel → Cron Jobs: correct path? username? Then check Overview → run log |
+| Nothing posts | Site Panels: site ON? Mode not "Manual"? Timer time reached? → **Run now** |
+| Wix test: "OAuth token failed" | Wrong Client ID/Secret — Dev Center → your app → **OAuth** tab (not "API Keys") |
+| Wix test: HTTP 403 | App has no permission for that site — install the app on the site in Dev Center (it grants Blog/Community access) |
+| Wix draft test fails with "memberId" | Auto-detect of your member was blocked — set **member_id** manually in the site credentials |
+| Community: "Could not list topics / endpoints tried:…" | Send me that exact text — the topic path isn't fully documented by Wix; the output tells me which path to pin for your site |
+| Community: no groups found | Install the **Groups** app on your Wix site (editor → Apps) |
+| "Skipped (Wix keys not saved)" in run log | Expected — add the Wix OAuth keys in Backlink Websites first |
+| Hashnode "API returned a web page" | That's the **paid wall** (Pro only since May 2026) — use Manual mode + Copy Studio, or upgrade to Pro |
+| Cron didn't run | hPanel → Cron Jobs: path + username correct? Check Overview → run log |
+| Image is a plain gradient | Image API key not saved — API Keys → Test |

@@ -65,6 +65,14 @@ class BacklinkMaker {
         $dueCount = 0;
 
         foreach ($targets as $target) {
+            // Wix site without any credentials yet → skip quietly (no point failing every 30 min)
+            if (($target['platform'] ?? '') === 'wix') {
+                $wcred = json_decode($target['credential_json'] ?? '{}', true) ?: [];
+                if (empty($wcred['client_id']) && empty($wcred['access_token'])) {
+                    $summary['details'][] = ['job_id' => null, 'target' => $target['name'], 'title' => '', 'status' => 'Skipped (Wix keys not saved)', 'url' => '', 'error' => ''];
+                    continue;
+                }
+            }
             // ---- Blog lane ----
             $mode = $target['blog_mode'] ?? 'auto';
             if ($mode !== 'manual' && $budget > 0) {
