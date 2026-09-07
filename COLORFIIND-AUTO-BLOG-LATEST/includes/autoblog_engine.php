@@ -978,9 +978,14 @@ function shortTopicImagePrompt($title, $keyword) {
     $subject = trim(preg_replace('/[\x{1F300}-\x{1FAFF}\x{2600}-\x{27BF}"]+/u', '', $subject)); // strip emoji/quotes
     if ($subject === '') $subject = $title !== '' ? $title : 'the article topic';
     if (strlen($subject) > 90) $subject = substr($subject, 0, 90);
-    return 'Photorealistic photograph of this subject: ' . $subject
-        . '. Show the real-world people, objects, place, or product related to "' . ($title !== '' ? $title : $subject) . '" — exactly that subject, not a screen and not a generic stock desk. '
-        . 'Do not show a computer monitor, laptop screen, TV, phone UI, or app mockup. No text, no logos, no watermark.';
+    // Positive, concrete scene direction beats pure negation: image models render
+    // "annual report"/"dashboard" keywords as glowing screens when the prompt only
+    // says what NOT to draw. Ask for a physical, object-based editorial scene that
+    // still clearly illustrates the topic (works for design/color/SaaS keywords).
+    return 'Photorealistic editorial photograph for the blog article "' . ($title !== '' ? $title : $subject) . '". '
+        . 'Show the subject: ' . $subject . '. '
+        . 'Compose it as a real physical still-life scene that represents the topic: printed color swatch cards, painted chips, fabric and paper samples, printed charts or product objects arranged on a styled surface with soft natural light. If people belong in the topic, show hands or a designer working with those physical materials. '
+        . 'There must be no glowing screen anywhere: no computer monitor, no laptop, no tablet, no phone, no TV, no dashboard or app screenshot, no visible user interface. No readable text, no logos, no watermark.';
 }
 
 /**
@@ -990,10 +995,10 @@ function shortTopicImagePrompt($title, $keyword) {
 function topicVariantPrompt($title, $keyword, $index = 1) {
     $base = shortTopicImagePrompt($title, $keyword);
     $scenes = [
-        1 => ' Main establishing shot of the subject, straight editorial view.',
-        2 => ' Second photograph from a different angle, showing people or hands using/interacting with the subject.',
-        3 => ' Close-up detail photograph of the subject and its texture/materials.',
-        4 => ' Wide contextual scene photograph of the subject in its real environment.',
+        1 => ' Main establishing shot of the physical objects described, straight editorial view, shallow depth of field.',
+        2 => ' Second angle showing hands arranging the printed swatches, charts or objects on the surface.',
+        3 => ' Close-up macro detail of the texture of the printed color swatches, paper, fabric or objects.',
+        4 => ' Wider styled flat-lay of the complete set of physical objects on the surface, soft daylight.',
     ];
     return $base . ($scenes[$index] ?? $scenes[1]);
 }
