@@ -13,6 +13,7 @@ function getDB() {
         $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         $db->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
         $db->exec('PRAGMA journal_mode=WAL');
+        $db->exec('PRAGMA busy_timeout=30000'); // wait up to 30s if another cron worker is writing (fixes "database is locked")
         $db->exec('PRAGMA foreign_keys=ON');
     }
     return $db;

@@ -42,8 +42,7 @@ if ($cli || !empty($okKey) || ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
     @ini_set('display_errors', '1');
     error_reporting(E_ALL);
     set_exception_handler(function (Throwable $t) {
-        if (!headers_sent()) header('Content-Type: text/plain; charset=utf-8');
-        http_response_code(500);
+        if (!headers_sent()) { header('Content-Type: text/plain; charset=utf-8'); http_response_code(500); }
         echo '[AutoBlog Cron ERROR] ' . $t->getMessage() . ' @ ' . $t->getFile() . ':' . $t->getLine() . "\n";
         exit(1);
     });
@@ -93,43 +92,18 @@ foreach ($dueItems as $item) {
 
         if ($existingItem && !empty($existingItem['html_path'])) {
             $log("Found pre-generated HTML path: {$existingItem['html_path']}");
-            
-            // Try multiple path patterns to find the HTML file
-            $htmlFilePath = null;
-            $pathPatterns = [
-                dirname(__DIR__) . ltrim($existingItem['html_path'], '/'),
-                dirname(__DIR__) . '/../' . ltrim($existingItem['html_path'], '/'),
-                OUTPUT_DIR . '/../' . ltrim($existingItem['html_path'], '/'),
-                OUTPUT_DIR . '/demo/' . basename($existingItem['html_path']),
-                dirname(__DIR__) . '/public_html' . ltrim($existingItem['html_path'], '/'),
-                dirname(__DIR__) . '/published_posts/demo/' . basename($existingItem['html_path']),
-            ];
-            
-            foreach ($pathPatterns as $p) {
-                $log("Checking path: $p");
-                if (file_exists($p)) {
-                    $htmlFilePath = $p;
-                    $log("Found HTML file at: $p");
-                    break;
-                }
-            }
 
-            if ($htmlFilePath) {
-                $fullHtml = file_get_contents($htmlFilePath);
-                
-                // Extract only the <article> content for Blogger (not full HTML page)
-                $articleContent = $fullHtml;
-                if (preg_match('#<article[^>]*>(.*?)</article>#is', $fullHtml, $artMatch)) {
-                    $articleContent = trim($artMatch[1]);
-                    $log("Extracted <article> content (" . strlen($articleContent) . " chars)");
-                } else {
-                    $log("No <article> tag found, sending full HTML (" . strlen($fullHtml) . " chars)");
-                }
-                
+            // Use the app's own robust resolver (tries OUTPUT_DIR + sub_apps +
+            // public_html + demo variants with correct slashes). The old manual
+            // path list concatenated dirname(__DIR__) without a slash, producing
+            // ".../sub_appspublished_posts/..." and always failing.
+            $articleContent = function_exists('loadCampaignArticleContent') ? loadCampaignArticleContent($existingItem) : '';
+            if ($articleContent !== '' && trim(strip_tags($articleContent)) !== '') {
+                // loadCampaignArticleContent already extracts the <article> body.
                 $art = ['title' => $existingItem['title'], 'slug' => slugify($existingItem['title']), 'content' => $articleContent, 'keyword' => $existingItem['primary_keyword'], 'category' => $category, 'featured_image' => ''];
                 $log("Using pre-generated HTML for: $topicTitle");
             } else {
-                $log("HTML file not found at any path, will generate fresh content");
+                $log("HTML file not found on disk for: $topicTitle — will rebuild with the correct title.");
                 $existingItem = null;
             }
         }
@@ -140,17 +114,18 @@ foreach ($dueItems as $item) {
 
             if (empty($chatVault['api_key'])) throw new RuntimeException('Chat API credentials are required.');
 
-            $art = ContentGenerator::generateHumanArticle1000Words($keyword, $category, $targetLink, $targetAnchor, $userId, $slotNumber);
-            $prompt = "Write only researched HTML for an 1800 to 2200 word human-reviewed blog about $keyword. Use the approved internal link target $targetLink with natural anchor text $targetAnchor. Include correct headings, FAQ, schema only when supported, and relevant external citations. Do NOT insert any <img> tags, <figure> blocks, or image URLs — the publishing engine attaches one real topic image automatically.";
+            // ALWAYS keep the queued roadmap title. The old code called
+            // ContentGenerator::generateHumanArticle1000Words() which returned a
+            // generic "How to Master X" title — that renamed every post it rebuilt.
+            $art = ['title' => $topicTitle, 'slug' => slugify($topicTitle), 'content' => '', 'keyword' => $keyword, 'category' => $category, 'featured_image' => ''];
+            $prompt = "Write only researched HTML for an 1800 to 2200 word human-reviewed blog titled \"$topicTitle\" about $keyword. Use the approved internal link target $targetLink with natural anchor text $targetAnchor. Include correct headings, FAQ, schema only when supported, and relevant external citations. Do NOT insert any <img> tags, <figure> blocks, or image URLs — the publishing engine attaches one real topic image automatically.";
             $aiResult = AIProviderClient::chat($chatVault, $prompt);
             if (!$aiResult['success']) throw new RuntimeException($aiResult['error'] ?? 'Chat API failed');
             $art['content'] = AntiAiSanitizer::sanitizeText($aiResult['content']);
             $art['content'] = stripArticleImagesAndFigures($art['content']);
 
-            // Topic-relevant image (never a random stock monitor). Paid Image APIs
-            // are only called when safe (Pollinations on web; others from CLI) to
-            // avoid Hostinger 504 timeouts.
-            $featuredUrl = topicPhotoUrlForTitle($art['title'], $keyword, 1, 1280, 720);
+            // Topic-relevant thumbnail image (never a random stock monitor).
+            $featuredUrl = topicPhotoUrlForTitle($art['title'], $keyword, 1);
             $imageProvider = strtolower((string)($imageVault['provider'] ?? ''));
             $imageAllowed = ($imageProvider === 'pollinations') || (PHP_SAPI === 'cli' && in_array($imageProvider, ['openai', 'openrouter', 'custom'], true));
             if ($imageAllowed && !empty($imageVault['api_key'])) {

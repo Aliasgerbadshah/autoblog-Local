@@ -33,8 +33,7 @@ if ($cli || !empty($secret)) {
     @ini_set('display_errors', '1');
     error_reporting(E_ALL);
     set_exception_handler(function (Throwable $t) {
-        if (!headers_sent()) header('Content-Type: text/plain; charset=utf-8');
-        http_response_code(500);
+        if (!headers_sent()) { header('Content-Type: text/plain; charset=utf-8'); http_response_code(500); }
         echo '[AutoBlog Cron ERROR] ' . $t->getMessage() . ' @ ' . $t->getFile() . ':' . $t->getLine() . "\n";
         exit(1);
     });

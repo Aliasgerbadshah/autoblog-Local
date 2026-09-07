@@ -232,7 +232,13 @@ class AIProviderClient {
             // OpenAI-compatible
             $endpoint = $credentials['endpoint'] ?: 'https://api.openai.com/v1/images/generations';
             $headers = ['Authorization: Bearer ' . $key, 'Content-Type: application/json'];
-            $payload = ['model' => $model, 'prompt' => $prompt, 'size' => $credentials['size'] ?? '1024x1024', 'n' => 1];
+            // Wide (thumbnail-like) output where the model allows it.
+            $imgSize = $credentials['size'] ?? null;
+            if (!$imgSize) {
+                // gpt-image-1 supports wide sizes; gpt-image-1-mini is 1024x1024 only.
+                $imgSize = (stripos((string)$model, 'mini') !== false) ? '1024x1024' : '1536x1024';
+            }
+            $payload = ['model' => $model, 'prompt' => $prompt, 'size' => $imgSize, 'n' => 1];
 
             // Image generation needs longer than a chat call. A 15s cap made
             // OpenAI finish generating AFTER we gave up — the image was billed
