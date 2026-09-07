@@ -1,8 +1,10 @@
 <?php
 /**
  * AutoBlog SaaS - Approval Timer Cron Job
- * 
- * */5 * * * * php /home/USERNAME/public_html/cron/approval_timer.php
+ *
+ * Set ONCE in Hostinger hPanel Cron Jobs to run every 5 minutes.
+ * Command example:
+ * wget -q -O - "https://apps.colorfiind.com/cron/approval_timer.php?key=YOUR_SECRET"
  *
  * Processes:
  * 1. Sends reminder emails for items still pending

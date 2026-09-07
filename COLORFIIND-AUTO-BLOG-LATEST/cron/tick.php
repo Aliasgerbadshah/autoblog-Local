@@ -3,7 +3,8 @@
  * Hostinger / wget clock for Auto Blog.
  * Set ONCE in hPanel Cron Jobs (every 5 minutes). Do not click Run Auto Cron daily.
  *
- *   */5 * * * * wget -q -O - "https://apps.colorfiind.com/cron/tick.php?key=YOUR_SECRET"
+ * Cron command (every 5 minutes):
+ * wget -q -O - "https://apps.colorfiind.com/cron/tick.php?key=YOUR_SECRET"
  *
  * The secret is in data/cron_secret.txt (created automatically).
  */

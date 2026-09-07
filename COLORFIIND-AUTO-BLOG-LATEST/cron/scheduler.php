@@ -1,8 +1,10 @@
 <?php
 /**
  * AutoBlog SaaS - Scheduler Cron Job
- * 
- * */5 * * * * php /home/USERNAME/public_html/cron/scheduler.php
+ *
+ * Set ONCE in Hostinger hPanel Cron Jobs to run every 5 minutes.
+ * Command example:
+ * wget -q -O - "https://apps.colorfiind.com/cron/scheduler.php?key=YOUR_SECRET"
  *
  * Processes scheduled_queue and publishes articles that are due.
  * Uses pre-generated HTML from campaign_items when available.
