@@ -302,6 +302,15 @@ function initAuthDB() {
         created_at TEXT NOT NULL
     )');
 
+    // Per-user control flags (e.g. manual-publish-only / pause the legacy
+    // approval-timer auto-queue that used to re-add old approved articles).
+    $db->exec('CREATE TABLE IF NOT EXISTS user_controls (
+        user_id INTEGER PRIMARY KEY,
+        auto_schedule_paused INTEGER DEFAULT 0,
+        manual_publish_only INTEGER DEFAULT 0,
+        updated_at TEXT
+    )');
+
     $db->exec('CREATE TABLE IF NOT EXISTS user_workspace_slots (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER NOT NULL,

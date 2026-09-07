@@ -465,6 +465,7 @@
                 <div class="card-header">
                     <h2 class="card-title">My Published Content for Active Slot</h2>
                     <button class="btn btn-accent" onclick="quickGenerateArticle()">⚡ Quick Write 1,800w Article & Post</button>
+                    <button class="btn" style="background:#ef4444;color:#fff;" onclick="cleanStartQueue()">🧹 Clean old queue</button>
                 </div>
                 <table>
                     <thead>
@@ -644,6 +645,10 @@
                     <button type="submit" class="btn btn-purple">✅ Schedule Approved Roadmap</button>
                 </form>
                 <div id="schedule-status" style="margin-top:12px;font-weight:700;"></div>
+                <div style="margin-top:14px;padding:10px 14px;background:#fef2f2;border:1px solid #fecaca;border-radius:10px;font-size:0.8rem;line-height:1.6;">
+                    <strong style="color:#b91c1c;">🧹 Clean Start</strong> — removes every currently <em>Scheduled / Cancelled / Failed</em> queue item and pauses old approved articles from automatically re-posting. Published posts are kept. Only posts you <strong>🚀 Publish Now</strong> or <strong>📅 Schedule</strong> from now on will ever be posted.
+                    <button type="button" class="btn btn-danger" style="margin-left:8px;padding:6px 12px;font-size:0.8rem;" onclick="cleanStartQueue()">Run Clean Start</button>
+                </div>
                 <table style="margin-top:18px;"><thead><tr><th>Title</th><th>Keyword</th><th>Scheduled For</th><th>Status</th><th>Action</th></tr></thead><tbody id="schedule-queue-tbody"><tr><td colspan="5">Loading queue...</td></tr></tbody></table>
             </div>
         </div>
@@ -1494,6 +1499,16 @@
             } catch(e) { console.error(e); }
         }
         async function cancelSchedule(id) { await fetch('/api/autoblog/queue/'+id,{method:'POST'}); loadScheduleQueue(); loadStats(); }
+        async function cleanStartQueue() {
+            if(!confirm('🧹 RUN CLEAN START?\n\n1) Deletes ALL currently Scheduled, Cancelled and Failed queue items (every slot).\n2) Deletes Cancelled / Rejected / Failed campaign items from the review list.\n3) Stops old approved articles from being auto re-added and re-posted by the 5-minute cron.\n\nPublished posts are KEPT. From now on ONLY posts you Publish Now or Schedule will go out.\n\nProceed?')) return;
+            const res = await fetch('/api/autoblog/clean-start',{method:'POST'});
+            const data = await readJson(res); const body = data.data || {};
+            alert(body.message || (data.error || 'Clean start done.'));
+            try { loadScheduleQueue(); } catch(e){}
+            try { loadDemoProgress(); } catch(e){}
+            try { loadStats(); } catch(e){}
+            try { loadPosts(); } catch(e){}
+        }
 
         async function handleSaveWpVault(e) {
             if (e) e.preventDefault();

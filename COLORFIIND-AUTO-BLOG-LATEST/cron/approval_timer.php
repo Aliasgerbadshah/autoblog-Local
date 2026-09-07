@@ -164,6 +164,8 @@ $needHtml = $stmt->fetchAll();
 foreach ($needHtml as $item) {
     $userId = $item['camp_user_id'] ?? null;
     if (!$userId) continue;
+    // Clean Start pause: don't auto-generate HTML/emails for old approved items.
+    if (approvalAutoQueuePaused($db, $userId)) continue;
 
     $activeSlot = 1;
     $stmt = $db->prepare('SELECT active_slot_id FROM users WHERE id = ?');
@@ -197,6 +199,9 @@ $needSchedule = $stmt->fetchAll();
 
 foreach ($needSchedule as $item) {
     $userId = $item['camp_user_id'];
+    // Clean Start pause: old Final-Approved articles must NOT be auto re-added
+    // to the queue. New items only enter the queue via Publish Now / Schedule.
+    if (approvalAutoQueuePaused($db, $userId)) continue;
     $activeSlot = 1;
     $stmt = $db->prepare('SELECT slot_number FROM user_workspace_slots WHERE user_id = ? AND is_active = 1 LIMIT 1');
     $stmt->execute([$userId]);

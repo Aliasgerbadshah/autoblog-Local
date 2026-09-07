@@ -824,21 +824,63 @@ function handleApiRoute($uri) {
         jsonResponse(['success' => true, 'scheduled_count' => $count, 'message' => "$count approved article slots scheduled."]);
     }
 
-    // List queue
+    // List queue — only Scheduled + Published are shown (Cancelled/Failed rows
+    // are deleted by Clean Start and never displayed).
     if ($uri === '/api/autoblog/queue') {
         $db = getDB();
-        $stmt = $db->prepare('SELECT * FROM scheduled_queue WHERE user_id = ? AND slot_number = ? ORDER BY scheduled_time ASC');
+        $stmt = $db->prepare("SELECT * FROM scheduled_queue WHERE user_id = ? AND slot_number = ? AND status IN ('Scheduled','Published') ORDER BY scheduled_time ASC");
         $stmt->execute([$userId, $activeSlot]);
         jsonResponse($stmt->fetchAll());
     }
 
-    // Cancel queue item
+    // Cancel queue item — removes the row entirely so nothing cancelled ever
+    // shows again in the dashboard (published history is kept separately).
     if (preg_match('#^/api/autoblog/queue/(\d+)$#', $uri, $m)) {
-        $queueId = $m[1];
+        $queueId = (int)$m[1];
         $db = getDB();
-        $stmt = $db->prepare("UPDATE scheduled_queue SET status = 'Cancelled' WHERE id = ? AND user_id = ?");
+        $stmt = $db->prepare('DELETE FROM scheduled_queue WHERE id = ? AND user_id = ?');
         $stmt->execute([$queueId, $userId]);
-        jsonResponse(['success' => true, 'status' => 'Cancelled']);
+        jsonResponse(['success' => true, 'status' => 'Removed from queue']);
+    }
+
+    // Clean Start — one click to stop every previously queued/failed/cancelled
+    // item and pause the legacy approval-timer auto-queue, so ONLY posts the
+    // user explicitly Publish or Schedule from now on will ever be posted.
+    if ($uri === '/api/autoblog/clean-start' && $method === 'POST') {
+        $db = getDB();
+        $now = nowString();
+
+        // 1) Remove ALL pending/cancelled/failed queue rows for this user
+        //    (across every slot) so old items can never auto-post again.
+        $st = $db->prepare("DELETE FROM scheduled_queue WHERE user_id = ? AND status IN ('Scheduled','Cancelled','Failed')");
+        $st->execute([$userId]);
+        $deletedQueue = $st->rowCount();
+
+        // 2) Remove terminal junk campaign rows (Rejected / Cancelled /
+        //    Replacement Pending) so they disappear from the human-review list.
+        $st = $db->prepare("DELETE FROM campaign_items WHERE id IN (SELECT ci.id FROM campaign_items ci JOIN campaigns c ON c.id = ci.campaign_id WHERE c.user_id = ? AND (ci.plan_status IN ('Rejected','Cancelled','Replacement Pending') OR ci.article_status IN ('Cancelled','Rejected','Failed')))");
+        $st->execute([$userId]);
+        $deletedJunk = $st->rowCount();
+
+        // 3) Pause the legacy approval-timer auto-queue. New Publish Now /
+        //    Schedule buttons still insert fresh queue rows, and the due-queue
+        //    cron still publishes them — only the automatic re-adding of old
+        //    approved articles is stopped.
+        $chk = $db->prepare('SELECT COUNT(*) FROM user_controls WHERE user_id = ?');
+        $chk->execute([$userId]);
+        if ((int)$chk->fetchColumn() > 0) {
+            $db->prepare("UPDATE user_controls SET auto_schedule_paused = 1, manual_publish_only = 1, updated_at = ? WHERE user_id = ?")->execute([$now, $userId]);
+        } else {
+            $db->prepare('INSERT INTO user_controls (user_id, auto_schedule_paused, manual_publish_only, updated_at) VALUES (?, 1, 1, ?)')->execute([$userId, $now]);
+        }
+
+        jsonResponse([
+            'success' => true,
+            'deleted_queue' => $deletedQueue,
+            'deleted_cancelled_failed' => $deletedQueue,
+            'deleted_junk_items' => $deletedJunk,
+            'message' => 'Clean start done: ' . $deletedQueue . ' old scheduled/cancelled/failed queue item(s) removed, ' . $deletedJunk . ' cancelled/rejected item(s) deleted. Published posts are kept. Only posts you Publish or Schedule from now on will be posted.',
+        ]);
     }
 
     // Backlinks
