@@ -140,6 +140,10 @@ class BacklinkMaker {
         $today = $today ?: date('Y-m-d');
         $now = nowString();
 
+        // This website's own Chat/Image API profiles (empty = default)
+        BacklinkContent::setChatOverride(bkResolveProfile('chat', (string)($target['chat_profile'] ?? '')) ?: null);
+        BacklinkContent::setImageOverride(bkResolveProfile('image', (string)($target['image_profile'] ?? '')) ?: null);
+
         // Load used topics for dedup
         $usedRows = $db->query('SELECT title, keyword FROM used_topics ORDER BY id DESC LIMIT 300')->fetchAll();
 
@@ -170,6 +174,7 @@ class BacklinkMaker {
                 $imageUrl = $imgRes['url'];
                 $saved = bkSaveImage($imgRes['url'], $dirAbs . '/image.png');
                 if ($saved) $imageFile = $saved;
+                else addRunLog('Image API WORKED but the file save FAILED for "' . $topic . '" (fallback gradient used). Response was ' . (str_starts_with((string)$imgRes['url'], 'data:') ? 'a base64 image' : 'a URL') . ' — check the packages/ folder exists with 777 permissions, and disk space.');
             } else {
                 addRunLog('Image API failed for "' . $topic . '": ' . ($imgRes['error'] ?? '?') . ' — using fallback image.');
             }
@@ -245,6 +250,8 @@ class BacklinkMaker {
      */
     public static function runCommunityOnce(array $settings, array $target) {
         $db = getDB();
+        // This website's own Chat API profile for the comment text (empty = default)
+        BacklinkContent::setChatOverride(bkResolveProfile('chat', (string)($target['chat_profile'] ?? '')) ?: null);
         $cred = json_decode($target['credential_json'] ?? '{}', true) ?: [];
 
         $tk = BacklinkPublisher::wixEnsureToken($cred);

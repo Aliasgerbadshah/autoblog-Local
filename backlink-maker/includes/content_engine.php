@@ -318,7 +318,14 @@ class BacklinkContent {
         return $s;
     }
 
+    // Per-target API overrides (each website can use its own Chat/Image profile)
+    private static $chatOverride = null;
+    private static $imageOverride = null;
+    public static function setChatOverride($creds) { self::$chatOverride = $creds; }
+    public static function setImageOverride($creds) { self::$imageOverride = $creds; }
+
     public static function getChatCreds() {
+        if (self::$chatOverride !== null) return self::$chatOverride;
         static $creds = null;
         if ($creds === null) {
             $creds = json_decode((string)getData('api_chat', '{}'), true) ?: [];
@@ -327,6 +334,7 @@ class BacklinkContent {
     }
 
     public static function getImageCreds() {
+        if (self::$imageOverride !== null) return self::$imageOverride;
         static $creds = null;
         if ($creds === null) {
             $creds = json_decode((string)getData('api_image', '{}'), true) ?: [];

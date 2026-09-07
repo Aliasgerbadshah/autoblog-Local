@@ -229,7 +229,7 @@
   <!-- ================= SITE PANELS (one per website) ================= -->
   <div class="page" id="page-panels">
     <h2 class="pg">🎛 Site Panels</h2>
-    <div class="pgsub">One panel per website — every site has its own pace, timer, start/stop and tests. Sites without a working API (Hashnode is paid-only now) use the Copy &amp; Paste Studio below.</div>
+    <div class="pgsub">Every website gets its <b>own separate page</b> — click <b>⚙ Open panel</b>. On it you manage that site's own authentication, its own Chat/Image API choice, its own pace, timer, tests and history. New websites get their own page automatically.</div>
 
     <!-- Copy & Paste Studio -->
     <div class="card" style="margin-bottom:16px; border-color:#2b3b63">
@@ -324,7 +324,8 @@
           <option value="custom">Custom (OpenAI-compatible endpoint)</option>
         </select>
         <label class="f">API KEY</label>
-        <input id="chat-key" type="password" placeholder="paste your key">
+        <input id="chat-key" type="password" placeholder="paste your key (leave empty to keep the saved one)">
+        <div id="chat-keyhint" class="hint" style="margin-top:4px"></div>
         <label class="f">MODEL</label>
         <input id="chat-model" placeholder="e.g. gemini-2.5-flash-lite / gpt-4o-mini">
         <label class="f">CUSTOM ENDPOINT (only for Custom provider)</label>
@@ -333,6 +334,7 @@
           <button class="btn" onclick="saveVault('chat')">💾 Save Chat API</button>
           <button class="btn ghost" onclick="testVault('chat')">🔌 Test</button>
         </div>
+        <div id="chat-test-result" style="margin-top:10px"></div>
       </div>
       <div class="card">
         <h3>🎨 Image API (creates the image for each post)</h3>
@@ -347,13 +349,50 @@
         </select>
         <label class="f">API KEY</label>
         <input id="img-key" type="password" placeholder="paste your key (Pollinations can be empty… a token is still needed)">
+        <div id="img-keyhint" class="hint" style="margin-top:4px"></div>
         <label class="f">MODEL</label>
         <input id="img-model" placeholder="e.g. black-forest-labs/FLUX.1-schnell / gemini-2.5-flash-image / flux">
         <label class="f">CUSTOM ENDPOINT (only for Custom provider)</label>
         <input id="img-endpoint" placeholder="https://…/v1/images/generations">
         <div style="display:flex; gap:8px; margin-top:14px">
           <button class="btn" onclick="saveVault('image')">💾 Save Image API</button>
-          <button class="btn ghost" onclick="testVault('image')">🔌 Test</button>
+          <button class="btn ghost" onclick="testVault('image')">🔌 Test (demo image appears below)</button>
+        </div>
+        <div id="img-test-result" style="margin-top:10px"></div>
+      </div>
+    </div>
+
+    <!-- Named API profiles: different APIs per website -->
+    <div class="card" style="margin-top:14px">
+      <h3>🗂 API Profiles — use a DIFFERENT Chat / Image API per website</h3>
+      <div class="hint" style="margin:6px 0 12px">Save as many API setups as you need (each with its own name + provider + key + model). Then on every website's panel (Site Panels → ⚙ Open panel) choose which Chat API and which Image API <b>that website</b> uses. Leave it on <b>(default)</b> to use the API saved above.</div>
+      <div class="row2">
+        <div style="border:1px solid var(--line);border-radius:10px;padding:12px">
+          <b style="font-size:13px">💬 Chat API profiles</b>
+          <div id="chat-profile-list" class="hint" style="margin-top:8px">none saved</div>
+        </div>
+        <div style="border:1px solid var(--line);border-radius:10px;padding:12px">
+          <b style="font-size:13px">🎨 Image API profiles</b>
+          <div id="img-profile-list" class="hint" style="margin-top:8px">none saved</div>
+        </div>
+      </div>
+      <div style="border:1px dashed var(--line);border-radius:10px;padding:12px;margin-top:12px">
+        <b style="font-size:13px">➕ Add a profile</b>
+        <div class="row2" style="margin-top:10px">
+          <div><label class="f">KIND</label><select id="pf-kind"><option value="chat">Chat API</option><option value="image">Image API</option></select></div>
+          <div><label class="f">NAME (how it appears in site panels)</label><input id="pf-name" placeholder="e.g. Gemini key 2 / HuggingFace images"></div>
+        </div>
+        <div class="row2" style="margin-top:10px">
+          <div><label class="f">PROVIDER</label><select id="pf-provider"><option value="gemini">Google Gemini</option><option value="openai">OpenAI</option><option value="huggingface">HuggingFace</option><option value="openrouter">OpenRouter</option><option value="anthropic">Anthropic (Claude)</option><option value="pollinations">Pollinations (free)</option><option value="custom">Custom (OpenAI-compatible)</option></select></div>
+          <div><label class="f">MODEL</label><input id="pf-model" placeholder="e.g. gemini-2.5-flash-lite"></div>
+        </div>
+        <div class="row2" style="margin-top:10px">
+          <div><label class="f">API KEY</label><input id="pf-key" type="password" placeholder="paste key"></div>
+          <div><label class="f">CUSTOM ENDPOINT (only for Custom)</label><input id="pf-endpoint" placeholder="https://…"></div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:12px">
+          <button class="btn" onclick="saveProfile()">💾 Save profile</button>
+          <span class="hint">Keys are stored on the server in <b>backlink_maker.db</b> — replacing files never deletes them.</span>
         </div>
       </div>
     </div>
@@ -418,6 +457,10 @@ function refreshPage(p) {
   if (p === 'queue') loadQueue();
   if (p === 'links') loadLinks();
   if (p === 'apikeys') loadVault();
+}
+function goPage(p) {
+  const tab = document.querySelector('.tab[data-page="' + p + '"]');
+  if (tab) tab.click();
 }
 
 // ---------- overview ----------
@@ -567,13 +610,19 @@ async function delTarget(id) {
 }
 
 // ---------- site panels (one per website) ----------
+S.openSiteId = null;
 async function loadPanels() {
   targets = await api('/api/targets');
   // studio target picker
   const sel = $('studio-target');
   sel.innerHTML = targets.map(t => `<option value="${t.id}">${esc(t.name)} ${t.publish_mode === 'api' ? '(' + esc(t.platform || 'api') + ')' : '(manual — good for Copy Studio)'}</option>`).join('');
-  // site cards
+  // site cards — or the dedicated single-site page if one is open
   const wrap = $('sitePanels');
+  if (S.openSiteId) {
+    const t = targets.find(x => x.id === S.openSiteId);
+    if (t) { renderSiteDetail(t); return; }
+    S.openSiteId = null;
+  }
   if (!targets.length) { wrap.innerHTML = '<div class="card empty">No websites yet — add them in <b>Backlink Websites</b> first.</div>'; return; }
   wrap.innerHTML = targets.map(t => {
     const isWix = t.platform === 'wix';
@@ -590,6 +639,7 @@ async function loadPanels() {
           <div class="kv" style="margin-top:4px">${esc(t.site_url)}${t.niche ? ' · niche: ' + esc(t.niche) : ''}</div>
         </div>
         <div style="margin-left:auto;display:flex;align-items:center;gap:10px">
+          <button class="btn sm" onclick="openSitePanel(${t.id})">⚙ Open panel</button>
           <span class="kv">on/off</span>
           <div class="switch ${t.is_active ? 'on' : ''}" onclick="toggleTarget(${t.id})"></div>
         </div>
@@ -690,6 +740,226 @@ async function savePanel(id) {
   const d = await api('/api/targets/' + id, 'PUT', body);
   toast(d.error ? d.error : "Site saved ✅", !d.error);
   loadPanels();
+}
+
+// ---------- dedicated panel PAGE per website ----------
+const CRED_FIELDS_DEF = {
+  blogger:   [['blog_id', 'Blogger Blog ID'], ['client_id', 'Google OAuth Client ID'], ['client_secret', 'Client Secret'], ['refresh_token', 'OAuth Refresh Token']],
+  wordpress: [['site_url', 'WP Site URL (https://…)'], ['username', 'WP Username'], ['app_password', 'WP Application Password']],
+  ghost:     [['site_url', 'Ghost Site URL'], ['admin_key', 'Admin API Key']],
+  hashnode:  [['publication_id', 'Publication ID'], ['personal_token', 'Personal Access Token']],
+  wix:       [['site_id', 'Wix Site ID'], ['client_id', 'Wix OAuth Client ID (App ID)'], ['client_secret', 'OAuth Client Secret'], ['instance_id', 'Instance ID (optional)'], ['access_token', 'Access Token (optional — auto-fills with Client ID + Secret)']],
+  webhook:   [['webhook_url', 'Webhook URL']]
+};
+function credFieldHtml(platform, cred, siteUrl) {
+  const defs = CRED_FIELDS_DEF[platform] || CRED_FIELDS_DEF.webhook;
+  let html = platform === 'wix' ? `<label class="f">SITE URL (https://yoursite.com)</label><input id="spc-siteurl" value="${esc(siteUrl || '')}">` : '';
+  return html + defs.map(([k, label]) => `<label class="f">${label}</label><input id="spc-${k}" value="${esc((cred && cred[k]) || '')}">`).join('');
+}
+function collectSiteCreds(platform) {
+  const defs = CRED_FIELDS_DEF[platform] || CRED_FIELDS_DEF.webhook;
+  const out = {};
+  defs.forEach(([k]) => { out[k] = $('spc-' + k) ? $('spc-' + k).value : ''; });
+  if (platform === 'wix' && $('spc-siteurl')) {
+    let su = $('spc-siteurl').value.trim();
+    if (su && !/^https?:\/\//i.test(su)) su = 'https://' + su;
+    out.site_url = su;
+  }
+  return out;
+}
+function profileSelectHtml(kind, current) {
+  const data = S.profiles[kind] || { default: { configured: false, provider: '' }, profiles: [] };
+  let opts = `<option value="">(default)${data.default.configured ? ' — ' + esc(data.default.provider) + (data.default.model ? ' · ' + esc(data.default.model) : '') : ' — NOT SET, template mode'}${current === '' ? ' selected' : ''}</option>`;
+  opts += (data.profiles || []).map(p => `<option value="${p.id}" ${p.id === current ? 'selected' : ''}>${esc(p.name)} — ${esc(p.provider)}${p.model ? ' · ' + esc(p.model) : ''}</option>`).join('');
+  return opts;
+}
+async function openSitePanel(id) {
+  S.openSiteId = id;
+  await loadProfiles(); // make sure the profile lists are fresh
+  const sel = $('studio-target'); if (sel) sel.value = id;
+  loadPanels();
+}
+async function closeSitePanel() { S.openSiteId = null; loadPanels(); }
+
+function renderSiteDetail(t) {
+  const wrap = $('sitePanels');
+  const isWix = t.platform === 'wix';
+  const hasApi = t.publish_mode === 'api';
+  let cred = {};
+  try { cred = JSON.parse(t.credential_json || '{}'); } catch (e) {}
+  const blogMode = t.blog_mode || 'auto';
+  const blogCount = t.blog_daily_count || 1;
+  const commCount = t.community_daily_count || 2;
+  const platLabel = { wix: 'Wix', blogger: 'Blogger', wordpress: 'WordPress', ghost: 'Ghost', hashnode: 'Hashnode', webhook: 'Webhook' }[t.platform] || (t.platform || 'Site');
+
+  wrap.innerHTML = `
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap">
+    <button class="btn sm ghost" onclick="closeSitePanel()">← All websites</button>
+    <b style="font-size:19px">${esc(t.name)}</b>
+    ${hasApi ? `<span class="badge b-blue">⚡ API · ${esc(t.platform)}</span>` : '<span class="badge b-gray">📋 manual / copy</span>'}
+    ${t.is_active ? '<span class="badge b-green">running</span>' : '<span class="badge b-red">paused</span>'}
+    <div class="kv">${esc(t.site_url)}</div>
+  </div>
+
+  <div class="row2">
+    <!-- its own authentication -->
+    <div class="card">
+      <h3>🔑 ${esc(platLabel)} authentication — just for this website</h3>
+      ${hasApi ? credFieldHtml(t.platform, cred, t.site_url) : '<div class="hint">This website has <b>no API</b> (manual / copy mode) — there is nothing to authenticate here. You post its links with the Copy &amp; Paste Studio below.</div>'}
+      ${hasApi ? `<div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
+          <button class="btn" onclick="saveSiteCreds(${t.id})">💾 Save authentication</button>
+          <button class="btn ghost" onclick="testTarget(${t.id})">🔌 Test connection</button>
+        </div>
+        ${isWix ? '<div class="hint" style="margin-top:10px">Wix setup: <b>dev.wix.com</b> → your app → <b>OAuth</b> tab → Client ID + Secret. The <b>Site ID</b> is in your Wix dashboard URL. After saving, click <b>🧪 Draft Test</b> — it creates a real draft you can see in your Wix blog (nothing goes public).</div>' : ''}` : ''}
+    </div>
+    <!-- its own API profile choice -->
+    <div class="card">
+      <h3>🗂 Which APIs THIS website uses</h3>
+      <div class="hint" style="margin:6px 0 12px">Every website can use <b>its own</b> Chat + Image API — different key, different provider, whatever each site needs. <b>(default)</b> = the API saved in the API Keys tab. Manage all saved APIs in <a href="#" onclick="goPage('apikeys');return false" style="color:#7ab">API Keys → API Profiles</a>.</div>
+      <label class="f">💬 CHAT API (writes this site's content)</label>
+      <select id="sp-chat-${t.id}">${profileSelectHtml('chat', t.chat_profile || '')}</select>
+      <label class="f" style="margin-top:12px">🎨 IMAGE API (makes this site's images)</label>
+      <select id="sp-img-${t.id}">${profileSelectHtml('image', t.image_profile || '')}</select>
+      <button class="btn" style="margin-top:14px" onclick="saveSiteApi(${t.id})">💾 Save API choice for this website</button>
+      <div class="hint" style="margin-top:8px">Applies to: auto posts, Copy Studio generation, and Wix community comments for this site.</div>
+    </div>
+  </div>
+
+  <!-- its own blog automation -->
+  <div class="card" style="margin-top:16px">
+    <h3>✍️ Blog auto posting — this website's own system</h3>
+    <div class="hint" style="margin:6px 0 12px">This page controls <b>only this website</b> — its own pace, timer, mode and APIs. Every website you add gets its own page like this automatically.</div>
+    <label class="f">MODE</label>
+    <select id="dsp-mode-${t.id}">
+      <option value="auto" ${blogMode==='auto'?'selected':''}>⚡ Full auto (posts as soon as it's due)</option>
+      <option value="scheduled" ${blogMode==='scheduled'?'selected':''}>⏰ Scheduled — posts at the timer time below</option>
+      <option value="manual" ${blogMode==='manual'?'selected':''}>📋 Manual — I paste from Copy Studio</option>
+    </select>
+    <div class="row2" style="margin-top:12px">
+      <div>
+        <label class="f">POSTS PER DAY (1–5)</label>
+        <select id="dsp-count-${t.id}">${[1,2,3,4,5].map(n => `<option value="${n}" ${blogCount===n?'selected':''}>${n}</option>`).join('')}</select>
+      </div>
+      <div>
+        <label class="f">MINIMUM GAP (DAYS) — wins if bigger</label>
+        <input id="dsp-gap-${t.id}" type="number" min="1" max="90" value="${t.min_interval_days || 1}">
+      </div>
+    </div>
+    <div class="row2" style="margin-top:12px">
+      <div>
+        <label class="f">POST TIME (TIMER — HH:MM)</label>
+        <input id="dsp-time-${t.id}" type="time" value="${t.blog_time || ''}">
+      </div>
+      <div style="align-self:end;display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn sm" onclick="saveSiteSettings(${t.id})">💾 Save this website's settings</button>
+        <button class="btn sm ghost" onclick="runSiteNow(${t.id})">🚀 Run this website now (blog${isWix ? ' + 1 comment' : ''})</button>
+        ${isWix ? `<button class="btn sm" onclick="wixDraftTest(${t.id})">🧪 Draft Test</button>` : ''}
+      </div>
+    </div>
+    <div class="hint" style="margin-top:10px">Last posted: ${t.last_posted_at ? esc(t.last_posted_at) : 'never'} · total posts: ${t.post_count} · min gap: ${t.min_interval_days || 1} day(s)</div>
+    <div id="run-now-result-${t.id}" style="margin-top:10px"></div>
+  </div>
+
+  <!-- its own community (Wix) -->
+  ${isWix ? `
+  <div class="card" style="margin-top:16px">
+    <h3>💬 Community — Wix Groups auto commenting — this website</h3>
+    <div style="display:flex;align-items:center;gap:10px">
+      <div class="switch ${t.community_enabled ? 'on' : ''}" id="dsp-commsw-${t.id}" onclick="this.classList.toggle('on')"></div>
+      <b>Enable</b>
+      <span class="hint">finds topics, writes a useful comment with your link, posts it — slow &amp; human-like</span>
+    </div>
+    <div class="row2" style="margin-top:12px">
+      <div>
+        <label class="f">COMMENTS PER DAY (1–3, bot-safe)</label>
+        <select id="dsp-commcount-${t.id}">${[1,2,3].map(n => `<option value="${n}" ${commCount===n?'selected':''}>${n}</option>`).join('')}</select>
+      </div>
+      <div>
+        <label class="f">COMMENT TIME (HH:MM)</label>
+        <input id="dsp-commtime-${t.id}" type="time" value="${t.community_time || ''}">
+      </div>
+    </div>
+    <label class="f">COMMUNITY / GROUP</label>
+    <div style="display:flex;gap:8px">
+      <select id="dsp-commgroup-${t.id}">
+        <option value="">— auto (first group) —</option>
+        ${(t.community_group_id ? `<option value="${esc(t.community_group_id)}" selected>${esc(t.community_group_id)}</option>` : '')}
+      </select>
+      <button class="btn sm ghost" style="flex:none" onclick="loadWixGroups(${t.id})">↻ Load groups</button>
+    </div>
+    <div class="copybar" style="margin-top:12px">
+      <button class="btn sm" onclick="exploreCommunity(${t.id})">🔎 Find topics + prepare our comments</button>
+      <button class="btn sm ghost" onclick="runCommunityNow(${t.id})">🚀 Post one comment now</button>
+    </div>
+    <div id="comm-results-${t.id}"></div>
+    <div class="hint" style="margin-top:8px">Last comment: ${t.community_last_at ? esc(t.community_last_at) : 'never'}</div>
+  </div>` : ''}
+
+  <!-- its own activity -->
+  <div class="card" style="margin-top:16px">
+    <h3>📜 Recent activity — this website only</h3>
+    <div id="sp-activity-${t.id}" class="hint">Loading…</div>
+  </div>`;
+  loadSiteActivity(t.id);
+}
+
+async function saveSiteCreds(id) {
+  const t = targets.find(x => x.id === id); if (!t) return;
+  const body = { credentials: collectSiteCreds(t.platform || 'webhook') };
+  const d = await api('/api/targets/' + id, 'PUT', body);
+  toast(d.error ? d.error : 'Authentication saved ✅ (stored in backlink_maker.db on your server — file updates never erase it)', !d.error);
+  if (!d.error) loadPanels();
+}
+async function saveSiteApi(id) {
+  const body = { chat_profile: $('sp-chat-' + id).value, image_profile: $('sp-img-' + id).value };
+  const d = await api('/api/targets/' + id, 'PUT', body);
+  toast(d.error ? d.error : "This website now uses its own selected APIs ✅ — saves to its panel, applies to every auto post from here on", !d.error);
+}
+async function saveSiteSettings(id) {
+  const body = {
+    blog_mode: $('dsp-mode-' + id).value,
+    blog_daily_count: $('dsp-count-' + id).value,
+    min_interval_days: $('dsp-gap-' + id).value,
+    blog_time: $('dsp-time-' + id).value,
+  };
+  const cc = $('dsp-commcount-' + id);
+  if (cc) {
+    body.community_enabled = $('dsp-commsw-' + id).classList.contains('on') ? 1 : 0;
+    body.community_daily_count = cc.value;
+    body.community_time = $('dsp-commtime-' + id).value;
+    body.community_group_id = $('dsp-commgroup-' + id).value;
+  }
+  const d = await api('/api/targets/' + id, 'PUT', body);
+  toast(d.error ? d.error : "This website's settings saved ✅ (its own mode, pace and timer)", !d.error);
+}
+async function runSiteNow(id) {
+  const box = $('run-now-result-' + id); if (!box) return;
+  box.innerHTML = '<div class="hint">Running this website now — blog post (+ community comment if enabled) — 20–60s…</div>';
+  const d = await api('/api/targets/' + id + '/run', 'POST', {});
+  const rows = (d.details || []).map(x => `<div style="border:1px solid var(--line);border-radius:10px;padding:10px;margin-top:8px">
+      <b>${x.part === 'community' ? '💬 Community' : '📝 Blog'}</b>
+      <span class="badge ${x.status === 'Published' || x.status === 'Posted' ? 'b-green' : (x.status === 'Draft' ? 'b-blue' : 'b-amber')}" style="margin-left:8px">${esc(x.status)}</span>
+      ${x.title ? '<div class="hint" style="margin-top:4px">' + esc(x.title) + '</div>' : ''}
+      ${x.url ? '<div style="margin-top:4px"><a href="' + esc(x.url) + '" target="_blank" style="font-size:12px">' + esc(x.url) + '</a></div>' : ''}
+      ${x.error ? '<div style="margin-top:4px;color:#f87171;font-size:12px">' + esc(x.error) + '</div>' : ''}</div>`).join('');
+  box.innerHTML = rows || '<div class="hint">Nothing ran.</div>';
+  toast('Done — see results below', true);
+  loadSiteActivity(id);
+  loadPanels();
+}
+async function loadSiteActivity(id) {
+  const box = $('sp-activity-' + id); if (!box) return;
+  const d = await api('/api/targets/' + id + '/activity');
+  const jobs = (d.jobs || []).map(j => `<div style="display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px dashed var(--line);font-size:12.5px;flex-wrap:wrap">
+      <span class="badge ${j.status === 'Published' ? 'b-green' : j.status === 'Draft' ? 'b-blue' : 'b-red'}">${esc(j.status)}</span>
+      <b>${esc(j.title || '(untitled)')}</b><span class="kv">${esc(j.run_date || '')}</span>
+      ${j.published_url ? '<a class="kv" href="' + esc(j.published_url) + '" target="_blank" style="margin-left:auto">open ↗</a>' : (j.error_message ? '<span class="kv" style="margin-left:auto;color:#f87171">' + esc(j.error_message).slice(0, 90) + '</span>' : '')}</div>`).join('');
+  const comms = (d.community || []).map(c => `<div style="display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px dashed var(--line);font-size:12.5px;flex-wrap:wrap">
+      <span class="badge ${c.status === 'ok' ? 'b-green' : 'b-red'}">${c.status === 'ok' ? '💬 posted' : 'failed'}</span>
+      <b>${esc(c.topic_title || 'topic')}</b><span class="kv">${esc(c.created_at || '')}</span>
+      ${c.error_message ? '<span class="kv" style="margin-left:auto;color:#f87171">' + esc(c.error_message).slice(0, 90) + '</span>' : ''}</div>`).join('');
+  box.innerHTML = `<b style="font-size:12.5px">Blog posts</b><div style="margin-top:6px">${jobs || '<span class="hint">No blog posts yet for this website.</span>'}</div>
+    ${comms ? '<b style="font-size:12.5px;display:block;margin-top:12px">Community comments</b><div style="margin-top:6px">' + comms + '</div>' : ''}`;
 }
 
 // ---------- Copy & Paste Studio ----------
@@ -968,24 +1238,99 @@ async function recheckLinks() {
 }
 
 // ---------- api keys ----------
+S.vaultSaved = { chat: null, image: null };
 async function loadVault() {
   const c = await api('/api/vault/chat');
+  S.vaultSaved.chat = c;
   $('chatStatus').textContent = 'Status: ' + (c.configured ? '✅ configured (' + (c.provider || 'custom') + (c.model ? ' · ' + c.model : '') + ')' : '⚪ not set — template mode active');
+  $('chat-keyhint').textContent = c.configured ? '🔑 Saved on server (masked): ' + (c.key_masked || '') + ' — the key stays saved even if you replace files. Leave the field empty to keep it.' : 'No key saved yet.';
+  if (c.provider) $('chat-provider').value = c.provider;
+  if (c.model) $('chat-model').value = c.model;
   const i = await api('/api/vault/image');
+  S.vaultSaved.image = i;
   $('imgStatus').textContent = 'Status: ' + (i.configured ? '✅ configured (' + (i.provider || 'custom') + (i.model ? ' · ' + i.model : '') + ')' : '⚪ not set — fallback image active');
+  $('img-keyhint').textContent = i.configured ? '🔑 Saved on server (masked): ' + (i.key_masked || '') + ' — the key stays saved even if you replace files. Leave the field empty to keep it.' : 'No key saved yet.';
+  if (i.provider) $('img-provider').value = i.provider;
+  if (i.model) $('img-model').value = i.model;
+  loadProfiles();
 }
 async function saveVault(which) {
+  const saved = S.vaultSaved[which];
+  const keyField = which === 'chat' ? $('chat-key').value : $('img-key').value;
+  // empty field = keep the saved key (so changing only the model doesn't wipe it)
+  const key = keyField.trim() !== '' ? keyField : (saved && saved.configured ? saved.saved_key : '');
   const body = which === 'chat'
-    ? { provider: $('chat-provider').value, api_key: $('chat-key').value, model: $('chat-model').value, endpoint: $('chat-endpoint').value }
-    : { provider: $('img-provider').value, api_key: $('img-key').value, model: $('img-model').value, endpoint: $('img-endpoint').value };
+    ? { provider: $('chat-provider').value, api_key: key, model: $('chat-model').value, endpoint: $('chat-endpoint').value, _keep_key: keyField.trim() === '' }
+    : { provider: $('img-provider').value, api_key: key, model: $('img-model').value, endpoint: $('img-endpoint').value, _keep_key: keyField.trim() === '' };
   const d = await api('/api/vault/' + which, 'POST', body);
-  toast(d.error || which.toUpperCase() + ' API saved ✅', !d.error);
+  toast(d.error || (which === 'chat' ? 'Chat' : 'Image') + ' API saved ✅ (stored in backlink_maker.db on your server)', !d.error);
   loadVault();
 }
 async function testVault(which) {
+  const box = $(which === 'chat' ? 'chat-test-result' : 'img-test-result');
+  box.innerHTML = '<div class="hint">Testing ' + which + ' API… (10–60s)</div>';
   toast('Testing ' + which + ' API…');
   const d = await api('/api/vault/test/' + which, 'POST', {});
-  toast(d.success ? (which === 'chat' ? '✅ Chat API works: ' + (d.content || '').slice(0, 80) : '✅ Image API works') : ('❌ ' + (d.error || 'failed')), !!d.success);
+  if (which === 'image') {
+    box.innerHTML = d.success
+      ? `<div style="border:1px solid #14532d;border-radius:10px;padding:10px">
+           <span class="badge b-green">✅ Image API test successful</span>
+           <div class="hint" style="margin:6px 0">${esc(d.note || '')}</div>
+           <img class="thumb" src="${esc(d.preview)}" alt="demo test image">
+         </div>`
+      : `<div style="border:1px solid #7f1d1d;border-radius:10px;padding:10px;color:#f87171;font-size:12.5px;white-space:pre-wrap">❌ ${esc(d.error || 'failed')}</div>`;
+    toast(d.success ? '✅ Image pipeline verified — real images will be used' : '❌ ' + (d.error || 'image test failed').slice(0, 120), !!d.success);
+  } else {
+    box.innerHTML = d.success
+      ? `<div style="border:1px solid #14532d;border-radius:10px;padding:10px"><span class="badge b-green">✅ Chat API works</span> <span class="hint" style="margin-left:8px">${esc((d.content || '').slice(0, 120))}</span></div>`
+      : `<div style="border:1px solid #7f1d1d;border-radius:10px;padding:10px;color:#f87171;font-size:12.5px">❌ ${esc(d.error || 'failed')}</div>`;
+    toast(d.success ? '✅ Chat API works: ' + (d.content || '').slice(0, 60) : '❌ ' + (d.error || 'failed'), !!d.success);
+  }
+}
+
+// ---- named API profiles ----
+S.profiles = { chat: { profiles: [] }, image: { profiles: [] } };
+async function loadProfiles() {
+  const c = await api('/api/profiles/chat');
+  const i = await api('/api/profiles/image');
+  S.profiles.chat = c; S.profiles.image = i;
+  renderProfileList('chat'); renderProfileList('image');
+}
+function renderProfileList(kind) {
+  const el = $(kind === 'chat' ? 'chat-profile-list' : 'img-profile-list');
+  if (!el) return; // profile lists only render on the API Keys page
+  const list = (S.profiles[kind] || {}).profiles || [];
+  if (!list.length) { el.innerHTML = 'none saved yet — add one below ↓'; return; }
+  el.innerHTML = list.map(p => `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px dashed var(--line);font-size:12.5px">
+      <b>${esc(p.name)}</b> <span class="kv">${esc(p.provider)}${p.model ? ' · ' + esc(p.model) : ''} · ${esc(p.key_masked || 'no key')}</span>
+      <span style="margin-left:auto;display:flex;gap:6px">
+        <button class="btn sm ghost" onclick="testProfile('${kind}','${p.id}')">🔌 Test</button>
+        <button class="btn sm bad" onclick="deleteProfile('${kind}','${p.id}')">✕</button>
+      </span></div>`).join('') + '<div id="pf-test-' + kind + '" style="margin-top:8px"></div>';
+}
+async function saveProfile() {
+  const d = await api('/api/profiles/' + $('pf-kind').value, 'POST', {
+    name: $('pf-name').value, provider: $('pf-provider').value, api_key: $('pf-key').value, model: $('pf-model').value, endpoint: $('pf-endpoint').value,
+  });
+  if (d.error) return toast(d.error, false);
+  toast('Profile "' + $('pf-name').value + '" saved ✅ — you can now pick it on any website\'s panel');
+  ['pf-name','pf-key','pf-model','pf-endpoint'].forEach(x => $(x).value = '');
+  loadProfiles();
+}
+async function deleteProfile(kind, id) {
+  if (!confirm('Delete this API profile?')) return;
+  await api('/api/profiles/' + kind + '/' + id + '/delete', 'POST', {});
+  loadProfiles();
+}
+async function testProfile(kind, id) {
+  const box = $('pf-test-' + kind);
+  box.innerHTML = '<div class="hint">Testing… (10–60s)</div>';
+  const d = await api('/api/profiles/' + kind + '/' + id + '/test', 'POST', {});
+  if (kind === 'image') {
+    box.innerHTML = d.success ? `<span class="badge b-green">✅ works</span> <img class="thumb" src="${esc(d.preview)}" style="max-width:220px;margin-top:8px">` : `<span style="color:#f87171;font-size:12px;white-space:pre-wrap">❌ ${esc(d.error || '')}</span>`;
+  } else {
+    box.innerHTML = d.success ? '<span class="badge b-green">✅ works: ' + esc((d.content || '').slice(0, 80)) + '</span>' : '<span style="color:#f87171;font-size:12px">❌ ' + esc(d.error || '') + '</span>';
+  }
 }
 
 // ---------- logout ----------

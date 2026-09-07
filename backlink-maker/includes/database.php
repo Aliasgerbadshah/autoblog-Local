@@ -112,6 +112,8 @@ function initSchema(PDO $db) {
         'community_time'         => "TEXT DEFAULT ''",        // HH:MM
         'community_group_id'     => "TEXT DEFAULT ''",
         'community_last_at'      => 'TEXT',
+        'chat_profile'           => "TEXT DEFAULT ''",   // API profile id ('' = default)
+        'image_profile'          => "TEXT DEFAULT ''",
     ];
     foreach ($newCols as $col => $def) {
         if (!in_array($col, $targetCols, true)) {

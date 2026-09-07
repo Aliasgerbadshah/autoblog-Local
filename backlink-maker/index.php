@@ -13,6 +13,7 @@ require_once __DIR__ . '/includes/database.php';
 require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/content_engine.php';
 require_once __DIR__ . '/includes/maker.php';
+require_once __DIR__ . '/includes/api_profiles.php';
 
 bkStartSession();
 
@@ -119,12 +120,22 @@ function handleApi($uri, $method, $input) {
     if (preg_match('#^/api/vault/(chat|image)$#', $uri, $m)) {
         $key = 'api_' . $m[1];
         if ($method === 'POST') {
-            putData($key, json_encode($input));
+            // _keep_key: the form left the key field empty → keep the existing key
+            $existing = json_decode((string)getData($key, '{}'), true) ?: [];
+            $apiKey = (string)($input['api_key'] ?? '');
+            if ($apiKey === '' && !empty($input['_keep_key'])) $apiKey = (string)($existing['api_key'] ?? '');
+            $clean = [
+                'provider' => (string)($input['provider'] ?? ($existing['provider'] ?? 'custom')),
+                'api_key' => $apiKey,
+                'model' => (string)($input['model'] ?? ''),
+                'endpoint' => (string)($input['endpoint'] ?? ''),
+            ];
+            putData($key, json_encode($clean));
             bkJson(['success' => true, 'message' => ($m[1] === 'chat' ? 'Chat API' : 'Image API') . ' saved.']);
         }
         $creds = json_decode((string)getData($key, '{}'), true) ?: [];
         $hasKey = !empty($creds['api_key']);
-        bkJson(['configured' => $hasKey, 'provider' => $creds['provider'] ?? '', 'model' => $creds['model'] ?? '', 'has_key' => $hasKey]);
+        bkJson(['configured' => $hasKey, 'provider' => $creds['provider'] ?? '', 'model' => $creds['model'] ?? '', 'has_key' => $hasKey, 'key_masked' => bkMaskKey($creds['api_key'] ?? '')]);
     }
     if (preg_match('#^/api/vault/test/(chat|image)$#', $uri, $m) && $method === 'POST') {
         $key = 'api_' . $m[1];
@@ -134,8 +145,52 @@ function handleApi($uri, $method, $input) {
             $res = AIProviderClient::chat($creds, 'Reply with exactly: AutoBacklink API connection successful');
             bkJson($res, $res['success'] ? 200 : 400);
         } else {
-            $res = AIProviderClient::image($creds, 'A simple test image: a plain dark gradient, no text');
-            bkJson(['success' => $res['success'], 'error' => $res['error'] ?? '', 'preview' => $res['success'] ? substr($res['url'], 0, 200) : ''], $res['success'] ? 200 : 400);
+            // FULL pipeline test: generate → save file → serve it back.
+            // This is the EXACT path post creation uses, so if the preview
+            // image renders below, auto-backlinks will get real images.
+            $demoPrompt = 'A bright modern interior design studio with a comfortable sofa, plants and warm light. Professional editorial photograph, no text, no watermark.';
+            $res = AIProviderClient::image($creds, $demoPrompt);
+            if (empty($res['success']) || empty($res['url'])) {
+                bkJson(['success' => false, 'error' => 'Image API call failed: ' . ($res['error'] ?? 'no response')], 400);
+            }
+            $dir = APP_ROOT . '/packages/api-test';
+            if (!is_dir($dir)) mkdir($dir, 0755, true);
+            $file = $dir . '/test-' . time() . '-' . substr(md5((string)microtime()), 0, 4) . '.png';
+            $saved = bkSaveImage($res['url'], $file);
+            if (!$saved || !file_exists($file)) {
+                bkJson(['success' => false, 'error' => 'The API returned an image, but SAVING IT AS A FILE FAILED — this is the same step posts use, so this is why you see gradient images. The ' . (str_starts_with((string)$res['url'], 'data:') ? 'base64 image was too large to decode' : 'image URL could not be downloaded') . '. Check: packages/ folder exists with 777 permissions, disk space, and server outbound access.'], 400);
+            }
+            bkJson(['success' => true, 'preview' => '/packages/api-test/' . basename($file), 'note' => 'Demo image generated AND saved as a real file — the exact pipeline your posts use. If you see the photo below, auto-backlinks will create real images.']);
+        }
+    }
+
+    // ---- API profiles (multiple named Chat/Image APIs; per-site selection) ----
+    if (preg_match('#^/api/profiles/(chat|image)$#', $uri, $m)) {
+        if ($method === 'POST') {
+            $res = bkSaveProfile($m[1], $input);
+            bkJson(['success' => true] + $res);
+        }
+        bkJson(['success' => true] + bkListProfiles($m[1]));
+    }
+    if (preg_match('#^/api/profiles/(chat|image)/([a-z0-9]+)/delete$#', $uri, $m) && $method === 'POST') {
+        bkDeleteProfile($m[1], $m[2]);
+        bkJson(['success' => true]);
+    }
+    if (preg_match('#^/api/profiles/(chat|image)/([a-z0-9]+)/test$#', $uri, $m) && $method === 'POST') {
+        $creds = bkResolveProfile($m[1], $m[2]);
+        if (empty($creds['api_key'])) bkJson(['success' => false, 'error' => 'This profile has no API key saved.'], 400);
+        if ($m[1] === 'chat') {
+            $res = AIProviderClient::chat($creds, 'Reply with exactly: AutoBacklink API connection successful');
+            bkJson($res, $res['success'] ? 200 : 400);
+        } else {
+            $res = AIProviderClient::image($creds, 'A bright modern interior design studio with a comfortable sofa, plants and warm light. Professional editorial photograph, no text, no watermark.');
+            if (empty($res['success'])) bkJson(['success' => false, 'error' => ($res['error'] ?? 'no response')], 400);
+            $dir = APP_ROOT . '/packages/api-test';
+            if (!is_dir($dir)) mkdir($dir, 0755, true);
+            $file = $dir . '/test-' . time() . '-' . substr(md5((string)microtime()), 0, 4) . '.png';
+            $saved = bkSaveImage($res['url'], $file);
+            if (!$saved || !file_exists($file)) bkJson(['success' => false, 'error' => 'API returned an image but the FILE SAVE failed (same step posts use). Check packages/ permissions (777) and disk space.'], 400);
+            bkJson(['success' => true, 'preview' => '/packages/api-test/' . basename($file)]);
         }
     }
 
@@ -184,7 +239,8 @@ function handleApi($uri, $method, $input) {
             $cur = $st->fetch();
             if (!$cur) bkJson(['error' => 'Target not found.'], 404);
             $fields = ['name','site_url','target_type','publish_mode','platform','niche','min_interval_days','is_active','account_notes',
-                       'blog_mode','blog_daily_count','blog_time','community_enabled','community_daily_count','community_time','community_group_id'];
+                       'blog_mode','blog_daily_count','blog_time','community_enabled','community_daily_count','community_time','community_group_id',
+                       'chat_profile','image_profile'];
             $sets = []; $vals = [];
             foreach ($fields as $f) {
                 if (array_key_exists($f, $input)) { $sets[] = "$f = ?"; $vals[] = $input[$f]; }
@@ -242,6 +298,44 @@ function handleApi($uri, $method, $input) {
         if (empty($pkg['title']) || empty($pkg['html'])) bkJson(['error' => 'Missing generated content.'], 400);
         $res = BacklinkMaker::saveCopyJob($t, $pkg, (string)($input['published_url'] ?? ''));
         bkJson(['success' => true] + $res);
+    }
+
+    // ---- Run THIS site now (blog if not manual + community if enabled) ----
+    if (preg_match('#^/api/targets/(\\d+)/run$#', $uri, $m) && $method === 'POST') {
+        $t = bkGetTargetRow(intval($m[1]));
+        if (!$t) bkJson(['error' => 'Target not found.'], 404);
+        $settings = getSettings();
+        $details = [];
+        if (($t['blog_mode'] ?? 'auto') !== 'manual') {
+            $tcred = json_decode((string)($t['credential_json'] ?? '{}'), true) ?: [];
+            if (($t['platform'] ?? '') === 'wix' && empty($tcred['client_id']) && empty($tcred['access_token'])) {
+                $details[] = ['part' => 'blog', 'status' => 'Skipped', 'title' => '', 'url' => '', 'error' => 'Wix keys not saved yet — save your OAuth Client ID + Secret in the authentication box on this page, then run again.'];
+            } else {
+                $job = BacklinkMaker::processTarget($settings, $t);
+                $details[] = [
+                    'part' => 'blog', 'status' => $job['status'] ?? 'Failed', 'title' => $job['title'] ?? '',
+                    'url' => $job['published_url'] ?? '', 'error' => $job['error_message'] ?? '',
+                ];
+            }
+        } else {
+            $details[] = ['part' => 'blog', 'status' => 'Skipped (manual mode)', 'title' => '', 'url' => '', 'error' => 'This site is in manual/copy mode — use the Copy & Paste Studio, or switch its mode to auto.'];
+        }
+        if (($t['platform'] ?? '') === 'wix' && intval($t['community_enabled'] ?? 0) === 1) {
+            $cres = BacklinkMaker::runCommunityOnce($settings, $t);
+            $details[] = ['part' => 'community', 'status' => $cres['success'] ? 'Posted' : 'Failed', 'title' => $cres['topic']['title'] ?? '', 'url' => $cres['topic']['url'] ?? '', 'error' => $cres['error'] ?? ''];
+        }
+        bkJson(['success' => true, 'details' => $details]);
+    }
+
+    // ---- This site's recent activity (jobs + community comments) ----
+    if (preg_match('#^/api/targets/(\\d+)/activity$#', $uri, $m)) {
+        $db = getDB();
+        $id = intval($m[1]);
+        $st = $db->prepare('SELECT id, title, status, run_date, published_url, error_message FROM jobs WHERE target_id = ? ORDER BY id DESC LIMIT 6');
+        $st->execute([$id]);
+        $st2 = $db->prepare('SELECT topic_title, status, created_at, error_message FROM community_actions WHERE target_id = ? ORDER BY id DESC LIMIT 6');
+        $st2->execute([$id]);
+        bkJson(['success' => true, 'jobs' => $st->fetchAll(), 'community' => $st2->fetchAll()]);
     }
 
     // ---- Wix: draft test (creates a real DRAFT post so you can see it) ----
