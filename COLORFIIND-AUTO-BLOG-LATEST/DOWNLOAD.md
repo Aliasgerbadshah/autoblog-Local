@@ -4,7 +4,7 @@ Use **only** this file (this branch, not `main`):
 
 ## Direct download
 
-**https://github.com/Aliasgerbadshah/autoblog-Local/raw/arena/019fc6f1-autoblog-local/COLORFIIND-AUTO-BLOG-LATEST.zip**
+**https://github.com/Aliasgerbadshah/autoblog-Local/raw/arena/01a07a9c-autoblog-local/COLORFIIND-AUTO-BLOG-LATEST.zip**
 
 If the browser opens a blank page, right-click that link → **Save link as…**
 

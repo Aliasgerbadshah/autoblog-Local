@@ -650,6 +650,7 @@
 
         <!-- TAB: AUTO BLOG (separate from Human Article Writer) -->
         <div id="tab-auto-blog" class="tab-content">
+            <div id="auto-blog-slot-bar" style="margin-bottom:14px;padding:12px 14px;background:var(--inner-bg);border:1px solid var(--border-light);border-radius:12px;font-size:0.82rem;line-height:1.6;"></div>
             <div class="card" style="border-top:4px solid #8b5cf6;">
                 <div class="card-header"><h2 class="card-title">🤖 Auto Blog — Daily Create, Check, Post</h2></div>
                 <p style="color:var(--text-muted);margin-bottom:12px;">This is not Human Article Writer. You start <strong>once</strong>. After that the software does the rest every day until you <strong>Set Inactive</strong> or the end date is reached. No end date = it keeps running daily.</p>
@@ -707,6 +708,13 @@
                     <code id="cron-line-timer" style="display:block;word-break:break-all;">Loading…</code>
                     <p style="margin:10px 0 4px 0;"><strong>3. Due queue</strong></p>
                     <code id="cron-line-sched" style="display:block;word-break:break-all;">Loading…</code>
+                    <p style="margin:10px 0 4px 0;"><button type="button" class="btn" style="background:#0f172a;" onclick="verifyAutoBlogCron()">🔍 Verify cron URLs now</button> <span id="auto-cron-check-status" style="font-size:0.78rem;"></span></p>
+                    <div id="auto-cron-check-results"></div>
+                </div>
+                <div id="auto-cron-runs-wrap" style="margin-top:14px;">
+                    <p style="font-weight:800;margin:0 0 6px 0;font-size:0.85rem;">🕘 Recent worker runs (last 12)</p>
+                    <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 8px 0;">Source names: <code>hostinger_tick</code> = your Hostinger cron URL 1 is firing · <code>auto_blog_page</code> = the dashboard tab you keep open is doing the work. To prove the Hostinger cron works, close this tab for 10 minutes, reopen, and look for a fresh <code>hostinger_tick</code> row.</p>
+                    <div style="overflow-x:auto;"><table><thead><tr><th>When</th><th>Source</th><th>HTML</th><th>Sched.</th><th>Pub.</th><th>Err</th></tr></thead><tbody id="auto-cron-runs-tbody"><tr><td colspan="6">Loading…</td></tr></tbody></table></div>
                 </div>
             </div>
             <div class="card">
@@ -840,6 +848,22 @@
                         </div>
                         <button type="submit" class="btn btn-purple">💾 Save Separate Chat & Image APIs</button><button type="button" class="btn" style="background:#0f172a;" onclick="testAi('chat_api')">🔍 Test Chat API</button><button type="button" class="btn" style="background:#0f172a;" onclick="testAi('image_api')">🔍 Test Image API</button><div id="ai-test-status" style="margin-top:10px;font-size:0.85rem;font-weight:700;"></div>
                     </form>
+                    <div style="margin-top:18px;padding:16px 18px;background:rgba(139,92,246,0.07);border:1px dashed rgba(139,92,246,0.5);border-radius:12px;">
+                        <h4 style="font-size:0.95rem;font-weight:800;color:#8b5cf6;margin:0 0 6px 0;">🖼️ Image Prompt Tester — fixes the "same / monitor image in every blog" problem</h4>
+                        <p style="font-size:0.78rem;color:var(--text-muted);margin:0 0 10px 0;">This runs the <strong>exact same image call the blog writer uses</strong> for this slot and shows you the resulting picture below. First try a dummy prompt such as <em>"a red apple on a wooden table, photorealistic"</em> — if the returned image is <strong>not</strong> a red apple, the problem is your Image API/model, not the blog code. Then press <strong>✨ Build prompt from title/keyword</strong> with a real blog topic to preview the photo your next blog will use.</p>
+                        <div class="form-grid">
+                            <div class="form-group"><label>Blog title (optional, for auto prompt)</label><input type="text" id="tip-title" placeholder="e.g. Best Leather Office Chairs for Back Pain"></div>
+                            <div class="form-group"><label>Keyword (optional)</label><input type="text" id="tip-keyword" placeholder="e.g. ergonomic leather office chair"></div>
+                        </div>
+                        <div class="form-group"><label>Image prompt (type a dummy prompt, or auto-build from the title)</label><textarea id="tip-prompt" rows="2" style="width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid #cbd5e1;border-radius:8px;font-size:0.85rem;font-family:inherit;" placeholder="e.g. a red apple on a wooden table, photorealistic, soft natural light"></textarea></div>
+                        <p style="margin:8px 0 0 0;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+                            <button type="button" class="btn" style="background:#8b5cf6;" onclick="buildTestImagePromptFromTitle()">✨ Build prompt from title/keyword</button>
+                            <button type="button" class="btn btn-accent" onclick="testImagePrompt()">🖼️ Generate image from this prompt</button>
+                            <label style="font-size:0.78rem;color:var(--text-muted);font-weight:600;"><input type="checkbox" id="tip-chat-build" checked> Ask Chat API to write the prompt first (needs Chat key)</label>
+                        </p>
+                        <div id="image-tester-status" style="margin-top:10px;font-size:0.85rem;font-weight:700;"></div>
+                        <div id="image-tester-preview" style="margin-top:10px;"></div>
+                    </div>
                 </div>
 
                 <!-- DataForSEO SEO Research API -->
@@ -1130,12 +1154,19 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ slot_number: slotNum })
             });
-            await res.json();
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) { alert('Switch failed: ' + (data.error || 'unknown error')); return; }
+            // Reload EVERYTHING that is stored per-slot so the two slots never
+            // share Auto Blog state, project settings or account selections.
             loadSlotSettings();
             loadStats();
             loadPosts();
             loadSocialAccounts();
-            alert(`Switched active workspace profile to Slot #${slotNum}`);
+            loadProjectModelChoices(true);
+            loadDemoProgress();
+            loadAutoBlogStatus();
+            if (typeof loadScheduleQueue === 'function') loadScheduleQueue();
+            alert(`Switched active workspace profile to Slot #${slotNum} — Auto Blog, articles, posts and settings now show this slot's own data.`);
         }
 
         async function saveSlotSettings(e) {
@@ -1324,6 +1355,44 @@
             return document.getElementById('v-image-model').value;
         }
         async function testAi(service) { updateAiDefaults(); const el=document.getElementById('ai-test-status'); el.innerText='Testing '+service+'...'; const isChat=service==='chat_api'; const modelVal=isChat?getChatModelValue():getImageModelValue(); const res=await fetch('/api/vault/test-ai',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({service_name:service,provider:document.getElementById(isChat?'v-chat-provider':'v-image-provider').value,api_key:document.getElementById(isChat?'v-chat-key':'v-image-key').value,model:modelVal,endpoint:document.getElementById(isChat?'v-chat-endpoint':'v-image-endpoint').value})}); const data=await res.json(); el.innerText=res.ok?'🟢 '+service+' connected successfully.':'🔴 '+(data.error||'API test failed.'); }
+        // ===== Image Prompt Tester (below Test Chat/Image in the Vault) =====
+        async function buildTestImagePromptFromTitle() {
+            const title=document.getElementById('tip-title').value.trim();
+            const keyword=document.getElementById('tip-keyword').value.trim();
+            if(!title && !keyword){ alert('Enter a blog title or keyword first.'); return; }
+            const statusEl=document.getElementById('image-tester-status');
+            statusEl.innerText='⏳ Building prompt' + (document.getElementById('tip-chat-build').checked ? ' with Chat API…' : '…');
+            try {
+                const res=await fetch('/api/vault/test-image-prompt',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title:title,keyword:keyword,prompt:'',chat_build:document.getElementById('tip-chat-build').checked?1:0,build_only:1})});
+                const data=await res.json();
+                if(data && data.prompt_used){ document.getElementById('tip-prompt').value=data.prompt_used; statusEl.innerText='✅ Prompt ready ' + (data.chat_built?'(written by Chat API)':'(auto topic prompt)') + (data.note?' — '+data.note:''); }
+                else { statusEl.innerText='🔴 '+(data.error||'Could not build prompt.'); }
+            } catch(e){ statusEl.innerText='🔴 '+e.message; }
+        }
+        async function testImagePrompt() {
+            const statusEl=document.getElementById('image-tester-status');
+            const previewEl=document.getElementById('image-tester-preview');
+            const prompt=document.getElementById('tip-prompt').value.trim();
+            const title=document.getElementById('tip-title').value.trim();
+            const keyword=document.getElementById('tip-keyword').value.trim();
+            if(!prompt && !title && !keyword){ statusEl.innerText='🔴 Type a dummy prompt (e.g. "a red apple on a wooden table, photorealistic") or a blog title first.'; return; }
+            statusEl.innerText='⏳ Generating image for this prompt (Pollinations can take ~10-20 s the first time)…';
+            previewEl.innerHTML='';
+            try {
+                const res=await fetch('/api/vault/test-image-prompt',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title:title,keyword:keyword,prompt:prompt||'',chat_build:document.getElementById('tip-chat-build').checked?1:0})});
+                const parsed=await readJson(res); const data=parsed.data||{};
+                if(!data || !data.image_url){ statusEl.innerText='🔴 '+(data.error||'Image generation failed.'); return; }
+                const url=data.image_url;
+                const label=(data.prompt_source==='typed_by_you')?'Your dummy prompt':'Prompt from blog title/keyword';
+                statusEl.innerHTML='<span style="color:#10b981;">🟢 Image URL generated (' + escapeHtml(String(data.provider||'?')) + ' / ' + escapeHtml(String(data.model||'?')) + ' · ' + escapeHtml(String(data.mode||'')) + ')</span>' + (data.note?'<div style="font-weight:400;color:#b45309;font-size:0.78rem;">'+escapeHtml(data.note)+'</div>':'');
+                previewEl.innerHTML='<div style="border:1px solid var(--border-light);border-radius:12px;padding:12px;background:#fff;">'
+                    + '<p style="margin:0 0 8px 0;font-size:0.8rem;"><strong>' + label + ':</strong><br><em style="color:#475569;">' + escapeHtml(data.prompt_used||'') + '</em></p>'
+                    + '<div style="background:#f8fafc;border-radius:10px;padding:8px;text-align:center;"><img id="tester-img" src="' + escapeHtml(url) + '" alt="Generated test image" onerror="this.style.opacity=0.35;document.getElementById(\'tester-loading\')&&(document.getElementById(\'tester-loading\').innerText=\'Image failed to load — Pollinations may still be generating it. Wait a few seconds then click the image URL below.\');" style="max-width:100%;max-height:360px;border-radius:10px;" loading="lazy"></div>'
+                    + '<p id="tester-loading" style="font-size:0.75rem;color:var(--text-muted);margin:6px 0 0 0;">If the image stays blank for ~30 s, open this URL directly (image generates on first request):</p>'
+                    + '<p style="margin:4px 0 0 0;word-break:break-all;font-size:0.7rem;"><a href="' + escapeHtml(url) + '" target="_blank" rel="noopener">' + escapeHtml(url.slice(0,180)) + '…</a></p>'
+                    + '</div>';
+            } catch(e){ statusEl.innerText='🔴 '+e.message; }
+        }
 
         async function handleSaveAiApis(e) {
             e.preventDefault();
@@ -1489,7 +1558,14 @@
             const autoMap=[['chat_api','auto-project-chat-account'],['image_api','auto-project-image-account'],['dataforseo_api','auto-project-seo-account'],['blogger_api','auto-project-blogger-account']];
             for (const [service,id] of map) { try { const rows=await (await fetch('/api/vault/accounts/'+service)).json(); const el=document.getElementById(id); if(el) el.innerHTML=rows.length?rows.map(x=>`<option value="${x.id}">${escapeHtml(x.account_alias)}${x.provider?' — '+escapeHtml(x.provider):''}${x.model?' — '+escapeHtml(x.model):''}</option>`).join(''):'<option value="">No saved account</option>'; } catch(e){} }
             for (const [service,id] of autoMap) { try { const rows=await (await fetch('/api/vault/accounts/'+service)).json(); const el=document.getElementById(id); if(el) el.innerHTML=rows.length?rows.map(x=>`<option value="${x.id}">${escapeHtml(x.account_alias)}${x.provider?' — '+escapeHtml(x.provider):''}${x.model?' — '+escapeHtml(x.model):''}</option>`).join(''):'<option value="">No saved account</option>'; } catch(e){} }
-            try { const s=await (await fetch('/api/projects/settings')).json(); if(s.domain_url){document.getElementById('project-domain').value=s.domain_url; const ad=document.getElementById('auto-project-domain'); if(ad && !ad.value) ad.value=s.domain_url;} if(s.target_country){document.getElementById('project-country').value=s.target_country; const ac=document.getElementById('auto-project-country'); if(ac) ac.value=s.target_country;} ['chat_credential_id','image_credential_id','seo_credential_id','blogger_credential_id'].forEach((k,i)=>{if(s[k]){ const a=document.getElementById(map[i][1]); const b=document.getElementById(autoMap[i][1]); if(a) a.value=s[k]; if(b) b.value=s[k];}}); } catch(e){}
+            try { const s=await (await fetch('/api/projects/settings')).json(); const setVal=(id,v)=>{const el=document.getElementById(id); if(el) el.value=(v===null||v===undefined?'':v);};
+                setVal('project-domain', s.domain_url||''); setVal('auto-project-domain', s.domain_url||'');
+                setVal('project-country', s.target_country||'India'); setVal('auto-project-country', s.target_country||'India');
+                setVal('project-language', s.target_language||'en'); setVal('auto-project-language', s.target_language||'en');
+                setVal('project-platform', s.destination_platform||'blogger'); setVal('auto-project-platform', s.destination_platform||'blogger');
+                ['chat_credential_id','image_credential_id','seo_credential_id','blogger_credential_id'].forEach((k,i)=>{ setVal(map[i][1], s[k]||''); setVal(autoMap[i][1], s[k]||''); });
+                if (s.destination_platform) { try { updateCalendarDates(); updateAutoCalendarDates(); } catch(e){} }
+            } catch(e){}
         }
         async function dashboardDecision(token,decision) { const res=await fetch('/api/demo/decision/'+token+'/'+decision,{method:'POST'}); if(!res.ok){alert('This approval link is expired or already used.');} loadDemoProgress(); loadStats(); }
         async function htmlDecision(token,decision) { if(!confirm('Are you sure you want to '+(decision==='approve'?'APPROVE this HTML for publishing?':'REJECT and rewrite this HTML?'))) return; const res=await fetch('/api/demo/html-decision/'+token+'/'+decision,{method:'POST'}); if(res.ok){alert(decision==='approve'?'✅ HTML Approved! Article is now scheduled for publishing.':'🔄 HTML Rejected! A rewritten version will be generated shortly.');loadDemoProgress();loadStats();}else{alert('This HTML approval link is expired or already used.');} }
@@ -2043,17 +2119,80 @@
                 try { await fetch('/api/auto-blog/run', {method:'POST'}); loadAutoBlogStatus(); } catch(e) {}
             }, 120000);
         }
+        function renderAutoBlogSlotBar(data) {
+            const bar = document.getElementById('auto-blog-slot-bar');
+            if (!bar) return;
+            const activeSlot = Number(data.active_slot || 1);
+            const slots = data.slots || [];
+            if (!slots.length) { bar.innerHTML = ''; return; }
+            const chips = slots.map(s => {
+                const n = Number(s.slot_number);
+                const isActive = n === activeSlot;
+                const on = Number(s.job_enabled || 0) === 1;
+                const platform = (s.job_platform || '').toUpperCase() || (on ? 'AUTO' : '');
+                const domain = s.domain_url ? ' · ' + escapeHtml(String(s.domain_url).replace(/^https?:\/\//,'')) : '';
+                const color = on ? '#10b981' : '#94a3b8';
+                const border = isActive ? '2px solid #8b5cf6' : '1px solid var(--border-light)';
+                const statusTxt = on ? 'ACTIVE' : '—';
+                const platTxt = on ? ('<span style="color:' + color + ';font-weight:800;">' + platform + '</span>') : 'no job';
+                return `<button type="button" onclick="switchSlot(${n})" title="Switch to Slot #${n}" style="cursor:pointer;text-align:left;background:${isActive?'#fff':'var(--inner-bg)'};border:${border};border-radius:10px;padding:8px 10px;font-size:0.75rem;font-family:inherit;color:var(--text-dark);min-width:150px;">
+                    <span style="font-weight:800;color:var(--primary-blue);">Slot #${n}${isActive?' (now)':''}</span><br>
+                    <span>${escapeHtml(s.slot_name||'')}</span><br>
+                    <span style="color:${on?'#10b981':'#94a3b8'};font-weight:800;">${on?'●':''} ${statusTxt}</span> <span style="color:${color};">${platTxt}</span><span style="color:var(--text-muted);">${domain}</span>
+                </button>`;
+            }).join('');
+            bar.innerHTML = '<div style="font-weight:800;margin-bottom:6px;font-size:0.85rem;">🧩 Auto Blog is per-slot — each Slot has its own separate campaign</div>'
+                + '<div style="display:flex;gap:8px;flex-wrap:wrap;">' + chips + '</div>'
+                + '<p style="margin:6px 0 0 0;color:var(--text-muted);font-size:0.75rem;">Click a slot chip to switch. Starting Auto Blog in Slot #1 (Blogger) and Slot #2 (Website) creates two independent campaigns: active/inactive, queue, posting times and emails never mix.</p>';
+        }
+        function renderAutoBlogRuns(runs) {
+            const tb = document.getElementById('auto-cron-runs-tbody');
+            if (!tb) return;
+            if (!runs || !runs.length) { tb.innerHTML = '<tr><td colspan="6">No worker runs recorded yet. Run the tick URL or click "Run Auto Cron" once.</td></tr>'; return; }
+            tb.innerHTML = runs.map(r => `<tr>
+                <td>${escapeHtml(r.ran_at||'')}</td>
+                <td><code>${escapeHtml(r.source||'')}</code></td>
+                <td>${r.html_created||0}</td>
+                <td>${r.scheduled||0}</td>
+                <td>${r.published||0}</td>
+                <td style="color:${Number(r.failed||0)>0?'#ef4444':'var(--text-muted)'}">${r.failed||0}</td>
+            </tr>`).join('');
+        }
+        async function verifyAutoBlogCron() {
+            const stEl = document.getElementById('auto-cron-check-status');
+            const resEl = document.getElementById('auto-cron-check-results');
+            if (!stEl || !resEl) return;
+            stEl.innerText = '⏳ Requesting each URL (15 s max each)…';
+            resEl.innerHTML = '';
+            try {
+                const res = await fetch('/api/auto-blog/cron-check', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({check:'all'})});
+                const data = await (await readJson(res)).data;
+                if (!data || !data.results) { stEl.innerText = '🔴 ' + (data.error || 'No results'); return; }
+                stEl.innerText = '';
+                const rows = data.results || {};
+                const keys = Object.keys(rows);
+                const okCount = keys.filter(k => rows[k].ok).length;
+                resEl.innerHTML = '<p style="margin:6px 0 4px 0;font-weight:800;">Check result: ' + (okCount===keys.length && keys.length? '<span style="color:#10b981;">✅ all ' + keys.length + ' URLs return HTTP 200</span>' : '<span style="color:#ef4444;">' + okCount + '/' + keys.length + ' OK — fix the failing line below</span>') + '</p>'
+                    + keys.map(k => { const r = rows[k]; return `<p style="margin:2px 0;font-size:0.78rem;border-bottom:1px dashed var(--border-light);padding:4px 0;">${r.ok?'✅':'❌'} <strong>${escapeHtml(k)}</strong> — HTTP ${r.http||'—'} in ${r.time_s}s<br><code style="font-size:0.7rem;word-break:break-all;">${escapeHtml(r.url)}</code><br><span style="color:${r.ok?'#10b981':'#ef4444'};">${escapeHtml(r.ok?'':' '+(r.error||''))}</span><span style="color:var(--text-muted);">${escapeHtml(r.response?(' · '+r.response):'')}</span></p>`; }).join('')
+                    + (data.note? '<p style="margin:6px 0 0 0;font-size:0.74rem;color:var(--text-muted);">' + escapeHtml(data.note) + '</p>' : '');
+            } catch(e) { stEl.innerText = '🔴 Check failed: ' + e.message; }
+        }
         async function loadAutoBlogStatus() {
             const health = document.getElementById('auto-cron-health');
             const body = document.getElementById('auto-progress-tbody');
             if (!health || !body) return;
             try {
                 const data = await (await fetch('/api/auto-blog/status')).json();
+                renderAutoBlogSlotBar(data);
+                renderAutoBlogRuns(data.runs || []);
                 const cron = data.cron || {};
                 const working = cron.cron_is_working;
                 const last = cron.last_run_at || 'never';
                 const job = data.job || {};
                 const jobOn = Number(job.enabled||0)===1;
+                const activeSlot = Number(data.active_slot || 1);
+                const slotRow = (data.slots||[]).find(s => Number(s.slot_number) === activeSlot) || {};
+                const slotName = slotRow.slot_name ? ('Slot #' + activeSlot + ' — ' + slotRow.slot_name) : ('Slot #' + activeSlot);
                 const st = document.getElementById('auto-job-state');
                 if (st) { st.className = 'badge ' + (jobOn?'badge-success':'badge-warning'); st.innerText = jobOn ? 'Active' : (job.id ? 'Inactive' : 'Not started'); }
                 if (jobOn) startAutoBlogHeartbeat();
@@ -2061,9 +2200,10 @@
                 const cronUrls = data.cron_urls || {};
                 const left = data.custom_topics_left;
                 const badge = working ? '<span class="badge badge-success">Running (last 15 min)</span>' : '<span class="badge badge-warning">Idle — set the 3 Hostinger wget jobs below</span>';
-                health.innerHTML = '<p><strong>Last worker run:</strong> ' + escapeHtml(String(last)) + ' ' + badge + '</p>'
+                health.innerHTML = '<p><strong>Now viewing:</strong> <strong style="color:var(--primary-blue);">' + escapeHtml(slotName) + '</strong> · Job in this slot: ' + (job.id ? (jobOn?'<span class="badge badge-success">Active</span>':'<span class="badge badge-warning">Inactive</span>') : '<span class="badge badge-warning">Not started</span>') + (job.domain_url? ' · Site: ' + escapeHtml(job.domain_url) : '') + (job.target_platform? ' · Platform: <strong>' + escapeHtml(String(job.target_platform).toUpperCase()) + '</strong>' : '') + '</p>'
+                    + '<p><strong>Last worker run:</strong> ' + escapeHtml(String(last)) + ' ' + badge + '</p>'
                     + '<p>Source: ' + escapeHtml(cron.last_source||'—') + ' · Master HTML last run: ' + (cron.last_html||0) + ' · Scheduled: ' + (cron.last_scheduled||0) + ' · Published: ' + (cron.last_published||0) + ' · Failures: ' + (cron.last_failed||0) + ' · Custom topics left: ' + (left===undefined?'—':left) + '</p>'
-                    + '<p style="margin-top:8px;">Pattern: 1 hour before each posting time → Master HTML → schedule that exact time → email you the article.</p>';
+                    + '<p style="margin-top:8px;">Pattern: 1 hour before each posting time → Master HTML → schedule that exact time → email you the article. This worker serves ALL slots; the queue below shows only the active slot.</p>';
                 function fillCronLine(id, url) {
                     const el = document.getElementById(id);
                     if (!el) return;
@@ -2073,10 +2213,10 @@
                 fillCronLine('cron-line-timer', cronUrls.approval_timer);
                 fillCronLine('cron-line-sched', cronUrls.scheduler);
                 const items = data.items || [];
-                if (!items.length) { body.innerHTML = '<tr><td colspan="8">Queue is empty until Start (or until start date). Master HTML is not written until 1 hour before the posting time.</td></tr>'; return; }
+                if (!items.length) { body.innerHTML = '<tr><td colspan="8">' + (job.id ? ('Queue is empty in this slot' + (jobOn?' (job is Active — next topic appears at the next posting time)':' (job is Inactive)')) : 'No Auto Blog campaign in this slot yet. Fill the form and click Start.') + '</td></tr>'; return; }
                 body.innerHTML = items.map(x => `<tr>
-                    <td>Day ${x.day_number} / Slot ${x.post_number}</td>
-                    <td><strong>${escapeHtml(x.title||'')}</strong></td>
+                    <td>Day ${x.day_number} / Post ${x.post_number}</td>
+                    <td><strong>${escapeHtml(x.title||'')}</strong>${x.topic_source?('<div style="font-size:0.68rem;color:var(--text-muted);">source: '+escapeHtml(x.topic_source)+'</div>'):''}</td>
                     <td>${formatPlannerKeywords(x)}</td>
                     <td><span class="badge ${x.article_status==='Published'||x.article_status==='HTML Ready'||x.article_status==='Scheduled'?'badge-success':'badge-warning'}">${escapeHtml(x.article_status||'Not Created')}</span>${x.article_status==='Not Created'?' <span style="font-size:0.72rem;color:var(--text-muted);">waits until 1 hour before</span>':''}</td>
                     <td>${escapeHtml(x.scheduled_date||'—')} ${escapeHtml(x.scheduled_time||'')}</td>

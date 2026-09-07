@@ -650,7 +650,7 @@ function handleApiRoute($uri) {
         }
 
         $researchContext = $input['research_context'] ?? 'Use the approved website research, keyword plan, internal-link map, external sources, FAQ questions, and image requirements.';
-        $prompt = "Write a researched HTML blog article of 1,800 to 2,200 words about: $keyword. Category: $category.\n$researchContext\nUse one H1, logical H2-H6 headings, natural internal and external links, a real FAQ section, valid Article and FAQ JSON-LD only when supported, varied relevant image positions with descriptive alt text, and no banned AI words or phrases. Do not invent facts or URLs. CRITICAL: Keep all paragraphs SHORT — strictly 45 to 50 words per <p> tag. Every paragraph must have between 45 and 50 words. Break long paragraphs into multiple short ones. Include 2-3 external links to real, verified authority sites (Wikipedia, official docs, etc). Return only the article HTML.";
+        $prompt = "Write a researched HTML blog article of 1,800 to 2,200 words about: $keyword. Category: $category.\n$researchContext\nUse one H1, logical H2-H6 headings, natural internal and external links, a real FAQ section, valid Article and FAQ JSON-LD only when supported, and no banned AI words or phrases. Do not invent facts or URLs. CRITICAL: Do NOT insert any <img> tags, <figure> blocks, or image URLs anywhere — the publishing engine attaches one real, topic-matching image automatically after you finish. Keep all paragraphs SHORT — strictly 45 to 50 words per <p> tag. Every paragraph must have between 45 and 50 words. Break long paragraphs into multiple short ones. Include 2-3 external links to real, verified authority sites (Wikipedia, official docs, etc). Return only the article HTML.";
 
         $chatResult = AIProviderClient::chat($chatVault, $prompt);
         if (!$chatResult['success']) {
@@ -660,14 +660,26 @@ function handleApiRoute($uri) {
         $art = ContentGenerator::generateHumanArticle1000Words($keyword, $category, $targetLink, $targetAnchor, $userId, $activeSlot);
         $art['content'] = AntiAiSanitizer::sanitizeText($chatResult['content']);
 
+        // 1) Remove any image/figure the Chat model invented (the old "same monitor
+        //    image in every blog" bug). 2) Attach ONE image built from this article's
+        //    topic, so the photo always matches the blog.
+        $art['content'] = stripArticleImagesAndFigures($art['content']);
+        $featuredUrl = topicPhotoUrlForTitle($art['title'], $keyword, 1, 1280, 720);
         $imageResult = ['success' => false];
-        if (!empty($imageVault['api_key'])) {
-            $imageResult = AIProviderClient::image($imageVault, "Relevant editorial image for $keyword; monochrome professional photography, no text, no logos.");
+        $imageProvider = strtolower((string)($imageVault['provider'] ?? ''));
+        $imageAllowed = ($imageProvider === 'pollinations') || (PHP_SAPI === 'cli' && in_array($imageProvider, ['openai', 'openrouter', 'custom'], true));
+        if ($imageAllowed && !empty($imageVault['api_key'])) {
+            try {
+                $imageResult = AIProviderClient::image($imageVault, shortTopicImagePrompt($art['title'], $keyword));
+                if (!empty($imageResult['success']) && !empty($imageResult['url'])) {
+                    $featuredUrl = $imageResult['url'];
+                }
+            } catch (Throwable $e) {
+                error_log('[Generate] image API failed, using topic URL: ' . $e->getMessage());
+            }
         }
-        if (!empty($imageResult['success']) && !empty($imageResult['url'])) {
-            $art['featured_image'] = $imageResult['url'];
-            $art['content'] = '<figure><img src="' . $imageResult['url'] . '" alt="Relevant image for ' . escapeHtml($keyword) . '" loading="eager" style="max-width:100%;height:auto;"></figure>' . $art['content'];
-        }
+        $art['featured_image'] = $featuredUrl;
+        $art['content'] = topicFigureHtml($art['title'], $keyword, $featuredUrl) . $art['content'];
 
         $results = [];
         $publishedUrl = '';
@@ -1484,8 +1496,8 @@ function handleApiRoute($uri) {
     // Demo campaign status — Human Article Writer only (manual campaigns)
     if ($uri === '/api/demo/campaign-status') {
         $db = getDB();
-        $stmt = $db->prepare("SELECT id FROM campaigns WHERE user_id = ? AND (workflow_mode IS NULL OR workflow_mode = 'manual') ORDER BY id DESC LIMIT 1");
-        $stmt->execute([$userId]);
+        $stmt = $db->prepare("SELECT id FROM campaigns WHERE user_id = ? AND slot_number = ? AND (workflow_mode IS NULL OR workflow_mode = 'manual') ORDER BY id DESC LIMIT 1");
+        $stmt->execute([$userId, $activeSlot]);
         $campaign = $stmt->fetch();
         if (!$campaign) jsonResponse(['campaign' => null, 'items' => []]);
 
@@ -2518,6 +2530,17 @@ function handleApiRoute($uri) {
         $targetPlatform = $input['target_platform'] ?? 'blogger';
         $now = nowString();
         $db = getDB();
+        // If this slot already has an Auto Blog campaign running, pause the OLD one
+        // first. Each slot owns its own campaign; restarting must not leave two
+        // "Auto Running" campaigns inside the same slot.
+        try {
+            $oldStmt = $db->prepare("SELECT campaign_id FROM auto_blog_jobs WHERE user_id = ? AND slot_number = ?");
+            $oldStmt->execute([$userId, $activeSlot]);
+            $oldCampaignId = intval($oldStmt->fetchColumn() ?: 0);
+            if ($oldCampaignId) {
+                $db->prepare("UPDATE campaigns SET status = 'Paused' WHERE id = ? AND user_id = ? AND slot_number = ? AND workflow_mode = 'auto'")->execute([$oldCampaignId, $userId, $activeSlot]);
+            }
+        } catch (Throwable $e) {}
         $stmt = $db->prepare('INSERT INTO campaigns (user_id, slot_number, domain_url, target_country, language_code, days, posts_per_day, status, start_date, end_date, no_end, posting_times, target_platform, created_at, workflow_mode, keyword_source) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
         $stmt->execute([$userId, $activeSlot, $domain, $country, $language, 0, $perDay, 'Auto Running', $startDate, $endDate, $noEnd, json_encode($postingTimes), $targetPlatform, $now, 'auto', 'planner']);
         $campaignId = $db->lastInsertId();
@@ -2582,38 +2605,236 @@ function handleApiRoute($uri) {
     if ($uri === '/api/auto-blog/toggle' && $method === 'POST') {
         $enabled = !empty($input['enabled']) ? 1 : 0;
         $db = getDB();
-        $db->prepare('UPDATE auto_blog_jobs SET enabled = ? WHERE user_id = ? AND slot_number = ?')->execute([$enabled, $userId, $activeSlot]);
+        $slotDetails = SecurityVault::getSlotDetails($userId, $activeSlot);
+        $slotLabel = 'Slot #' . $activeSlot . ' (' . ($slotDetails['slot_name'] ?? '') . ')';
+        $stmt = $db->prepare('SELECT id, campaign_id FROM auto_blog_jobs WHERE user_id = ? AND slot_number = ?');
+        $stmt->execute([$userId, $activeSlot]);
+        $job = $stmt->fetch();
+        if ($enabled && !$job) {
+            jsonResponse(['success' => false, 'error' => 'No Auto Blog campaign has been started in ' . $slotLabel . ' yet. Fill the form above (Website URL, times, platform) and click "🚀 Start Auto Blog Campaign" first.'], 400);
+        }
+        if (!$job) {
+            jsonResponse(['success' => true, 'enabled' => 0, 'message' => $slotLabel . ' has no Auto Blog job. Nothing to stop.']);
+        }
+        $db->prepare('UPDATE auto_blog_jobs SET enabled = ? WHERE id = ?')->execute([$enabled, $job['id']]);
         $status = $enabled ? 'Auto Running' : 'Paused';
-        $db->prepare("UPDATE campaigns SET status = ? WHERE user_id = ? AND workflow_mode = 'auto' AND id IN (SELECT campaign_id FROM auto_blog_jobs WHERE user_id = ? AND slot_number = ?)")->execute([$status, $userId, $userId, $activeSlot]);
-        jsonResponse(['success' => true, 'enabled' => $enabled, 'message' => $enabled ? 'Auto Blog is Active.' : 'Auto Blog is Inactive. Daily posting stopped.']);
+        // Only this slot's own campaign is touched — never another slot's auto blog.
+        $db->prepare("UPDATE campaigns SET status = ? WHERE id = ? AND user_id = ? AND slot_number = ?")->execute([$status, $job['campaign_id'], $userId, $activeSlot]);
+        jsonResponse(['success' => true, 'enabled' => $enabled, 'message' => $enabled ? 'Auto Blog is Active in ' . $slotLabel . '.' : 'Auto Blog is Inactive in ' . $slotLabel . '. Daily posting stopped for this slot only.']);
     }
 
     if ($uri === '/api/auto-blog/status' && $method === 'GET') {
         $db = getDB();
-        $stmt = $db->prepare("SELECT * FROM campaigns WHERE user_id = ? AND workflow_mode = 'auto' ORDER BY id DESC LIMIT 1");
-        $stmt->execute([$userId]);
-        $campaign = $stmt->fetch();
-        $items = [];
-        if ($campaign) {
-            $stmt = $db->prepare('SELECT id, day_number, post_number, title, primary_keyword, keyword_data, plan_status, article_status, html_path, scheduled_date, scheduled_time, target_platform, last_error, html_retry_count FROM campaign_items WHERE campaign_id = ? ORDER BY day_number, post_number');
-            $stmt->execute([$campaign['id']]);
-            $items = $stmt->fetchAll();
-        }
-        $cron = function_exists('getLatestAutoCronStatus') ? getLatestAutoCronStatus($userId) : [];
         $job = null;
         try {
             $stmt = $db->prepare('SELECT * FROM auto_blog_jobs WHERE user_id = ? AND slot_number = ?');
             $stmt->execute([$userId, $activeSlot]);
             $job = $stmt->fetch() ?: null;
         } catch (Throwable $e) {}
+
+        // IMPORTANT: every Auto Blog view is isolated to the ACTIVE SLOT.
+        // Without this filter, Slot #2 showed Slot #1's campaign ("Auto Blog active" everywhere).
+        $campaign = null;
+        $campaignId = !empty($job['campaign_id']) ? intval($job['campaign_id']) : 0;
+        if ($campaignId) {
+            $stmt = $db->prepare("SELECT * FROM campaigns WHERE id = ? AND user_id = ? AND workflow_mode = 'auto' AND slot_number = ?");
+            $stmt->execute([$campaignId, $userId, $activeSlot]);
+            $campaign = $stmt->fetch() ?: null;
+        }
+        if (!$campaign) {
+            $stmt = $db->prepare("SELECT * FROM campaigns WHERE user_id = ? AND slot_number = ? AND workflow_mode = 'auto' ORDER BY id DESC LIMIT 1");
+            $stmt->execute([$userId, $activeSlot]);
+            $campaign = $stmt->fetch() ?: null;
+        }
+        $items = [];
+        if ($campaign) {
+            $stmt = $db->prepare('SELECT id, day_number, post_number, title, primary_keyword, keyword_data, plan_status, article_status, html_path, scheduled_date, scheduled_time, target_platform, last_error, html_retry_count, topic_source FROM campaign_items WHERE campaign_id = ? ORDER BY day_number, post_number');
+            $stmt->execute([$campaign['id']]);
+            $items = $stmt->fetchAll();
+        }
+
+        // Every slot's job state, so the UI can show which slots run their own Auto Blog.
+        $slots = [];
+        try {
+            $stmt = $db->prepare("SELECT uws.slot_number, uws.slot_name, uws.domain_url,
+                        COALESCE(ab.enabled, 0) AS job_enabled, ab.campaign_id AS job_campaign_id,
+                        ab.target_platform AS job_platform, ab.posts_per_day AS job_posts_per_day, ab.last_run_at AS job_last_run_at
+                    FROM user_workspace_slots uws
+                    LEFT JOIN auto_blog_jobs ab ON ab.user_id = uws.user_id AND ab.slot_number = uws.slot_number
+                    WHERE uws.user_id = ? ORDER BY uws.slot_number ASC");
+            $stmt->execute([$userId]);
+            $slots = $stmt->fetchAll();
+        } catch (Throwable $e) {}
+
+        $runs = [];
+        try {
+            $stmt = $db->prepare('SELECT source, ran_at, html_created, published, scheduled, processed, failed FROM auto_cron_log WHERE user_id IS NULL OR user_id = ? ORDER BY id DESC LIMIT 12');
+            $stmt->execute([$userId]);
+            $runs = $stmt->fetchAll();
+        } catch (Throwable $e) {}
+
+        $cron = function_exists('getLatestAutoCronStatus') ? getLatestAutoCronStatus($userId) : [];
         jsonResponse([
+            'active_slot' => $activeSlot,
             'campaign' => $campaign,
             'items' => $items,
             'cron' => $cron,
             'job' => $job,
+            'slots' => $slots,
+            'runs' => $runs,
             'tick_url' => function_exists('autoBlogTickUrl') ? autoBlogTickUrl() : '',
             'cron_urls' => function_exists('autoBlogAllCronUrls') ? autoBlogAllCronUrls() : [],
             'custom_topics_left' => function_exists('countCustomTopicsRemaining') ? countCustomTopicsRemaining() : 0,
+        ]);
+    }
+
+    // ========== AUTO BLOG — verify the 3 Hostinger cron URLs ==========
+    if ($uri === '/api/auto-blog/cron-check' && $method === 'POST') {
+        @set_time_limit(150);
+        @ini_set('max_execution_time', '150');
+        $which = $input['check'] ?? 'all';
+        $urls = [];
+        if (function_exists('autoBlogAllCronUrls')) {
+            $cronUrls = autoBlogAllCronUrls();
+            $urls['tick'] = $cronUrls['tick'] ?? '';
+            $urls['timer'] = $cronUrls['approval_timer'] ?? '';
+            $urls['sched'] = $cronUrls['scheduler'] ?? '';
+        } else {
+            $urls['tick'] = function_exists('autoBlogTickUrl') ? autoBlogTickUrl() : '';
+        }
+        $results = [];
+        foreach ($urls as $key => $u) {
+            if ($which !== 'all' && $which !== $key) continue;
+            if ($u === '') {
+                $results[$key] = ['url' => '', 'ok' => false, 'http' => 0, 'error' => 'URL not available.', 'response' => '', 'time_s' => 0];
+                continue;
+            }
+            $start = microtime(true);
+            $res = curlGet($u, [], 15);
+            $timeS = round(microtime(true) - $start, 1);
+            $http = intval($res['http_code'] ?? 0);
+            $body = (string)($res['data'] ?? '');
+            $firstLine = trim(preg_replace('/\s+/', ' ', $body));
+            $firstLine = substr($firstLine, 0, 220);
+            $err = $res['error'] ?? '';
+            if ($http === 403) $err = '403 Forbidden — the URL key does not match data/cron_secret.txt. Re-upload the latest files or use the URL shown on the Auto Blog tab.';
+            if ($http === 404) $err = '404 Not Found — cron file not at this path (upload cron/tick.php etc. to public_html/cron/).';
+            if ($timeS >= 14.9 && $http === 0) $err = 'No answer in 15s — another Auto Blog run may be in progress, or the server cannot reach this URL from itself. Open the URL in a browser to confirm.';
+            $results[$key] = ['url' => $u, 'ok' => $http === 200, 'http' => $http, 'error' => $err, 'response' => $firstLine, 'time_s' => $timeS];
+        }
+        $okCount = count(array_filter($results, fn($r) => !empty($r['ok'])));
+        jsonResponse(['success' => true, 'ok' => $okCount, 'total' => count($results), 'results' => $results, 'note' => 'Each URL runs the same command the Hostinger cron job runs (wget GET). HTTP 200 = URL + secret key are correct.']);
+    }
+
+    // ========== VAULT — Image Prompt Tester (debug the "same image" issue) ==========
+    if ($uri === '/api/vault/test-image-prompt' && $method === 'POST') {
+        @set_time_limit(90);
+        $title = trim((string)($input['title'] ?? ''));
+        $keyword = trim((string)($input['keyword'] ?? ''));
+        $userPrompt = trim((string)($input['prompt'] ?? ''));
+        $chatBuild = !empty($input['chat_build']) ? 1 : 0;
+        if ($userPrompt === '' && $title === '' && $keyword === '') {
+            jsonResponse(['success' => false, 'error' => 'Type a dummy image prompt, or a blog title/keyword to auto-build one.'], 400);
+        }
+        $db = getDB();
+        $sel = null;
+        try {
+            $stmt = $db->prepare('SELECT chat_credential_id, image_credential_id FROM user_workspace_slots WHERE user_id = ? AND slot_number = ?');
+            $stmt->execute([$userId, $activeSlot]);
+            $sel = $stmt->fetch() ?: null;
+        } catch (Throwable $e) {}
+        $imageVault = [];
+        if (!empty($sel['image_credential_id'])) $imageVault = SecurityVault::getApiCredentialsById($userId, 'image_api', $sel['image_credential_id']);
+        if (empty($imageVault)) $imageVault = SecurityVault::getApiCredentials($userId, 'image_api');
+        // Allow overriding with unsaved test values from the Vault form.
+        foreach (['provider', 'api_key', 'model', 'endpoint'] as $k) {
+            if (isset($input[$k]) && $input[$k] !== null && $input[$k] !== '') $imageVault[$k] = $input[$k];
+        }
+        $usedChat = false;
+        $chatNote = '';
+        if ($userPrompt === '') {
+            $prompt = shortTopicImagePrompt($title, $keyword);
+            if ($chatBuild && !empty($title)) {
+                try {
+                    $chatVault = [];
+                    if (!empty($sel['chat_credential_id'])) $chatVault = SecurityVault::getApiCredentialsById($userId, 'chat_api', $sel['chat_credential_id']);
+                    if (empty($chatVault)) $chatVault = SecurityVault::getApiCredentials($userId, 'chat_api');
+                    if (isset($input['chat_api_key']) && $input['chat_api_key'] !== '') $chatVault['api_key'] = $input['chat_api_key'];
+                    if (!empty($chatVault['api_key'])) {
+                        $ask = "Write ONE image-generation prompt (max 45 words) for a photorealistic photo of this blog article. Be specific about the real scene/people/objects. No text, no logos, no watermarks, and never a computer monitor or laptop screen unless the article is literally about monitors.\nTITLE: $title\nKEYWORD: " . ($keyword ?: $title) . "\nReturn ONLY the prompt.";
+                        $cr = AIProviderClient::chat($chatVault, $ask, 20);
+                        if (!empty($cr['success']) && !empty($cr['content'])) {
+                            $p = trim(preg_replace('/\s+/', ' ', strip_tags($cr['content'])));
+                            $p = trim($p, "\"'` \t\n\r");
+                            if (strlen($p) >= 15) {
+                                $prompt = $p;
+                                $usedChat = true;
+                            }
+                        } else {
+                            $chatNote = 'Chat could not build the prompt (' . ($cr['error'] ?? 'no content') . ') — using the standard topic prompt.';
+                        }
+                    }
+                } catch (Throwable $e) {
+                    $chatNote = 'Chat prompt builder skipped (' . $e->getMessage() . ').';
+                }
+            }
+        } else {
+            $prompt = $userPrompt;
+        }
+        // build_only = just show the prompt that WOULD be sent (no image cost).
+        if (!empty($input['build_only'])) {
+            jsonResponse([
+                'success' => true,
+                'build_only' => true,
+                'prompt_used' => $prompt,
+                'prompt_source' => $userPrompt !== '' ? 'typed_by_you' : ($usedChat ? 'chat_built' : 'auto_topic'),
+                'chat_built' => $usedChat,
+                'note' => $chatNote,
+            ]);
+        }
+        $provider = strtolower((string)($imageVault['provider'] ?? ''));
+        $hasKey = !empty($imageVault['api_key']);
+        $mode = 'url_only';
+        $imgUrl = '';
+        $errMsg = '';
+        // Exact same policy the blog writers use: URL-only Pollinations on web;
+        // paid image APIs are only called from CLI (or Pollinations with key).
+        $canCallApi = ($provider === 'pollinations') || (PHP_SAPI === 'cli' && in_array($provider, ['openai', 'openrouter', 'custom'], true));
+        if ($canCallApi && $hasKey) {
+            try {
+                $imgResult = AIProviderClient::image($imageVault, $prompt);
+                if (!empty($imgResult['success']) && !empty($imgResult['url'])) {
+                    $imgUrl = $imgResult['url'];
+                    $mode = ($provider === 'pollinations') ? 'pollinations_url' : 'image_api';
+                } else {
+                    $errMsg = $imgResult['error'] ?? 'Image API returned nothing.';
+                }
+            } catch (Throwable $e) {
+                $errMsg = $e->getMessage();
+            }
+        } elseif (!$canCallApi && $provider !== '' && $provider !== 'pollinations') {
+            $errMsg = 'Web requests skip paid image APIs (OpenAI/HuggingFace/Gemini) to prevent Hostinger 504 timeouts — showing the free Pollinations topic-URL fallback that blogs use. To test the paid API directly, choose Pollinations.ai or run the test from CLI.';
+        } elseif (!$hasKey && $provider !== 'pollinations') {
+            $errMsg = 'No Image API key saved for this slot — showing the free Pollinations topic-URL mode that blogs use as fallback. Save an Image API in the Vault and Test again for a paid generation.';
+        }
+        if ($imgUrl === '') {
+            // Fall back to exactly what the blog writers embed when no Image API is used.
+            $seed = abs(crc32($prompt . '|tester')) % 999983;
+            $imgModel = !empty($imageVault['model']) ? $imageVault['model'] : 'flux';
+            $imgUrl = 'https://image.pollinations.ai/prompt/' . rawurlencode($prompt) . '?model=' . rawurlencode($imgModel) . '&width=1280&height=720&nologo=true&seed=' . $seed;
+            if ($provider === 'pollinations' && $hasKey) $imgUrl .= '&key=' . urlencode($imageVault['api_key']);
+            if ($mode === 'url_only' && $errMsg === '') $mode = ($provider === 'pollinations') ? 'pollinations_url' : 'url_only';
+        }
+        jsonResponse([
+            'success' => true,
+            'image_url' => $imgUrl,
+            'prompt_used' => $prompt,
+            'prompt_source' => $userPrompt !== '' ? 'typed_by_you' : ($usedChat ? 'chat_built' : 'auto_topic'),
+            'provider' => $provider !== '' ? $provider : 'pollinations-fallback',
+            'model' => $imageVault['model'] ?? 'flux',
+            'mode' => $mode,
+            'chat_built' => $usedChat,
+            'note' => trim(($chatNote ? $chatNote . ' ' : '') . $errMsg),
         ]);
     }
 

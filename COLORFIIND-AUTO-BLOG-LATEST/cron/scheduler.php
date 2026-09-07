@@ -117,22 +117,41 @@ foreach ($dueItems as $item) {
             if (empty($chatVault['api_key'])) throw new RuntimeException('Chat API credentials are required.');
 
             $art = ContentGenerator::generateHumanArticle1000Words($keyword, $category, $targetLink, $targetAnchor, $userId, $slotNumber);
-            $prompt = "Write only researched HTML for an 1800 to 2200 word human-reviewed blog about $keyword. Use the approved internal link target $targetLink with natural anchor text $targetAnchor. Include correct headings, FAQ, schema only when supported, relevant external citations, and varied image alt text.";
+            $prompt = "Write only researched HTML for an 1800 to 2200 word human-reviewed blog about $keyword. Use the approved internal link target $targetLink with natural anchor text $targetAnchor. Include correct headings, FAQ, schema only when supported, and relevant external citations. Do NOT insert any <img> tags, <figure> blocks, or image URLs — the publishing engine attaches one real topic image automatically.";
             $aiResult = AIProviderClient::chat($chatVault, $prompt);
             if (!$aiResult['success']) throw new RuntimeException($aiResult['error'] ?? 'Chat API failed');
             $art['content'] = AntiAiSanitizer::sanitizeText($aiResult['content']);
+            $art['content'] = stripArticleImagesAndFigures($art['content']);
 
-            if (!empty($imageVault['api_key'])) {
-                $imageResult = AIProviderClient::image($imageVault, "Relevant editorial image for $keyword; no text or logos.");
+            // Topic-relevant image (never a random stock monitor). Paid Image APIs
+            // are only called when safe (Pollinations on web; others from CLI) to
+            // avoid Hostinger 504 timeouts.
+            $featuredUrl = topicPhotoUrlForTitle($art['title'], $keyword, 1, 1280, 720);
+            $imageProvider = strtolower((string)($imageVault['provider'] ?? ''));
+            $imageAllowed = ($imageProvider === 'pollinations') || (PHP_SAPI === 'cli' && in_array($imageProvider, ['openai', 'openrouter', 'custom'], true));
+            if ($imageAllowed && !empty($imageVault['api_key'])) {
+                $imageResult = AIProviderClient::image($imageVault, shortTopicImagePrompt($art['title'], $keyword));
                 if (!empty($imageResult['success']) && !empty($imageResult['url'])) {
-                    $art['featured_image'] = $imageResult['url'];
-                    $art['content'] = '<figure><img src="' . $imageResult['url'] . '" alt="Relevant image for ' . escapeHtml($keyword) . '" loading="eager"></figure>' . $art['content'];
+                    $featuredUrl = $imageResult['url'];
                 }
             }
+            $art['featured_image'] = $featuredUrl;
+            $art['content'] = topicFigureHtml($art['title'], $keyword, $featuredUrl) . $art['content'];
         }
 
         if ($platform === 'blogger') {
-            $vault = SecurityVault::getApiCredentials($userId, 'blogger_api');
+            // Prefer the Blogger account chosen for this item's slot (per-slot isolation).
+            $vault = [];
+            if (!empty($slotNumber)) {
+                try {
+                    $db2 = getDB();
+                    $ss = $db2->prepare('SELECT blogger_credential_id FROM user_workspace_slots WHERE user_id = ? AND slot_number = ?');
+                    $ss->execute([$userId, $slotNumber]);
+                    $bloggerCredId = (string)($ss->fetchColumn() ?: '');
+                    if ($bloggerCredId !== '') $vault = SecurityVault::getApiCredentialsById($userId, 'blogger_api', $bloggerCredId);
+                } catch (Throwable $e) {}
+            }
+            if (empty($vault)) $vault = SecurityVault::getApiCredentials($userId, 'blogger_api');
             $blogId = $vault['blogger_blog_id'] ?? '';
             $clientId = $vault['client_id'] ?? '';
             $clientSecret = $vault['client_secret'] ?? '';

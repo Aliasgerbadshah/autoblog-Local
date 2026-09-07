@@ -167,11 +167,14 @@ class ContentGenerator {
         $title = "How to Master $keywordCap: Practical Strategies for $nowYear";
         $slug = slugify($title);
 
+        // Topic-driven images (NOT a fixed stock gallery). Every image URL is
+        // built from this article's title/keyword, so the photo always matches
+        // the blog topic. "Monitor / laptop" stock photos are explicitly banned.
         $numImages = [2, 3, 4][array_rand([2, 3, 4])];
-        $imageKeys = array_rand(self::$HUMAN_IMAGE_GALLERY, $numImages);
-        if (!is_array($imageKeys)) $imageKeys = [$imageKeys];
         $images = [];
-        foreach ($imageKeys as $k) $images[] = self::$HUMAN_IMAGE_GALLERY[$k];
+        for ($i = 1; $i <= $numImages && $i <= 3; $i++) {
+            $images[] = topicPhotoUrlForTitle($title, $keyword, $i, $i === 1 ? 1280 : 1024, $i === 1 ? 720 : 576);
+        }
 
         // Crawl subpages
         $crawledSubpages = [];
@@ -965,12 +968,73 @@ function articleLooksLikeDraftHtml($html) {
 }
 
 function shortTopicImagePrompt($title, $keyword) {
-    $subject = trim((string)($title !== '' ? $title : $keyword));
+    $title = trim((string)$title);
+    $keyword = trim((string)$keyword);
+    // Auto-generated titles like "How to Master X: Practical Strategies for 2026"
+    // add no visual detail, so the real subject term (keyword) drives the photo.
+    $subject = $title;
+    if ($keyword !== '' && stripos($title, $keyword) !== false) {
+        $subject = $keyword;
+    } elseif ($subject === '') {
+        $subject = $keyword;
+    }
     $subject = preg_replace('/\s+/', ' ', $subject);
+    $subject = trim(preg_replace('/[\x{1F300}-\x{1FAFF}\x{2600}-\x{27BF}"]+/u', '', $subject)); // strip emoji/quotes
+    if ($subject === '') $subject = $title !== '' ? $title : 'the article topic';
     if (strlen($subject) > 90) $subject = substr($subject, 0, 90);
-    return 'Photorealistic photograph of this topic: ' . $subject
-        . '. Show the real-world people, objects, or place from the title. '
-        . 'Do not show a computer monitor, laptop screen, TV, phone UI, or app mockup. No text, no logos.';
+    return 'Photorealistic photograph of this subject: ' . $subject
+        . '. Show the real-world people, objects, place, or product related to "' . ($title !== '' ? $title : $subject) . '" — exactly that subject, not a screen and not a generic stock desk. '
+        . 'Do not show a computer monitor, laptop screen, TV, phone UI, or app mockup. No text, no logos, no watermark.';
+}
+
+/**
+ * Same prompt, with a different camera angle/scene per $index so the 2nd/3rd
+ * image inside one article is a different shot of the SAME topic (not a monitor).
+ */
+function topicVariantPrompt($title, $keyword, $index = 1) {
+    $base = shortTopicImagePrompt($title, $keyword);
+    $scenes = [
+        1 => ' Main establishing shot of the subject, straight editorial view.',
+        2 => ' Second photograph from a different angle, showing people or hands using/interacting with the subject.',
+        3 => ' Close-up detail photograph of the subject and its texture/materials.',
+        4 => ' Wide contextual scene photograph of the subject in its real environment.',
+    ];
+    return $base . ($scenes[$index] ?? $scenes[1]);
+}
+
+/**
+ * Deterministic topic-based Pollinations image URL for a given article position.
+ * Different title/keyword -> different seed + prompt -> different, relevant image.
+ */
+function topicPhotoUrlForTitle($title, $keyword, $index = 1, $width = 1280, $height = 720) {
+    $prompt = topicVariantPrompt($title, $keyword, $index);
+    $seed = abs(crc32((string)$title . '|' . (string)$keyword . '|' . (string)$index)) % 999983;
+    return 'https://image.pollinations.ai/prompt/' . rawurlencode($prompt)
+        . '?model=flux&width=' . intval($width) . '&height=' . intval($height) . '&nologo=true&seed=' . $seed;
+}
+
+/**
+ * Remove EVERY image/figure the Chat model may have invented. Text models often
+ * paste unrelated Unsplash "laptop / monitor" photos into the article — that was
+ * the root cause of blogs showing the same monitor-type images for any topic.
+ */
+function stripArticleImagesAndFigures($html) {
+    $html = preg_replace('#<figure[^>]*>.*?</figure>#is', '', (string)$html);
+    $html = preg_replace('#<picture[^>]*>.*?</picture>#is', '', $html);
+    $html = preg_replace('#<img[^>]*/?>#is', '', $html);
+    $html = preg_replace('#<p[^>]*>\s*(?:Image\s*\d*|Prompt|Alt|Picture|Photo)[^<]*</p>#is', '', $html);
+    return $html;
+}
+
+/**
+ * One standard <figure> with a topic image. Pass $url to override (e.g. when a
+ * paid Image API returned an image); otherwise the topic prompt URL is used.
+ */
+function topicFigureHtml($title, $keyword, $url = '', $altSuffix = '') {
+    $imgUrl = ($url !== '') ? $url : topicPhotoUrlForTitle($title, $keyword, 1, 1280, 720);
+    $kw = escapeHtml(trim((string)$keyword) !== '' ? $keyword : $title);
+    $alt = escapeHtml(substr($kw, 0, 110)) . ($altSuffix !== '' ? ' - ' . $altSuffix : '');
+    return '<figure style="margin:0 0 28px 0;border-radius:14px;overflow:hidden;"><img class="blog-content-img" src="' . escapeHtml($imgUrl) . '" alt="' . $alt . '" loading="eager" style="width:100%;height:auto;display:block;object-fit:cover;max-height:460px;"></figure>';
 }
 
 function buildTopicImagePrompt($title, $keyword, $h2s = []) {
@@ -1169,6 +1233,7 @@ function generateArticleHtmlFromCampaignItem($item, $userId, $activeSlot, $db, $
     // Strip ALL images/figures from Chat API content to prevent duplicates
     // (we insert our own thumbnail after H1). Also strip prompt/alt text paragraphs.
     $chatContent = preg_replace('#<figure[^>]*>.*?</figure>#is', '', $chatContent);
+    $chatContent = preg_replace('#<picture[^>]*>.*?</picture>#is', '', $chatContent);
     $chatContent = preg_replace('#<img[^>]*/?>#is', '', $chatContent);
     $chatContent = preg_replace('#<p[^>]*>\s*(?:Image\s*\d+|Prompt|Alt)[^<]*</p>#is', '', $chatContent);
 
@@ -1465,15 +1530,36 @@ function generateArticleHtmlReliable($item, $userId, $activeSlot, $db, $contentA
     return $last;
 }
 
-function publishItemToSelectedPlatform($userId, $item, $platform, $scheduledStr = null) {
+function publishItemToSelectedPlatform($userId, $item, $platform, $scheduledStr = null, $slotNumber = null) {
     $title = $item['title'] ?? 'Untitled';
     $articleContent = loadCampaignArticleContent($item);
     if (trim(strip_tags($articleContent)) === '') {
         return ['success' => false, 'error' => 'HTML file not found or empty. Path: ' . ($item['html_path'] ?? 'none')];
     }
     $platform = $platform ?: ($item['target_platform'] ?? 'blogger');
+    // Resolve the slot that owns this item (used to pick that slot's chosen
+    // Blogger account instead of always the first saved account).
+    $slotNum = intval($slotNumber ?: 0);
+    if (!$slotNum) {
+        try {
+            $db = getDB();
+            $cs = $db->prepare('SELECT slot_number FROM campaigns WHERE id = ?');
+            $cs->execute([$item['campaign_id'] ?? 0]);
+            $slotNum = intval($cs->fetchColumn() ?: 0);
+        } catch (Throwable $e) { $slotNum = 0; }
+    }
     if ($platform === 'blogger') {
-        $vault = SecurityVault::getApiCredentials($userId, 'blogger_api');
+        $vault = [];
+        if ($slotNum) {
+            try {
+                $db = getDB();
+                $ss = $db->prepare('SELECT blogger_credential_id FROM user_workspace_slots WHERE user_id = ? AND slot_number = ?');
+                $ss->execute([$userId, $slotNum]);
+                $bloggerCredId = $ss->fetchColumn() ?: '';
+                if ($bloggerCredId !== '') $vault = SecurityVault::getApiCredentialsById($userId, 'blogger_api', $bloggerCredId);
+            } catch (Throwable $e) {}
+        }
+        if (empty($vault)) $vault = SecurityVault::getApiCredentials($userId, 'blogger_api');
         $blogId = $vault['blogger_blog_id'] ?? '';
         if (empty($blogId)) return ['success' => false, 'error' => 'Blogger Blog ID is missing in Vault.'];
         $res = Publisher::publishBlogger($userId, $blogId, $title, $articleContent, $vault['client_id'] ?? '', $vault['client_secret'] ?? '', $vault['refresh_token'] ?? '', $scheduledStr);

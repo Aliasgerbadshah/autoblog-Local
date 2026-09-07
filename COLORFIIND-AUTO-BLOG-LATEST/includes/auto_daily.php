@@ -495,8 +495,8 @@ function processAutoBlogCampaignsUnlocked($htmlLimit = 1, $publishLimit = 5) {
                 $camp = $cs->fetch();
             }
             if (!$camp) {
-                $cs = $db->prepare("SELECT * FROM campaigns WHERE user_id = ? AND workflow_mode = 'auto' AND status IN ('Auto Running','Roadmap Review') ORDER BY id DESC LIMIT 1");
-                $cs->execute([$job['user_id']]);
+                $cs = $db->prepare("SELECT * FROM campaigns WHERE user_id = ? AND slot_number = ? AND workflow_mode = 'auto' AND status IN ('Auto Running','Roadmap Review') ORDER BY id DESC LIMIT 1");
+                $cs->execute([$job['user_id'], $job['slot_number'] ?? 1]);
                 $camp = $cs->fetch();
             }
             if (!$camp) continue;
@@ -602,7 +602,8 @@ function processAutoBlogCampaignsUnlocked($htmlLimit = 1, $publishLimit = 5) {
                 $userId,
                 $item,
                 $itemPlatform,
-                $useBloggerSchedule ? $scheduledStr : ($itemPlatform === 'website' && $future ? $scheduledStr : null)
+                $useBloggerSchedule ? $scheduledStr : ($itemPlatform === 'website' && $future ? $scheduledStr : null),
+                $slot
             );
             $pubDid++;
             $out['processed']++;
