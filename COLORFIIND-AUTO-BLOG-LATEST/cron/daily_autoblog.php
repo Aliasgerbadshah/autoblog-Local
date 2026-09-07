@@ -26,6 +26,27 @@ if (!$cli) {
     }
 }
 
+// ---- Cron debugging helpers ----
+// When the secret key is correct, print any PHP error as readable text instead of
+// a blank HTTP 500, so Hostinger cron problems can be seen in the browser.
+if ($cli || !empty($secret)) {
+    @ini_set('display_errors', '1');
+    error_reporting(E_ALL);
+    set_exception_handler(function (Throwable $t) {
+        if (!headers_sent()) header('Content-Type: text/plain; charset=utf-8');
+        http_response_code(500);
+        echo '[AutoBlog Cron ERROR] ' . $t->getMessage() . ' @ ' . $t->getFile() . ':' . $t->getLine() . "\n";
+        exit(1);
+    });
+    register_shutdown_function(function () {
+        $e = error_get_last();
+        if ($e && in_array($e['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR], true)) {
+            if (!headers_sent()) header('Content-Type: text/plain; charset=utf-8');
+            echo "\n[AutoBlog Cron FATAL] " . $e['message'] . ' @ ' . $e['file'] . ':' . $e['line'] . "\n";
+        }
+    });
+}
+
 @set_time_limit(180);
 $res = processAutoBlogCampaigns(1, 3);
 if (function_exists('recordAutoCronRun')) {
