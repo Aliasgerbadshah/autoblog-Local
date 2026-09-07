@@ -657,7 +657,14 @@ function handleApiRoute($uri) {
             jsonResponse(['error' => 'Chat API writing failed: ' . ($chatResult['error'] ?? 'Unknown error')], 400);
         }
 
-        $art = ContentGenerator::generateHumanArticle1000Words($keyword, $category, $targetLink, $targetAnchor, $userId, $activeSlot);
+        // Build the article shell from the typed topic keyword only. The old code
+        // called ContentGenerator::generateHumanArticle1000Words() first, which
+        // forced the generic \"How to Master ...\" title onto every post and baked
+        // its own image HTML into the shell (then threw that content away). Keep
+        // the user's topic as the title; only ONE topic image is attached below.
+        $artTitle = trim(ucwords((string)$keyword));
+        if (strlen($artTitle) < 3) $artTitle = 'Color Design Insights';
+        $art = ['title' => $artTitle, 'slug' => slugify($artTitle), 'content' => '', 'keyword' => $keyword, 'category' => $category, 'featured_image' => ''];
         $art['content'] = AntiAiSanitizer::sanitizeText($chatResult['content']);
 
         // 1) Remove any image/figure the Chat model invented (the old "same monitor
@@ -2843,6 +2850,20 @@ function handleApiRoute($uri) {
             if ($provider === 'pollinations' && $hasKey) $imgUrl .= '&key=' . urlencode($imageVault['api_key']);
             if ($mode === 'url_only' && $errMsg === '') $mode = ($provider === 'pollinations') ? 'pollinations_url' : 'url_only';
         }
+        // Tell the tester exactly what pixel size the image API produced, so it
+        // is obvious that gpt-image-1-mini can only make SQUARE (1024x1024) while
+        // gpt-image-1 makes WIDE 1536x1024 and Pollinations makes 640x360.
+        $nativeW = 0; $nativeH = 0;
+        if (preg_match('#width=([0-9]+)#i', $imgUrl, $m)) { $nativeW = (int)$m[1]; }
+        if (preg_match('#height=([0-9]+)#i', $imgUrl, $m)) { $nativeH = (int)$m[1]; }
+        if ($nativeW === 0) {
+            $mName = (string)($imageVault['model'] ?? '');
+            if (stripos($mName, 'mini') !== false) { $nativeW = 1024; $nativeH = 1024; }
+            elseif (in_array($provider, ['openai', 'openrouter', 'custom'], true) && $imgUrl !== '') { $nativeW = 1536; $nativeH = 1024; }
+        }
+        $thumbNote = ($nativeW > 0 && $nativeH > 0)
+            ? "Native image is {$nativeW}\u00d7{$nativeH}px. In your blogs this image is displayed cropped to a 640px-wide 16:9 thumbnail (blog-thumbnail / topic-figure)."
+            : 'In your blogs this image is displayed cropped to a 640px-wide 16:9 thumbnail.';
         jsonResponse([
             'success' => true,
             'image_url' => $imgUrl,
@@ -2852,6 +2873,9 @@ function handleApiRoute($uri) {
             'model' => $imageVault['model'] ?? 'flux',
             'mode' => $mode,
             'chat_built' => $usedChat,
+            'native_w' => $nativeW,
+            'native_h' => $nativeH,
+            'thumb_note' => $thumbNote,
             'note' => trim(($chatNote ? $chatNote . ' ' : '') . $errMsg),
         ]);
     }

@@ -200,9 +200,9 @@ class ContentGenerator {
         $dateStr = date('F d, Y');
         $prevPostTitleEsc = escapeHtml($prevPostTitle);
 
-        $imageHtml1 = "<figure style=\"margin-bottom:32px; border-radius:12px; overflow:hidden;\"><img src=\"{$images[0]}\" alt=\"$keywordCap\" style=\"width:100%; height:auto; display:block; object-fit:cover; max-height:420px;\"></figure>";
-        $imageHtml2 = $numImages >= 2 ? "<figure style=\"margin:36px 0; border-radius:12px; overflow:hidden;\"><img src=\"{$images[1]}\" alt=\"Execution Framework\" style=\"width:100%; height:auto; display:block; object-fit:cover; max-height:380px;\"></figure>" : '';
-        $imageHtml3 = $numImages >= 3 ? "<figure style=\"margin:36px 0; border-radius:12px; overflow:hidden;\"><img src=\"{$images[2]}\" alt=\"Metrics Data\" style=\"width:100%; height:auto; display:block; object-fit:cover; max-height:360px;\"></figure>" : '';
+        $imageHtml1 = "<figure style=\"margin-bottom:32px; border-radius:12px; overflow:hidden;\"><img class=\"topic-figure-img\" src=\"{$images[0]}\" alt=\"$keywordCap\" style=\"width:100%; display:block; object-fit:cover; aspect-ratio:16/9;\"></figure>";
+        $imageHtml2 = $numImages >= 2 ? "<figure style=\"margin:36px 0; border-radius:12px; overflow:hidden;\"><img class=\"topic-figure-img\" src=\"{$images[1]}\" alt=\"Execution Framework\" style=\"width:100%; display:block; object-fit:cover; aspect-ratio:16/9;\"></figure>" : '';
+        $imageHtml3 = $numImages >= 3 ? "<figure style=\"margin:36px 0; border-radius:12px; overflow:hidden;\"><img class=\"topic-figure-img\" src=\"{$images[2]}\" alt=\"Metrics Data\" style=\"width:100%; display:block; object-fit:cover; aspect-ratio:16/9;\"></figure>" : '';
 
         $rawArticle = <<<ARTICLE
 <article class="monochrome-editorial-article" style="font-family:'Montserrat', -apple-system, sans-serif; line-height:1.85; color:#334155; max-width:840px; margin:0 auto; font-size:1.02rem;">
