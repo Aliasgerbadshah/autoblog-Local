@@ -141,14 +141,9 @@ HTML;
 }
 
 class ContentGenerator {
-    private static $HUMAN_IMAGE_GALLERY = [
-        "https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=1200&q=80",
-        "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80",
-        "https://images.unsplash.com/photo-1551836022-d5d88e9218df?auto=format&fit=crop&w=1200&q=80",
-        "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1200&q=80",
-        "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=1200&q=80",
-        "https://images.unsplash.com/photo-1499750310107-5fef28a66643?auto=format&fit=crop&w=1200&q=80"
-    ];
+    // NOTE: the old fixed "monitor / laptop stock" gallery was removed. Every
+    // image is now generated from the article's own title/keyword so it matches
+    // the blog. See topicPhotoUrlForTitle() / topicFigureHtml() below.
 
     public static function slugify($text) {
         return slugify($text);
@@ -1249,7 +1244,7 @@ function generateArticleHtmlFromCampaignItem($item, $userId, $activeSlot, $db, $
     $escKw = escapeHtml($keyword);
     if ($chatUsed && $featuredImgUrl) {
         $escImgUrl = escapeHtml($featuredImgUrl);
-        $thumbHtml = "<figure class=\"blog-thumbnail\" style=\"margin:0 auto 24px;border-radius:12px;overflow:hidden;width:100%;max-width:640px;\"><img class=\"blog-thumb-img\" data-kw=\"{$escKw}\" src=\"{$escImgUrl}\" alt=\"{$escKw} - Blog Thumbnail\" style=\"width:100%;display:block;object-fit:cover;\" loading=\"eager\"></figure>";
+        $thumbHtml = "<figure class=\"blog-thumbnail\" style=\"margin:0 auto 24px;border-radius:12px;overflow:hidden;width:100%;max-width:640px;\"><img class=\"blog-thumb-img\" data-kw=\"{$escKw}\" data-fallback=\"" . escapeHtml(topicPhotoUrlForTitle($title, $keyword, 4)) . "\" src=\"{$escImgUrl}\" alt=\"{$escKw} - Blog Thumbnail\" style=\"width:100%;display:block;object-fit:cover;\" loading=\"eager\"></figure>";
         $chatContent = insertThumbnailAfterH1($chatContent, $thumbHtml);
     }
 
@@ -1339,8 +1334,10 @@ CSS;
             }
             if (img.classList.contains('blog-thumb-img') && tried < 2) {
                 img.setAttribute('data-tried', '2');
+                // Unique fallback per keyword — never a fixed stock photo.
                 var kw = (img.getAttribute('data-kw') || 'design color').replace(/[^a-zA-Z0-9 ]/g, ' ').trim().replace(/\s+/g, ',');
-                img.src = 'https://loremflickr.com/640/360/' + encodeURIComponent(kw || 'design') + '?lock=3';
+                var lock = (Math.abs((kw + img.getAttribute('src')).split('').reduce(function(a,c){return (a*31+c.charCodeAt(0))|0;},7)) % 9999) || 7;
+                img.src = 'https://loremflickr.com/640/360/' + encodeURIComponent(kw || 'design') + '?lock=' + lock;
                 return;
             }
             if (img.classList.contains('blog-thumb-img')) {

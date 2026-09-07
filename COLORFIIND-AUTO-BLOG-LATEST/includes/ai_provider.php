@@ -234,7 +234,12 @@ class AIProviderClient {
             $headers = ['Authorization: Bearer ' . $key, 'Content-Type: application/json'];
             $payload = ['model' => $model, 'prompt' => $prompt, 'size' => $credentials['size'] ?? '1024x1024', 'n' => 1];
 
-            $result = curlPost($endpoint, $payload, $headers, 15);
+            // Image generation needs longer than a chat call. A 15s cap made
+            // OpenAI finish generating AFTER we gave up — the image was billed
+            // but the app reported failure. CLI can wait up to 3 min; web waits
+            // up to 55s (Hostinger nginx usually cuts ~60s).
+            $imageTimeout = (PHP_SAPI === 'cli') ? 180 : 55;
+            $result = curlPost($endpoint, $payload, $headers, $imageTimeout);
             $data = $result['data'] ?? [];
 
             if ($result['http_code'] >= 400) {

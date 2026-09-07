@@ -856,6 +856,10 @@
                             <div class="form-group"><label>Keyword (optional)</label><input type="text" id="tip-keyword" placeholder="e.g. ergonomic leather office chair"></div>
                         </div>
                         <div class="form-group"><label>Image prompt (type a dummy prompt, or auto-build from the title)</label><textarea id="tip-prompt" rows="2" style="width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid #cbd5e1;border-radius:8px;font-size:0.85rem;font-family:inherit;" placeholder="e.g. a red apple on a wooden table, photorealistic, soft natural light"></textarea></div>
+                        <div class="form-grid">
+                            <div class="form-group"><label>Image API account to test</label><select id="tip-image-account" onchange="tipAccountChanged()"><option value="">(Slot's saved Image API)</option><option>Loading saved accounts…</option></select></div>
+                            <div class="form-group"><label>Model (type any — flux, flux-pro, gptimage, kontext, seedream5, gpt-image-1, …)</label><input type="text" id="tip-model" value="flux" list="tip-model-list" placeholder="flux" style="padding:9px 10px;border:1px solid #cbd5e1;border-radius:8px;width:100%;box-sizing:border-box;font-size:0.85rem;"><datalist id="tip-model-list"><option value="flux"><option value="flux-pro"><option value="turbo"><option value="gptimage"><option value="kontext"><option value="seedream5"><option value="imagen-4"><option value="grok-imagine"><option value="gpt-image-1"><option value="gpt-image-1-mini"></datalist></div>
+                        </div>
                         <p style="margin:8px 0 0 0;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
                             <button type="button" class="btn" style="background:#8b5cf6;" onclick="buildTestImagePromptFromTitle()">✨ Build prompt from title/keyword</button>
                             <button type="button" class="btn btn-accent" onclick="testImagePrompt()">🖼️ Generate image from this prompt</button>
@@ -1130,7 +1134,7 @@
             event.target.classList.add('active');
             
             if (tabId === 'dashboard' || tabId === 'autoblog') loadPosts();
-            if (tabId === 'vault') loadVaultSummary();
+            if (tabId === 'vault') { loadVaultSummary(); loadTipAccounts(); }
             if (tabId === 'social') loadSocialAccounts();
             if (tabId === 'backlinks') loadBacklinks();
         }
@@ -1165,6 +1169,7 @@
             loadProjectModelChoices(true);
             loadDemoProgress();
             loadAutoBlogStatus();
+            loadTipAccounts();
             if (typeof loadScheduleQueue === 'function') loadScheduleQueue();
             alert(`Switched active workspace profile to Slot #${slotNum} — Auto Blog, articles, posts and settings now show this slot's own data.`);
         }
@@ -1356,6 +1361,21 @@
         }
         async function testAi(service) { updateAiDefaults(); const el=document.getElementById('ai-test-status'); el.innerText='Testing '+service+'...'; const isChat=service==='chat_api'; const modelVal=isChat?getChatModelValue():getImageModelValue(); const res=await fetch('/api/vault/test-ai',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({service_name:service,provider:document.getElementById(isChat?'v-chat-provider':'v-image-provider').value,api_key:document.getElementById(isChat?'v-chat-key':'v-image-key').value,model:modelVal,endpoint:document.getElementById(isChat?'v-chat-endpoint':'v-image-endpoint').value})}); const data=await res.json(); el.innerText=res.ok?'🟢 '+service+' connected successfully.':'🔴 '+(data.error||'API test failed.'); }
         // ===== Image Prompt Tester (below Test Chat/Image in the Vault) =====
+        let _tipSavedAccounts = [];
+        async function loadTipAccounts() {
+            try {
+                const rows = await (await fetch('/api/vault/accounts/image_api')).json();
+                _tipSavedAccounts = Array.isArray(rows) ? rows : [];
+                const el = document.getElementById('tip-image-account');
+                if (!el) return;
+                el.innerHTML = '<option value="">(Slot\'s saved Image API)</option>'
+                    + _tipSavedAccounts.map(x => `<option value="${x.id}">${escapeHtml(x.account_alias)}${x.provider?' — '+escapeHtml(x.provider):''}${x.model?' — '+escapeHtml(x.model):''}</option>`).join('');
+            } catch(e) { console.error(e); }
+        }
+        function tipAccountChanged() {
+            const acc = _tipSavedAccounts.find(x => String(x.id) === String(document.getElementById('tip-image-account').value));
+            if (acc && acc.model) document.getElementById('tip-model').value = acc.model;
+        }
         async function buildTestImagePromptFromTitle() {
             const title=document.getElementById('tip-title').value.trim();
             const keyword=document.getElementById('tip-keyword').value.trim();
@@ -1376,10 +1396,10 @@
             const title=document.getElementById('tip-title').value.trim();
             const keyword=document.getElementById('tip-keyword').value.trim();
             if(!prompt && !title && !keyword){ statusEl.innerText='🔴 Type a dummy prompt (e.g. "a red apple on a wooden table, photorealistic") or a blog title first.'; return; }
-            statusEl.innerText='⏳ Generating image for this prompt (Pollinations can take ~10-20 s the first time)…';
+            statusEl.innerText='⏳ Generating image for this prompt (can take 10-50 s)…';
             previewEl.innerHTML='';
             try {
-                const res=await fetch('/api/vault/test-image-prompt',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title:title,keyword:keyword,prompt:prompt||'',chat_build:document.getElementById('tip-chat-build').checked?1:0})});
+                const res=await fetch('/api/vault/test-image-prompt',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title:title,keyword:keyword,prompt:prompt||'',chat_build:document.getElementById('tip-chat-build').checked?1:0,account_id:document.getElementById('tip-image-account').value,model:document.getElementById('tip-model').value.trim()})});
                 const parsed=await readJson(res); const data=parsed.data||{};
                 if(!data || !data.image_url){ statusEl.innerText='🔴 '+(data.error||'Image generation failed.'); return; }
                 const url=data.image_url;
@@ -2004,6 +2024,7 @@
         // Initial Load
         loadSlotSettings();
         loadProjectModelChoices();
+        loadTipAccounts();
         loadDemoProgress();
         setInterval(loadDemoProgress, 30000);
         loadStats();

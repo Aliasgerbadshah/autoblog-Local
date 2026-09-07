@@ -2690,7 +2690,7 @@ function handleApiRoute($uri) {
 
     // ========== AUTO BLOG — verify the 3 Hostinger cron URLs ==========
     if ($uri === '/api/auto-blog/cron-check' && $method === 'POST') {
-        @set_time_limit(150);
+        @set_time_limit(200);
         @ini_set('max_execution_time', '150');
         $which = $input['check'] ?? 'all';
         $urls = [];
@@ -2710,7 +2710,7 @@ function handleApiRoute($uri) {
                 continue;
             }
             $start = microtime(true);
-            $res = curlGet($u, [], 15);
+            $res = curlGet($u, [], 45);
             $timeS = round(microtime(true) - $start, 1);
             $http = intval($res['http_code'] ?? 0);
             $body = (string)($res['data'] ?? '');
@@ -2719,7 +2719,7 @@ function handleApiRoute($uri) {
             $err = $res['error'] ?? '';
             if ($http === 403) $err = '403 Forbidden — the URL key does not match data/cron_secret.txt. Re-upload the latest files or use the URL shown on the Auto Blog tab.';
             if ($http === 404) $err = '404 Not Found — cron file not at this path (upload cron/tick.php etc. to public_html/cron/).';
-            if ($timeS >= 14.9 && $http === 0) $err = 'No answer in 15s — another Auto Blog run may be in progress, or the server cannot reach this URL from itself. Open the URL in a browser to confirm.';
+            if ($timeS >= 44.9 && $http === 0) $err = 'No answer in 45s — this URL does real work (publishing / API calls) so it can take longer than the others. If you see this again, open the URL directly in a browser — an HTTP 200 there means the cron line is correct and Hostinger will wait longer than the browser check.';
             $results[$key] = ['url' => $u, 'ok' => $http === 200, 'http' => $http, 'error' => $err, 'response' => $firstLine, 'time_s' => $timeS];
         }
         $okCount = count(array_filter($results, fn($r) => !empty($r['ok'])));
@@ -2728,7 +2728,7 @@ function handleApiRoute($uri) {
 
     // ========== VAULT — Image Prompt Tester (debug the "same image" issue) ==========
     if ($uri === '/api/vault/test-image-prompt' && $method === 'POST') {
-        @set_time_limit(90);
+        @set_time_limit(180);
         $title = trim((string)($input['title'] ?? ''));
         $keyword = trim((string)($input['keyword'] ?? ''));
         $userPrompt = trim((string)($input['prompt'] ?? ''));
@@ -2743,11 +2743,23 @@ function handleApiRoute($uri) {
             $stmt->execute([$userId, $activeSlot]);
             $sel = $stmt->fetch() ?: null;
         } catch (Throwable $e) {}
+        // account_id lets you test ANY saved Image API account, not only the one
+        // assigned to this slot.
+        $accountId = trim((string)($input['account_id'] ?? ''));
         $imageVault = [];
-        if (!empty($sel['image_credential_id'])) $imageVault = SecurityVault::getApiCredentialsById($userId, 'image_api', $sel['image_credential_id']);
+        if ($accountId !== '' && is_numeric($accountId)) {
+            $imageVault = SecurityVault::getApiCredentialsById($userId, 'image_api', $accountId);
+        }
+        if (empty($imageVault) && !empty($sel['image_credential_id'])) {
+            $imageVault = SecurityVault::getApiCredentialsById($userId, 'image_api', $sel['image_credential_id']);
+        }
         if (empty($imageVault)) $imageVault = SecurityVault::getApiCredentials($userId, 'image_api');
-        // Allow overriding with unsaved test values from the Vault form.
-        foreach (['provider', 'api_key', 'model', 'endpoint'] as $k) {
+        // Allow overriding provider/model (e.g. type "flux-pro" or "gpt-image-1")
+        // with the tester's model box, without changing the saved account.
+        if (isset($input['model']) && $input['model'] !== null && trim((string)$input['model']) !== '') {
+            $imageVault['model'] = trim((string)$input['model']);
+        }
+        foreach (['provider', 'api_key', 'endpoint'] as $k) {
             if (isset($input[$k]) && $input[$k] !== null && $input[$k] !== '') $imageVault[$k] = $input[$k];
         }
         $usedChat = false;
@@ -2797,9 +2809,12 @@ function handleApiRoute($uri) {
         $mode = 'url_only';
         $imgUrl = '';
         $errMsg = '';
-        // Exact same policy the blog writers use: URL-only Pollinations on web;
-        // paid image APIs are only called from CLI (or Pollinations with key).
-        $canCallApi = ($provider === 'pollinations') || (PHP_SAPI === 'cli' && in_array($provider, ['openai', 'openrouter', 'custom'], true));
+        // TESTER POLICY: this is a deliberate test box, so paid Image APIs
+        // (OpenAI etc.) ARE allowed from the web here. Real blog generation
+        // still avoids them on web to prevent Hostinger 504 timeouts. Gemini /
+        // Hugging Face return heavy binary/data payloads — CLI only.
+        $canCallApi = ($provider === 'pollinations' || in_array($provider, ['openai', 'openrouter', 'custom'], true))
+            || (PHP_SAPI === 'cli' && in_array($provider, ['gemini', 'huggingface'], true));
         if ($canCallApi && $hasKey) {
             try {
                 $imgResult = AIProviderClient::image($imageVault, $prompt);
@@ -2813,9 +2828,9 @@ function handleApiRoute($uri) {
                 $errMsg = $e->getMessage();
             }
         } elseif (!$canCallApi && $provider !== '' && $provider !== 'pollinations') {
-            $errMsg = 'Web requests skip paid image APIs (OpenAI/HuggingFace/Gemini) to prevent Hostinger 504 timeouts — showing the free Pollinations topic-URL fallback that blogs use. To test the paid API directly, choose Pollinations.ai or run the test from CLI.';
+            $errMsg = 'Gemini/HuggingFace image tests are only allowed from CLI (heavy responses) — pick Pollinations, OpenAI, or a saved OpenAI-compatible account in this tester. Showing the free Pollinations topic-URL fallback below so you can still preview the prompt.';
         } elseif (!$hasKey && $provider !== 'pollinations') {
-            $errMsg = 'No Image API key saved for this slot — showing the free Pollinations topic-URL mode that blogs use as fallback. Save an Image API in the Vault and Test again for a paid generation.';
+            $errMsg = 'No Image API key — showing the free Pollinations topic-URL mode that blogs use as fallback. Pick a saved account above or save an Image API in the Vault.';
         }
         if ($imgUrl === '') {
             // Fall back to exactly what the blog writers embed when no Image API is used.
