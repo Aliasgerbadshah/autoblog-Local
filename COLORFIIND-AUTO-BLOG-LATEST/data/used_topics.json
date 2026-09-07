@@ -1,0 +1,12 @@
+{
+    "_instructions": "This file stores ALL previously used topics and keywords. It persists across code updates and redeployments. The app reads this file on every campaign creation to avoid duplicate topics. You can manually add topics here too — just follow the same format.",
+    "_last_updated": "2026-08-08",
+    "_format": {
+        "topic": "The blog title (what was used)",
+        "keyword": "The primary keyword",
+        "domain": "The website domain this topic was created for",
+        "date": "When it was created (YYYY-MM-DD)",
+        "status": "approved|rejected|pending|published"
+    },
+    "topics": []
+}
