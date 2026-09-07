@@ -664,7 +664,7 @@ function handleApiRoute($uri) {
         //    image in every blog" bug). 2) Attach ONE image built from this article's
         //    topic, so the photo always matches the blog.
         $art['content'] = stripArticleImagesAndFigures($art['content']);
-        $featuredUrl = topicPhotoUrlForTitle($art['title'], $keyword, 1, 1280, 720);
+        $featuredUrl = topicPhotoUrlForTitle($art['title'], $keyword, 1);
         $imageResult = ['success' => false];
         $imageProvider = strtolower((string)($imageVault['provider'] ?? ''));
         $imageAllowed = ($imageProvider === 'pollinations') || (PHP_SAPI === 'cli' && in_array($imageProvider, ['openai', 'openrouter', 'custom'], true));
@@ -2819,9 +2819,12 @@ function handleApiRoute($uri) {
         }
         if ($imgUrl === '') {
             // Fall back to exactly what the blog writers embed when no Image API is used.
+            // Thumbnail size (640x360) — same as the blogs use.
             $seed = abs(crc32($prompt . '|tester')) % 999983;
             $imgModel = !empty($imageVault['model']) ? $imageVault['model'] : 'flux';
-            $imgUrl = 'https://image.pollinations.ai/prompt/' . rawurlencode($prompt) . '?model=' . rawurlencode($imgModel) . '&width=1280&height=720&nologo=true&seed=' . $seed;
+            $testerW = !empty($input['width']) ? intval($input['width']) : 640;
+            $testerH = !empty($input['height']) ? intval($input['height']) : 360;
+            $imgUrl = 'https://image.pollinations.ai/prompt/' . rawurlencode($prompt) . '?model=' . rawurlencode($imgModel) . '&width=' . $testerW . '&height=' . $testerH . '&nologo=true&seed=' . $seed;
             if ($provider === 'pollinations' && $hasKey) $imgUrl .= '&key=' . urlencode($imageVault['api_key']);
             if ($mode === 'url_only' && $errMsg === '') $mode = ($provider === 'pollinations') ? 'pollinations_url' : 'url_only';
         }

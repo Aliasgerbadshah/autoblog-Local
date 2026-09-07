@@ -215,8 +215,10 @@ class AIProviderClient {
                 $imgModel = $model;
                 if (empty($imgModel)) $imgModel = 'flux';
                 error_log("[Pollinations Image] Model: $imgModel | Provider: $provider | Full credentials model: $model");
-                $width = 1024;
-                $height = 1024;
+                // Thumbnail-size output by default (640x360, 16:9, fast to load).
+                // Override per call by passing 'width'/'height' in credentials.
+                $width = (isset($credentials['width']) && $credentials['width']) ? intval($credentials['width']) : 640;
+                $height = (isset($credentials['height']) && $credentials['height']) ? intval($credentials['height']) : 360;
                 $seed = rand(1000, 9999);
                 $imageUrl = "https://image.pollinations.ai/prompt/" . rawurlencode($prompt) . "?model={$imgModel}&width={$width}&height={$height}&seed={$seed}&nologo=true";
                 if (!empty($key)) {
@@ -230,7 +232,7 @@ class AIProviderClient {
             // OpenAI-compatible
             $endpoint = $credentials['endpoint'] ?: 'https://api.openai.com/v1/images/generations';
             $headers = ['Authorization: Bearer ' . $key, 'Content-Type: application/json'];
-            $payload = ['model' => $model, 'prompt' => $prompt, 'size' => $credentials['size'] ?? '1536x1024', 'n' => 1];
+            $payload = ['model' => $model, 'prompt' => $prompt, 'size' => $credentials['size'] ?? '1024x1024', 'n' => 1];
 
             $result = curlPost($endpoint, $payload, $headers, 15);
             $data = $result['data'] ?? [];

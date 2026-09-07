@@ -170,10 +170,11 @@ class ContentGenerator {
         // Topic-driven images (NOT a fixed stock gallery). Every image URL is
         // built from this article's title/keyword, so the photo always matches
         // the blog topic. "Monitor / laptop" stock photos are explicitly banned.
+        // Images are generated at thumbnail size (640x360) so blogs load fast.
         $numImages = [2, 3, 4][array_rand([2, 3, 4])];
         $images = [];
         for ($i = 1; $i <= $numImages && $i <= 3; $i++) {
-            $images[] = topicPhotoUrlForTitle($title, $keyword, $i, $i === 1 ? 1280 : 1024, $i === 1 ? 720 : 576);
+            $images[] = topicPhotoUrlForTitle($title, $keyword, $i);
         }
 
         // Crawl subpages
@@ -449,8 +450,8 @@ article td, article th { border:1px solid #e2e8f0!important; padding:12px 14px!i
 article th { background:#f1f5f9!important; font-weight:700!important; }
 article figure { margin:24px 0!important; }
 article img { max-width:100%!important; height:auto!important; border-radius:12px!important; display:block!important; }
-/* Thumbnail must fill full article width — no blank space */
-article .blog-thumbnail { width:100%!important; max-width:100%!important; margin:0 0 24px 0!important; }
+/* Thumbnail is centered and capped at thumbnail size (640px) */
+article .blog-thumbnail { width:100%!important; max-width:640px!important; margin:0 auto 24px!important; }
 article .blog-thumbnail img { width:100%!important; display:block!important; object-fit:cover!important; border-radius:12px!important; }
 article footer { margin-top:48px!important; font-size:0.85rem!important; text-align:center!important; color:#64748b!important; font-weight:600!important; }
 /* Mobile responsive for Blogger */
@@ -1005,8 +1006,9 @@ function topicVariantPrompt($title, $keyword, $index = 1) {
 /**
  * Deterministic topic-based Pollinations image URL for a given article position.
  * Different title/keyword -> different seed + prompt -> different, relevant image.
+ * Default output is a fast-loading 16:9 thumbnail (640x360).
  */
-function topicPhotoUrlForTitle($title, $keyword, $index = 1, $width = 1280, $height = 720) {
+function topicPhotoUrlForTitle($title, $keyword, $index = 1, $width = 640, $height = 360) {
     $prompt = topicVariantPrompt($title, $keyword, $index);
     $seed = abs(crc32((string)$title . '|' . (string)$keyword . '|' . (string)$index)) % 999983;
     return 'https://image.pollinations.ai/prompt/' . rawurlencode($prompt)
@@ -1031,10 +1033,11 @@ function stripArticleImagesAndFigures($html) {
  * paid Image API returned an image); otherwise the topic prompt URL is used.
  */
 function topicFigureHtml($title, $keyword, $url = '', $altSuffix = '') {
-    $imgUrl = ($url !== '') ? $url : topicPhotoUrlForTitle($title, $keyword, 1, 1280, 720);
+    $imgUrl = ($url !== '') ? $url : topicPhotoUrlForTitle($title, $keyword, 1);
     $kw = escapeHtml(trim((string)$keyword) !== '' ? $keyword : $title);
     $alt = escapeHtml(substr($kw, 0, 110)) . ($altSuffix !== '' ? ' - ' . $altSuffix : '');
-    return '<figure style="margin:0 0 28px 0;border-radius:14px;overflow:hidden;"><img class="blog-content-img" src="' . escapeHtml($imgUrl) . '" alt="' . $alt . '" loading="eager" style="width:100%;height:auto;display:block;object-fit:cover;max-height:460px;"></figure>';
+    // Centered thumbnail-size figure (max 640px wide), loads fast.
+    return '<figure style="margin:24px auto 28px;border-radius:14px;overflow:hidden;max-width:640px;width:100%;"><img class="blog-content-img" src="' . escapeHtml($imgUrl) . '" alt="' . $alt . '" loading="eager" style="width:100%;height:auto;display:block;object-fit:cover;border-radius:12px;"></figure>';
 }
 
 function buildTopicImagePrompt($title, $keyword, $h2s = []) {
@@ -1044,7 +1047,7 @@ function buildTopicImagePrompt($title, $keyword, $h2s = []) {
 function relatedStockPhotoUrl($title, $keyword, $h2s = []) {
     $prompt = shortTopicImagePrompt($title, $keyword);
     $seed = abs(crc32((string)$title . '|' . (string)$keyword)) % 9999;
-    return 'https://image.pollinations.ai/prompt/' . rawurlencode($prompt) . '?model=flux&width=1280&height=720&nologo=true&seed=' . $seed;
+    return 'https://image.pollinations.ai/prompt/' . rawurlencode($prompt) . '?model=flux&width=640&height=360&nologo=true&seed=' . $seed;
 }
 
 function topicPhotoFallbackUrl($title, $keyword) {
@@ -1052,7 +1055,7 @@ function topicPhotoFallbackUrl($title, $keyword) {
     $q = preg_replace('/[^a-zA-Z0-9 ]+/', ' ', $q);
     $q = trim(preg_replace('/\s+/', ',', $q));
     if ($q === '') $q = 'design,color,workspace';
-    return 'https://loremflickr.com/1280/720/' . rawurlencode($q) . '?lock=' . (abs(crc32($q)) % 9999);
+    return 'https://loremflickr.com/640/360/' . rawurlencode($q) . '?lock=' . (abs(crc32($q)) % 9999);
 }
 
 function pickArticleThumbnailUrl($imageVault, $title, $keyword) {
@@ -1246,7 +1249,7 @@ function generateArticleHtmlFromCampaignItem($item, $userId, $activeSlot, $db, $
     $escKw = escapeHtml($keyword);
     if ($chatUsed && $featuredImgUrl) {
         $escImgUrl = escapeHtml($featuredImgUrl);
-        $thumbHtml = "<figure class=\"blog-thumbnail\" style=\"margin:0 0 24px 0;border-radius:12px;overflow:hidden;width:100%;\"><img class=\"blog-thumb-img\" data-kw=\"{$escKw}\" src=\"{$escImgUrl}\" alt=\"{$escKw} - Blog Thumbnail\" style=\"width:100%;display:block;object-fit:cover;\" loading=\"eager\"></figure>";
+        $thumbHtml = "<figure class=\"blog-thumbnail\" style=\"margin:0 auto 24px;border-radius:12px;overflow:hidden;width:100%;max-width:640px;\"><img class=\"blog-thumb-img\" data-kw=\"{$escKw}\" src=\"{$escImgUrl}\" alt=\"{$escKw} - Blog Thumbnail\" style=\"width:100%;display:block;object-fit:cover;\" loading=\"eager\"></figure>";
         $chatContent = insertThumbnailAfterH1($chatContent, $thumbHtml);
     }
 
@@ -1266,7 +1269,7 @@ function generateArticleHtmlFromCampaignItem($item, $userId, $activeSlot, $db, $
     $sharedArticleCss = <<<CSS
 * { box-sizing: border-box; }
 article { font-family: 'Montserrat', -apple-system, sans-serif; line-height: 1.85; color: #334155; max-width: 960px; margin: 0 auto; font-size: 1.02rem; background: #ffffff; padding: 48px; border: 1px solid #e2e8f0; }
-.blog-thumbnail { width: 100%; margin: 0 0 24px 0; }
+.blog-thumbnail { width: 100%; max-width: 640px; margin: 0 auto 24px; }
 .blog-thumbnail img { width: 100% !important; display: block !important; object-fit: cover !important; border-radius: 12px !important; }
 h1 { font-size: 2.2rem; font-weight: 800; color: #0f172a; margin-bottom: 12px; line-height: 1.2; text-align: center; }
 h2 { font-size: 1.5rem; font-weight: 800; color: #0f172a; margin-top: 36px; margin-bottom: 16px; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; }
@@ -1337,7 +1340,7 @@ CSS;
             if (img.classList.contains('blog-thumb-img') && tried < 2) {
                 img.setAttribute('data-tried', '2');
                 var kw = (img.getAttribute('data-kw') || 'design color').replace(/[^a-zA-Z0-9 ]/g, ' ').trim().replace(/\s+/g, ',');
-                img.src = 'https://loremflickr.com/1280/720/' + encodeURIComponent(kw || 'design') + '?lock=3';
+                img.src = 'https://loremflickr.com/640/360/' + encodeURIComponent(kw || 'design') + '?lock=3';
                 return;
             }
             if (img.classList.contains('blog-thumb-img')) {
