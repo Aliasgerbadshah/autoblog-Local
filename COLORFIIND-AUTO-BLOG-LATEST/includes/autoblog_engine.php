@@ -1053,8 +1053,27 @@ function topicPhotoFallbackUrl($title, $keyword) {
     return 'https://loremflickr.com/640/360/' . rawurlencode($q) . '?lock=' . (abs(crc32($q)) % 9999);
 }
 
+/**
+ * Blog thumbnails use 'flux' for Pollinations unless the saved account model is
+ * deliberately something else. zimage renders design-on-screen style images for
+ * abstract/design keywords, so posts came out looking like a monitor shot even
+ * though the tester (which defaults to flux) looked correct.
+ */
+function blogSafeImageVault($imageVault) {
+    $imageVault = (array)$imageVault;
+    $provider = strtolower((string)($imageVault['provider'] ?? ''));
+    if ($provider === 'pollinations') {
+        $model = trim((string)($imageVault['model'] ?? ''));
+        if ($model === '' || strtolower($model) === 'zimage') {
+            $imageVault['model'] = 'flux';
+        }
+    }
+    return $imageVault;
+}
+
 function pickArticleThumbnailUrl($imageVault, $title, $keyword) {
     $prompt = shortTopicImagePrompt($title, $keyword);
+    $imageVault = blogSafeImageVault($imageVault);
     $provider = strtolower((string)($imageVault['provider'] ?? ''));
     $hasKey = !empty($imageVault['api_key']);
     // Web request: only Pollinations URL-only. OpenAI/HF/Gemini image HTTP causes nginx 504 and leaves Draft HTML.

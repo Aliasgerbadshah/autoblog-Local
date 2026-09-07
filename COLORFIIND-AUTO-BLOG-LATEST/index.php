@@ -674,6 +674,7 @@ function handleApiRoute($uri) {
         $featuredUrl = topicPhotoUrlForTitle($art['title'], $keyword, 1);
         $imageResult = ['success' => false];
         $imageProvider = strtolower((string)($imageVault['provider'] ?? ''));
+        $imageVault = function_exists('blogSafeImageVault') ? blogSafeImageVault($imageVault) : $imageVault;
         $imageAllowed = ($imageProvider === 'pollinations') || (PHP_SAPI === 'cli' && in_array($imageProvider, ['openai', 'openrouter', 'custom'], true));
         if ($imageAllowed && !empty($imageVault['api_key'])) {
             try {

@@ -127,6 +127,9 @@ foreach ($dueItems as $item) {
             // Topic-relevant thumbnail image (never a random stock monitor).
             $featuredUrl = topicPhotoUrlForTitle($art['title'], $keyword, 1);
             $imageProvider = strtolower((string)($imageVault['provider'] ?? ''));
+            // Pollinations blog thumbnails default to the tester's proven 'flux'
+            // model (zimage draws screen-style shots for abstract/design topics).
+            $imageVault = function_exists('blogSafeImageVault') ? blogSafeImageVault($imageVault) : $imageVault;
             $imageAllowed = ($imageProvider === 'pollinations') || (PHP_SAPI === 'cli' && in_array($imageProvider, ['openai', 'openrouter', 'custom'], true));
             if ($imageAllowed && !empty($imageVault['api_key'])) {
                 $imageResult = AIProviderClient::image($imageVault, shortTopicImagePrompt($art['title'], $keyword));
