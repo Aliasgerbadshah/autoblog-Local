@@ -109,8 +109,21 @@ foreach ($dueItems as $item) {
         }
 
         if (!$existingItem) {
-            $chatVault = SecurityVault::getApiCredentials($userId, 'chat_api');
-            $imageVault = SecurityVault::getApiCredentials($userId, 'image_api');
+            // Resolve THIS slot's saved Chat + Image accounts (per-slot model
+            // choice is honored — e.g. gptimage on slot 1, klein on slot 2).
+            $chatVault = [];
+            $imageVault = [];
+            if (!empty($slotNumber)) {
+                try {
+                    $ss2 = $db->prepare('SELECT chat_credential_id, image_credential_id FROM user_workspace_slots WHERE user_id = ? AND slot_number = ?');
+                    $ss2->execute([$userId, $slotNumber]);
+                    $slotCreds = $ss2->fetch() ?: [];
+                    if (!empty($slotCreds['chat_credential_id'])) $chatVault = SecurityVault::getApiCredentialsById($userId, 'chat_api', $slotCreds['chat_credential_id']);
+                    if (!empty($slotCreds['image_credential_id'])) $imageVault = SecurityVault::getApiCredentialsById($userId, 'image_api', $slotCreds['image_credential_id']);
+                } catch (Throwable $e) {}
+            }
+            if (empty($chatVault)) $chatVault = SecurityVault::getApiCredentials($userId, 'chat_api');
+            if (empty($imageVault)) $imageVault = SecurityVault::getApiCredentials($userId, 'image_api');
 
             if (empty($chatVault['api_key'])) throw new RuntimeException('Chat API credentials are required.');
 
@@ -126,13 +139,23 @@ foreach ($dueItems as $item) {
 
             // Topic-relevant thumbnail image (never a random stock monitor).
             $featuredUrl = topicPhotoUrlForTitle($art['title'], $keyword, 1);
-            $imageProvider = strtolower((string)($imageVault['provider'] ?? ''));
-            // Pollinations blog thumbnails default to the tester's proven 'flux'
-            // model (zimage draws screen-style shots for abstract/design topics).
             $imageVault = function_exists('blogSafeImageVault') ? blogSafeImageVault($imageVault) : $imageVault;
+            $imageProvider = strtolower((string)($imageVault['provider'] ?? ''));
             $imageAllowed = ($imageProvider === 'pollinations') || (PHP_SAPI === 'cli' && in_array($imageProvider, ['openai', 'openrouter', 'custom'], true));
             if ($imageAllowed && !empty($imageVault['api_key'])) {
-                $imageResult = AIProviderClient::image($imageVault, shortTopicImagePrompt($art['title'], $keyword));
+                // Chat-written detailed prompt (title + keyword + website theme),
+                // same flow as the Image Prompt Tester, before calling the image API.
+                $imgCtx = [
+                    'domain_url' => (string)($targetLink !== '' ? $targetLink : ''),
+                    'primary_keyword' => $keyword,
+                    'h2s' => [],
+                    'chat_vault' => $chatVault,
+                ];
+                $imgPrompt = shortTopicImagePrompt($art['title'], $keyword);
+                if (function_exists('buildDetailedImagePrompt')) {
+                    list($imgPrompt, $pSrc) = buildDetailedImagePrompt($art['title'], $keyword, $imgCtx);
+                }
+                $imageResult = AIProviderClient::image($imageVault, $imgPrompt);
                 if (!empty($imageResult['success']) && !empty($imageResult['url'])) {
                     $featuredUrl = $imageResult['url'];
                 }

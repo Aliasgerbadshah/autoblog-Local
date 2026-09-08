@@ -678,7 +678,19 @@ function handleApiRoute($uri) {
         $imageAllowed = ($imageProvider === 'pollinations') || (PHP_SAPI === 'cli' && in_array($imageProvider, ['openai', 'openrouter', 'custom'], true));
         if ($imageAllowed && !empty($imageVault['api_key'])) {
             try {
-                $imageResult = AIProviderClient::image($imageVault, shortTopicImagePrompt($art['title'], $keyword));
+                // Chat-written detailed image prompt (title + keyword + website
+                // theme) — mirrors the Image Prompt Tester — then the slot's
+                // selected Image API model renders the thumbnail from it.
+                $imgPrompt = shortTopicImagePrompt($art['title'], $keyword);
+                if (function_exists('buildDetailedImagePrompt')) {
+                    list($imgPrompt, $pSrc) = buildDetailedImagePrompt($art['title'], $keyword, [
+                        'domain_url' => (string)($targetLink !== '' ? $targetLink : ''),
+                        'primary_keyword' => $keyword,
+                        'h2s' => [],
+                        'chat_vault' => $chatVault,
+                    ]);
+                }
+                $imageResult = AIProviderClient::image($imageVault, $imgPrompt);
                 if (!empty($imageResult['success']) && !empty($imageResult['url'])) {
                     $featuredUrl = $imageResult['url'];
                 }

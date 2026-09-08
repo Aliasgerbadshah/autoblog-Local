@@ -1065,19 +1065,88 @@ function topicPhotoFallbackUrl($title, $keyword) {
  * though the tester (which defaults to flux) looked correct.
  */
 function blogSafeImageVault($imageVault) {
+    // The saved Image API account on the active slot decides the model — whatever
+    // the user picked (gptimage / klein / flux / ...) is used exactly as saved.
+    // Only a totally empty model gets the user's preferred default 'gptimage'
+    // (Pollinations GPT Image 1 Mini — wide 640x360 thumbnails render well).
     $imageVault = (array)$imageVault;
     $provider = strtolower((string)($imageVault['provider'] ?? ''));
     if ($provider === 'pollinations') {
         $model = trim((string)($imageVault['model'] ?? ''));
-        if ($model === '' || strtolower($model) === 'zimage') {
-            $imageVault['model'] = 'flux';
-        }
+        if ($model === '') $imageVault['model'] = 'gptimage';
     }
     return $imageVault;
 }
 
-function pickArticleThumbnailUrl($imageVault, $title, $keyword) {
-    $prompt = shortTopicImagePrompt($title, $keyword);
+/**
+ * Build a DETAILED image-generation prompt (never hand the raw title to the
+ * image model). Mirrors the Image Prompt Tester: the Chat API writes a rich,
+ * photorealistic scene prompt using the article title + the HIGH-VOLUME primary
+ * keyword + the customer website theme + the article's H2 sections.
+ *
+ * Returns [prompt, source]: source is 'chat' when the Chat API wrote it and
+ * 'template' for the built-in detailed fallback (used when no Chat key exists
+ * or the Chat call fails/times out).
+ */
+function buildDetailedImagePrompt($title, $keyword, $ctx = []) {
+    $ctx = (array)$ctx;
+    $domain = trim((string)($ctx['domain_url'] ?? ''));
+    $primaryKw = trim((string)($ctx['primary_keyword'] ?? ''));
+    if ($primaryKw === '') $primaryKw = trim((string)$keyword);
+    $h2s = (array)($ctx['h2s'] ?? []);
+    $chatVault = ($ctx['chat_vault'] ?? null);
+    $siteLine = '';
+    if ($domain !== '') {
+        $host = preg_replace('#^https?://#i', '', $domain);
+        $host = preg_replace('#/.*$#', '', $host);
+        $siteLine = ' This blog belongs to the customer website ' . $host
+            . ' — make the photo concept match what that website teaches/sells (e.g. color palettes, design, UI color systems).';
+    }
+    $h2Line = '';
+    $h2List = array_values(array_filter(array_map('strval', $h2s)));
+    if (count($h2List) > 0) {
+        $h2Line = ' Article sections to inspire the scene: ' . implode(' | ', array_slice($h2List, 0, 4)) . '.';
+    }
+    if (is_array($chatVault) && !empty($chatVault['api_key'])) {
+        try {
+            $nl = "\n";
+            $ask = 'Write ONE image-generation prompt (45 to 60 words) for a photorealistic editorial photo for this blog article. Be specific about the real physical scene, objects, materials and light.'
+                . $nl . 'ARTICLE TITLE: ' . $title
+                . $nl . 'MAIN KEYWORD (highest search volume): ' . $primaryKw
+                . ($siteLine !== '' ? $nl . 'CUSTOMER WEBSITE:' . $siteLine : '')
+                . ($h2Line !== '' ? $nl . $h2Line : '')
+                . $nl . 'RULES: The image must clearly relate to the keyword and to the customer website topic. Describe a real scene with physical objects — printed swatches/charts/paper, product objects, or real people working with them. NEVER a glowing screen, UI, dashboard, computer monitor, laptop, tablet, phone, TV, or mockup. No readable text, no logos, no watermark. Return ONLY the prompt.';
+            $cr = AIProviderClient::chat($chatVault, $ask, 14);
+            if (!empty($cr['success']) && !empty($cr['content'])) {
+                $prompt = trim(preg_replace('/\s+/', ' ', strip_tags($cr['content'])));
+                $prompt = trim($prompt, "\"'` \t\n\r");
+                if (strlen($prompt) >= 25) return [$prompt, 'chat'];
+            }
+        } catch (Throwable $e) {}
+    }
+    // Built-in detailed template fallback (same anti-screen, physical-scene style).
+    $subject = trim((string)$primaryKw);
+    if ($subject === '') $subject = trim((string)$title);
+    $subject = trim(preg_replace('/[\x{1F300}-\x{1FAFF}\x{2600}-\x{27BF}"]+/u', '', $subject));
+    $sceneHints = '';
+    if (count($h2List) > 0) {
+        $sceneHints = ' Scene ideas drawn from the article: ' . implode('; ', array_slice($h2List, 0, 3)) . '.';
+    }
+    $domainHint = '';
+    if ($domain !== '') {
+        $host = preg_replace('#^https?://#i', '', $domain);
+        $host = preg_replace('#/.*$#', '', $host);
+        $domainHint = ' The photo should visually match the niche of ' . $host . '.';
+    }
+    return ['Photorealistic editorial photograph for the blog article "' . trim((string)$title) . '".'
+        . ' Show the subject: ' . $subject . '.'
+        . ' Compose it as a real physical still-life that represents the subject: printed color swatch cards, painted chips, fabric and paper samples, printed charts, or the actual product objects arranged on a styled surface with soft natural light' . ($domainHint !== '' ? ',' . $domainHint : '') . '.'
+        . ($sceneHints !== '' ? $sceneHints : '')
+        . ' There must be no glowing screen anywhere: no computer monitor, laptop, tablet, phone, TV, dashboard, app screenshot or visible user interface. No readable text, no logos, no watermark.', 'template'];
+}
+
+function pickArticleThumbnailUrl($imageVault, $title, $keyword, $ctx = []) {
+    list($prompt, $pSrc) = buildDetailedImagePrompt($title, $keyword, $ctx);
     $imageVault = blogSafeImageVault($imageVault);
     $provider = strtolower((string)($imageVault['provider'] ?? ''));
     $hasKey = !empty($imageVault['api_key']);
@@ -1089,7 +1158,20 @@ function pickArticleThumbnailUrl($imageVault, $title, $keyword) {
             if (!empty($imgResult['success']) && !empty($imgResult['url']) && (stripos($imgResult['url'], 'http') === 0 || str_starts_with($imgResult['url'], 'data:image/'))) {
                 return $imgResult['url'];
             }
-        } catch (Throwable $e) {}
+        } catch (Throwable $e) {
+            error_log('[Thumb] image API failed: ' . $e->getMessage());
+        }
+        if ($pSrc === 'chat') {
+            // Chat wrote a prompt but the image API failed — retry once with the
+            // built-in detailed template before giving up on the topic image.
+            try {
+                $fallPrompt = buildDetailedImagePrompt($title, $keyword, ['domain_url' => (string)($ctx['domain_url'] ?? ''), 'primary_keyword' => (string)($ctx['primary_keyword'] ?? ''), 'h2s' => (array)($ctx['h2s'] ?? [])])[0];
+                $imgResult = AIProviderClient::image($imageVault, $fallPrompt);
+                if (!empty($imgResult['success']) && !empty($imgResult['url']) && (stripos($imgResult['url'], 'http') === 0 || str_starts_with($imgResult['url'], 'data:image/'))) {
+                    return $imgResult['url'];
+                }
+            } catch (Throwable $e2) {}
+        }
     }
     return relatedStockPhotoUrl($title, $keyword);
 }
@@ -1246,7 +1328,16 @@ function generateArticleHtmlFromCampaignItem($item, $userId, $activeSlot, $db, $
     $fallbackImgUrl = topicPhotoFallbackUrl($title, $keyword);
     // URL-only Image API (Pollinations/OpenAI). Never wait on HuggingFace/Gemini binary (504).
     if ($chatUsed) {
-        $featuredImgUrl = pickArticleThumbnailUrl($imageVault ?: [], $title, $keyword);
+        // Detailed, topic-matched image prompt: title + high-volume keyword +
+        // customer website domain + H2 sections, written by the Chat API (same
+        // flow the Image Prompt Tester uses). Then the slot's selected Image API
+        // (gptimage/klein/...) creates the thumbnail from that prompt.
+        $featuredImgUrl = pickArticleThumbnailUrl($imageVault ?: [], $title, $keyword, [
+            'domain_url' => $domainUrl,
+            'primary_keyword' => $primaryKw,
+            'h2s' => $h2s,
+            'chat_vault' => !empty($chatVault['api_key']) ? $chatVault : null,
+        ]);
         if ($featuredImgUrl === '') {
             $featuredImgUrl = relatedStockPhotoUrl($title, $keyword);
         }
