@@ -1656,7 +1656,32 @@ function handleApiRoute($uri) {
             jsonResponse(['success' => true, 'url' => $result['url'] ?? '', 'message' => $result['message'] ?? 'Published successfully!']);
         }
         
-        jsonResponse(['success' => false, 'error' => $result['error'] ?? 'Publishing failed. Check Vault credentials.'], 400);
+        $errMsg = $result['error'] ?? 'Publishing failed. Check Vault credentials.';
+        $quotaHit = (stripos($errMsg, '429') !== false)
+            || (stripos($errMsg, 'resource has been exhausted') !== false)
+            || (stripos($errMsg, 'daily limit') !== false)
+            || (stripos($errMsg, 'quota') !== false);
+        if ($quotaHit && $platform === 'blogger') {
+            // Blogger API daily quota exhausted — the article is fine. Queue it
+            // so the 5-minute cron publishes it automatically once Google resets
+            // the quota (midnight Pacific = 12:30 PM IST) or it is raised.
+            try {
+                $qRetry = date('Y-m-d H:i:s', time() + 180);
+                $qNow = nowString();
+                $slotNum = intval($camp['slot_number'] ?? ($item['slot_number'] ?? 1));
+                $chk = $db->prepare("SELECT id FROM scheduled_queue WHERE topic_title = ? AND user_id = ? AND status IN ('Scheduled','Failed')");
+                $chk->execute([$item['title'], $userId]);
+                $existingQ = $chk->fetchColumn();
+                if (!$existingQ) {
+                    $ins = $db->prepare('INSERT INTO scheduled_queue (user_id, slot_number, topic_title, keyword, category, scheduled_time, target_platform, status, created_at, target_link, target_anchor) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+                    $ins->execute([$userId, $slotNum, $item['title'], $item['primary_keyword'] ?? $item['title'], 'Approved Article', $qRetry, 'blogger', 'Scheduled', $qNow, $item['internal_links'] ?? '', $item['primary_keyword'] ?? '']);
+                } else {
+                    $db->prepare("UPDATE scheduled_queue SET status = 'Scheduled', scheduled_time = ? WHERE id = ?")->execute([$qRetry, $existingQ]);
+                }
+            } catch (Throwable $e) {}
+            jsonResponse(['success' => false, 'error' => $errMsg . ' — Blogger API daily quota exhausted (a Google limit, not your server). This post was ADDED to the publishing queue and will post automatically once the quota resets (midnight Pacific Time = 12:30 PM IST tomorrow) or after you raise the quota in Google Cloud Console.'], 429);
+        }
+        jsonResponse(['success' => false, 'error' => $errMsg], 400);
     }
 
     // ========== SCHEDULE POST — Add to scheduled_queue for cron, or schedule in Blogger ==========

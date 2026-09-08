@@ -193,6 +193,7 @@ foreach ($dueItems as $item) {
             $result = Publisher::publishBlogger($userId, $blogId, $art['title'], $art['content'], $clientId, $clientSecret, $refreshToken);
             if (!$result['success']) throw new RuntimeException($result['error'] ?? 'Blogger publishing failed');
             $log("Blogger publish success: " . ($result['url'] ?? 'no URL returned'));
+            usleep(2500000); // 2.5 s pace between Blogger API publishes (rate-limit friendly)
         } elseif ($platform === 'wordpress') {
             $vault = SecurityVault::getApiCredentials($userId, 'wordpress_api');
             $result = Publisher::publishWordpress($userId, $vault['wp_site_url'] ?? '', $vault['wp_username'] ?? '', $vault['wp_app_password'] ?? '', $art['title'], $art['content']);
@@ -233,14 +234,31 @@ foreach ($dueItems as $item) {
         $log("Published: $topicTitle to $platform");
 
     } catch (Exception $exc) {
+        $errText = strval($exc);
+        // Google Blogger API daily quota is exhausted (429). This is a Google
+        // limit, NOT an article problem: keep the item Scheduled and defer the
+        // next attempt ~45 minutes instead of burning retries or marking Failed.
+        // Google resets the daily quota at midnight Pacific Time (= 12:30 PM IST),
+        // so queued posts then publish automatically with no user action.
+        $quotaHit = (stripos($errText, '429') !== false)
+            || (stripos($errText, 'resource has been exhausted') !== false)
+            || (stripos($errText, 'daily limit') !== false)
+            || (stripos($errText, 'quota') !== false);
+        if ($quotaHit) {
+            $deferTo = date('Y-m-d H:i:s', time() + 2700); // +45 min
+            $stmt2 = $db->prepare("UPDATE scheduled_queue SET status = 'Scheduled', retry_count = retry_count + 1, scheduled_time = ?, error_message = ? WHERE id = ?");
+            $stmt2->execute([$deferTo, '[Google quota] ' . $errText, $item['id']]);
+            $log("GOOGLE QUOTA (429): item {$item['id']} kept Scheduled, next attempt at $deferTo. Quota resets midnight Pacific (12:30 PM IST). Stopping this run so we don't hammer the API.");
+            break;
+        }
         $retries = intval($item['retry_count'] ?? 0) + 1;
         if ($retries < 8) {
             $stmt2 = $db->prepare("UPDATE scheduled_queue SET status = 'Scheduled', retry_count = ?, error_message = ? WHERE id = ?");
-            $stmt2->execute([$retries, strval($exc), $item['id']]);
+            $stmt2->execute([$retries, $errText, $item['id']]);
             $log("RETRY {$retries}/8 item {$item['id']}: " . $exc->getMessage());
         } else {
             $stmt2 = $db->prepare("UPDATE scheduled_queue SET status = 'Failed', retry_count = ?, error_message = ? WHERE id = ?");
-            $stmt2->execute([$retries, strval($exc), $item['id']]);
+            $stmt2->execute([$retries, $errText, $item['id']]);
             $log("ERROR item {$item['id']}: " . $exc->getMessage());
         }
     }
