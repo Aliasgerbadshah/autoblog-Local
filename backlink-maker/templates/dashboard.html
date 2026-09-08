@@ -1,0 +1,1348 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AutoBacklink — Dashboard</title>
+<style>
+  :root {
+    --bg:#0b1220; --card:#111a2e; --card2:#0d1526; --line:#1e2a44; --txt:#e5ecf8;
+    --mut:#8ea0c0; --acc:#4f7cff; --cyan:#22d3ee; --ok:#22c55e; --warn:#f59e0b; --bad:#ef4444;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--txt); font-family: 'Segoe UI', Arial, sans-serif; }
+  a { color: var(--cyan); text-decoration: none; }
+  .topbar { position: sticky; top: 0; z-index: 50; background: rgba(11,18,32,.92); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); padding: 12px 20px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .logo { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 16px; }
+  .logo .dot { width: 30px; height: 30px; border-radius: 9px; background: linear-gradient(135deg, #4f7cff, #22d3ee); display: flex; align-items: center; justify-content: center; font-size: 14px; }
+  .tabs { display: flex; gap: 4px; flex-wrap: wrap; margin-left: 10px; }
+  .tab { background: transparent; border: 1px solid transparent; color: var(--mut); padding: 8px 14px; border-radius: 9px; cursor: pointer; font-size: 13.5px; font-weight: 600; }
+  .tab.active { background: var(--card); border-color: var(--line); color: var(--txt); }
+  .tab:hover { color: var(--txt); }
+  .topbar .right { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+  .pill { font-size: 11px; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--line); color: var(--mut); }
+  .pill.warn { color: var(--warn); border-color: #4d3a12; }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 22px 18px 80px; }
+  .page { display: none; }
+  .page.active { display: block; }
+  h2.pg { font-size: 19px; margin-bottom: 4px; }
+  .pgsub { color: var(--mut); font-size: 13px; margin-bottom: 18px; }
+  .grid { display: grid; gap: 14px; }
+  .g4 { grid-template-columns: repeat(4, 1fr); }
+  .g3 { grid-template-columns: repeat(3, 1fr); }
+  .g2 { grid-template-columns: repeat(2, 1fr); }
+  @media (max-width: 900px) { .g4, .g3, .g2 { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 560px) { .g4, .g3, .g2 { grid-template-columns: 1fr; } }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 18px; }
+  .card h3 { font-size: 14px; margin-bottom: 10px; letter-spacing: .3px; }
+  .stat .num { font-size: 26px; font-weight: 800; }
+  .stat .lbl { color: var(--mut); font-size: 12px; margin-top: 2px; }
+  .stat .ok { color: var(--ok); } .stat .warn { color: var(--warn); } .stat .bad { color: var(--bad); } .stat .cy { color: var(--cyan); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; color: var(--mut); font-size: 11px; text-transform: uppercase; letter-spacing: .5px; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+  td { padding: 10px; border-bottom: 1px solid #16203a; vertical-align: top; }
+  tr:hover td { background: rgba(79,124,255,.04); }
+  .btn { background: var(--acc); color: #fff; border: 0; border-radius: 9px; padding: 9px 16px; font-size: 13px; font-weight: 700; cursor: pointer; }
+  .btn:hover { filter: brightness(1.1); }
+  .btn.ghost { background: transparent; border: 1px solid var(--line); color: var(--mut); }
+  .btn.ghost:hover { color: var(--txt); border-color: var(--mut); }
+  .btn.ok { background: var(--ok); } .btn.bad { background: var(--bad); }
+  .btn.sm { padding: 5px 10px; font-size: 12px; }
+  .badge { display: inline-block; font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 999px; }
+  .b-green { background: rgba(34,197,94,.15); color: #4ade80; }
+  .b-blue { background: rgba(79,124,255,.18); color: #93b4ff; }
+  .b-amber { background: rgba(245,158,11,.16); color: #fbbf24; }
+  .b-red { background: rgba(239,68,68,.16); color: #f87171; }
+  .b-gray { background: rgba(142,160,192,.14); color: var(--mut); }
+  label.f { display: block; font-size: 11.5px; color: var(--mut); margin: 12px 0 5px; font-weight: 700; letter-spacing: .4px; }
+  input, select, textarea { width: 100%; background: var(--card2); border: 1px solid var(--line); color: var(--txt); border-radius: 9px; padding: 10px 12px; font-size: 13.5px; outline: none; font-family: inherit; }
+  input:focus, select:focus, textarea:focus { border-color: var(--acc); }
+  textarea { min-height: 84px; resize: vertical; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px; }
+  @media (max-width: 560px) { .row2 { grid-template-columns: 1fr; } }
+  .hint { color: var(--mut); font-size: 11.5px; margin-top: 5px; }
+  .toast { position: fixed; bottom: 20px; right: 20px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px 18px; font-size: 13px; z-index: 200; max-width: 380px; box-shadow: 0 12px 40px rgba(0,0,0,.5); display: none; }
+  .toast.show { display: block; }
+  .toast.ok { border-color: #14532d; } .toast.err { border-color: #7f1d1d; }
+  .pkg { border: 1px solid var(--line); border-radius: 12px; margin-bottom: 14px; overflow: hidden; }
+  .pkg .head { display: flex; align-items: center; gap: 10px; padding: 13px 16px; background: var(--card2); flex-wrap: wrap; }
+  .pkg .body { padding: 16px; }
+  .pkg .title { font-weight: 700; font-size: 14.5px; }
+  .pkg .meta { color: var(--mut); font-size: 12px; }
+  .copybar { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0; }
+  pre.code { background: var(--card2); border: 1px solid var(--line); border-radius: 10px; padding: 14px; font-size: 12px; color: #b9c7e4; white-space: pre-wrap; max-height: 220px; overflow: auto; }
+  .switch { position: relative; width: 38px; height: 22px; background: #22304f; border-radius: 999px; cursor: pointer; transition: .2s; flex: none; }
+  .switch.on { background: var(--ok); }
+  .switch::after { content: ''; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; background: #fff; border-radius: 50%; transition: .2s; }
+  .switch.on::after { left: 19px; }
+  .modal-bg { position: fixed; inset: 0; background: rgba(4,8,18,.75); display: none; align-items: center; justify-content: center; z-index: 100; padding: 20px; }
+  .modal-bg.show { display: flex; }
+  .modal { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 24px; width: 100%; max-width: 560px; max-height: 88vh; overflow: auto; }
+  .logline { font-size: 12.5px; color: var(--mut); padding: 7px 0; border-bottom: 1px dashed #16203a; }
+  .logline b { color: var(--txt); }
+  .empty { text-align: center; color: var(--mut); padding: 40px 10px; font-size: 13.5px; }
+  img.thumb { width: 100%; border-radius: 10px; display: block; }
+  .kv { font-size: 12.5px; color: var(--mut); }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo"><div class="dot">AB</div> AutoBacklink</div>
+  <div class="tabs" id="tabs">
+    <button class="tab active" data-page="overview">Overview</button>
+    <button class="tab" data-page="websites">Backlink Websites</button>
+    <button class="tab" data-page="panels">🎛 Site Panels</button>
+    <button class="tab" data-page="runner">Auto Runner</button>
+    <button class="tab" data-page="queue">Paste Queue</button>
+    <button class="tab" data-page="links">Link Health</button>
+    <button class="tab" data-page="apikeys">API Keys</button>
+  </div>
+  <div class="right">
+    <span class="pill" id="sandboxPill" style="display:none">PREVIEW SANDBOX</span>
+    <button class="btn sm ghost" onclick="logout()">Logout</button>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <!-- ============ OVERVIEW ============ -->
+  <div class="page active" id="page-overview">
+    <h2 class="pg">Overview</h2>
+    <div class="pgsub">Your automatic backlink system at a glance</div>
+    <div class="grid g4">
+      <div class="card stat"><div class="num" id="st-targets">–</div><div class="lbl">Active backlink websites</div></div>
+      <div class="card stat"><div class="num cy" id="st-today">–</div><div class="lbl">Posts created today</div></div>
+      <div class="card stat"><div class="num ok" id="st-live">–</div><div class="lbl">Live backlinks (posted)</div></div>
+      <div class="card stat"><div class="num warn" id="st-waiting">–</div><div class="lbl">Waiting for your paste 📋</div></div>
+    </div>
+    <div class="grid g2" style="margin-top:14px">
+      <div class="card">
+        <h3>Today's run</h3>
+        <div id="todayJobs" class="empty">Loading…</div>
+        <button class="btn" style="margin-top:12px" onclick="runNow()">▶ Run today's batch now</button>
+        <div class="hint" style="margin-top:8px">Or let the daily cron do it automatically (set time in Auto Runner).</div>
+      </div>
+      <div class="card">
+        <h3>System status</h3>
+        <div class="kv" id="sysStatus">Loading…</div>
+        <div id="recentLog" style="margin-top:12px"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ BACKLINK WEBSITES ============ -->
+  <div class="page" id="page-websites">
+    <h2 class="pg">Backlink Websites</h2>
+    <div class="pgsub">Add every website you want to place backlinks on. Each site gets its own details, frequency and (optionally) its own API.</div>
+    <div class="grid" style="grid-template-columns: 1fr 380px; gap:14px">
+      <div class="card" style="overflow:auto">
+        <div id="targetsTable"></div>
+      </div>
+      <div>
+        <div class="card">
+          <h3 id="targetFormTitle">➕ Add backlink website</h3>
+          <input type="hidden" id="t-id">
+          <div class="row2">
+            <div><label class="f">NAME *</label><input id="t-name" placeholder="My Blogger 2 / DesignDirectory"></div>
+            <div><label class="f">SITE URL *</label><input id="t-url" placeholder="https://site.com"></div>
+          </div>
+          <div class="row2">
+            <div>
+              <label class="f">TYPE</label>
+              <select id="t-type">
+                <option value="blog">Blog</option>
+                <option value="directory">Directory</option>
+                <option value="forum">Forum</option>
+                <option value="qa">Q&amp;A (Quora/Reddit)</option>
+                <option value="social">Social</option>
+                <option value="review">Review site</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <div>
+              <label class="f">POSTING MODE</label>
+              <select id="t-mode" onchange="toggleCredFields()">
+                <option value="manual">Manual (I paste — software prepares everything)</option>
+                <option value="api">Auto via API (software posts by itself)</option>
+              </select>
+            </div>
+          </div>
+          <div id="credWrap" style="display:none">
+            <label class="f">PLATFORM</label>
+            <select id="t-platform" onchange="toggleCredFields()">
+              <option value="blogger">Blogger</option>
+              <option value="wordpress">WordPress</option>
+              <option value="ghost">Ghost</option>
+              <option value="hashnode">Hashnode</option>
+              <option value="wix">Wix Blog (+Community)</option>
+              <option value="webhook">Webhook (Make/Zapier)</option>
+            </select>
+            <div id="cred-blogger" style="display:none">
+              <label class="f">BLOGGER BLOG ID</label><input id="c-blogid" placeholder="from blogger.com/about">
+              <label class="f">CLIENT ID</label><input id="c-clientid" placeholder="…apps.googleusercontent.com">
+              <label class="f">CLIENT SECRET</label><input id="c-clientsecret" placeholder="GOCSPX-…">
+              <label class="f">REFRESH TOKEN</label><input id="c-refreshtoken" placeholder="1//…">
+            </div>
+            <div id="cred-wordpress" style="display:none">
+              <label class="f">WP SITE URL</label><input id="c-wpsite" placeholder="https://mysite.com">
+              <label class="f">WP USERNAME</label><input id="c-wpuser">
+              <label class="f">APPLICATION PASSWORD</label><input id="c-wppass" placeholder="xxxx xxxx xxxx xxxx">
+            </div>
+            <div id="cred-ghost" style="display:none">
+              <label class="f">GHOST SITE URL</label><input id="c-ghostsite" placeholder="https://mysite.com">
+              <label class="f">ADMIN API KEY</label><input id="c-ghostkey" placeholder="…-…">
+            </div>
+            <div id="cred-hashnode" style="display:none">
+              <label class="f">PUBLICATION ID</label><input id="c-hashpub" placeholder="from your Hashnode dashboard URL">
+              <label class="f">PERSONAL ACCESS TOKEN</label><input id="c-hashtoken" placeholder="hashnode.com → Settings → Developer">
+              <div class="hint" style="color:#fbbf24">⚠️ Hashnode made API posting <b>paid (Pro) in May 2026</b>. If you don't have Pro, keep this site in <b>manual mode</b> and use the 📋 Copy &amp; Paste Studio (Site Panels tab) — it generates the full article with image for you to paste.</div>
+            </div>
+            <div id="cred-wix" style="display:none">
+              <label class="f">WIX SITE ID *</label><input id="c-wixsite" placeholder="wix.com/dashboard/&lt;this-uuid&gt;/… — or Dev Center → your site">
+              <label class="f">OAUTH CLIENT ID (Wix Dev Center → your app → OAuth)</label><input id="c-wixcid" placeholder="app id">
+              <label class="f">OAUTH CLIENT SECRET</label><input id="c-wixcs" type="password" placeholder="app secret key">
+              <div class="row2">
+                <div><label class="f">INSTANCE ID (optional)</label><input id="c-wixinst" placeholder="if Wix asks for it"></div>
+                <div><label class="f">ACCESS TOKEN (optional — or paste if you already have one)</label><input id="c-wixtok" type="password" placeholder="auto-fetched when Client ID/Secret are saved"></div>
+              </div>
+              <div class="hint">The software fetches &amp; refreshes the Wix access token automatically (tokens last 4 hours). For community commenting, also install the <b>Groups</b> app on your Wix site.</div>
+            </div>
+            <div id="cred-webhook" style="display:none">
+              <label class="f">WEBHOOK URL</label><input id="c-hookurl" placeholder="https://hook.make.com/…">
+            </div>
+          </div>
+          <div class="row2">
+            <div><label class="f">NICHE</label><input id="t-niche" placeholder="e.g. interior design (helps content fit)"></div>
+            <div><label class="f">POST AT LEAST EVERY (DAYS)</label><input id="t-interval" type="number" value="7" min="1" max="90"></div>
+          </div>
+          <label class="f">ACCOUNT NOTES (optional)</label>
+          <textarea id="t-notes" placeholder="Your username/handle there, login steps, section to post in…"></textarea>
+          <button class="btn" style="margin-top:16px" onclick="saveTarget()">💾 Save website</button>
+          <button class="btn ghost" style="margin-top:16px; margin-left:8px" onclick="resetTargetForm()">Clear</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ AUTO RUNNER ============ -->
+  <!-- ================= SITE PANELS (one per website) ================= -->
+  <div class="page" id="page-panels">
+    <h2 class="pg">🎛 Site Panels</h2>
+    <div class="pgsub">Every website gets its <b>own separate page</b> — click <b>⚙ Open panel</b>. On it you manage that site's own authentication, its own Chat/Image API choice, its own pace, timer, tests and history. New websites get their own page automatically.</div>
+
+    <!-- Copy & Paste Studio -->
+    <div class="card" style="margin-bottom:16px; border-color:#2b3b63">
+      <h3>📋 Copy &amp; Paste Studio <span class="badge b-amber">no-API sites: Hashnode / any site you paste into</span></h3>
+      <div class="hint" style="margin:6px 0">One click generates the <b>complete</b> backlink article — title, image, and body with your link already inside. Copy it, paste it into the site, then mark it posted with the live URL so we can track the link.</div>
+      <div style="display:flex;gap:10px;align-items:center;margin-top:12px;flex-wrap:wrap">
+        <select id="studio-target" style="max-width:340px"></select>
+        <button class="btn" onclick="studioGenerate()">✨ Generate post now</button>
+      </div>
+      <div id="studio-result" style="margin-top:14px"></div>
+    </div>
+
+    <!-- Per-site cards -->
+    <div id="sitePanels"></div>
+  </div>
+
+  <div class="page" id="page-runner">
+    <h2 class="pg">Auto Runner</h2>
+    <div class="pgsub">Set it once — the system runs every day by itself.</div>
+    <div class="grid g2">
+      <div class="card">
+        <h3>⚙️ Your main website (receives the backlinks)</h3>
+        <label class="f">MAIN SITE URL</label>
+        <input id="s-mainsite" placeholder="https://yourwebsite.com">
+        <div class="hint">Every generated post contains exactly ONE natural link to this site.</div>
+        <label class="f">ANCHOR TEXT POOL (one per line — they rotate automatically)</label>
+        <textarea id="s-anchors" placeholder="YourBrandName&#10;your exact keyword phrase&#10;their complete guide&#10;this resource&#10;https://yourwebsite.com"></textarea>
+        <div class="hint">Never reused twice in a row on the same site. 4–8 anchors recommended.</div>
+        <label class="f">YOUR OWN TOPICS (optional — one per line, used first before AI)</label>
+        <textarea id="s-topics" placeholder="5 tools every freelancer needs&#10;how to price services in 2025"></textarea>
+        <button class="btn" style="margin-top:14px" onclick="saveSettings()">💾 Save runner settings</button>
+      </div>
+      <div>
+        <div class="card">
+          <h3>⏰ Daily schedule</h3>
+          <div class="row2">
+            <div>
+              <label class="f">POSTS PER DAY</label>
+              <select id="s-count">
+                <option>1</option><option>2</option><option>3</option><option>4</option>
+                <option selected>5</option><option>6</option><option>7</option><option>8</option><option>10</option>
+              </select>
+            </div>
+            <div>
+              <label class="f">RUN TIME (IST)</label>
+              <input id="s-time" type="time" value="06:00">
+            </div>
+          </div>
+          <div class="hint" id="cronHint" style="margin-top:10px">Hostinger cron (hPanel → Advanced → Cron Jobs):<br><code id="cronCmd" style="font-size:11px;color:var(--cyan)">0 6 * * * php /home/USERNAME/public_html/backlink-maker/cron/daily.php</code><br><br><b style="color:var(--ok)">Recommended for exact timers + community pacing:</b> one run every 30 min →<br><code id="cronCmd30" style="font-size:11px;color:var(--cyan)">*/30 * * * * php /home/USERNAME/public_html/backlink-maker/cron/backlink-30min.php</code><br>Use this line instead of the daily one. Each site's own timer (Site Panels) then fires at the exact hour you choose, and "2-3 comments/day" stays bot-safe.</div>
+          <button class="btn" style="margin-top:14px" onclick="saveSettings()">💾 Save schedule</button>
+          <button class="btn ok" style="margin-top:10px; width:100%" onclick="runNow()">▶ Run now (test)</button>
+        </div>
+        <div class="card" style="margin-top:14px">
+          <h3>📜 Run log</h3>
+          <div id="runnerLog" class="empty">Loading…</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ PASTE QUEUE ============ -->
+  <div class="page" id="page-queue">
+    <h2 class="pg">Paste Queue</h2>
+    <div class="pgsub">Manual-lane packages, ready for you. Copy, paste, upload image, submit — then mark as posted. (~1 minute each)</div>
+    <div id="queueList" class="empty">Loading…</div>
+  </div>
+
+  <!-- ============ LINK HEALTH ============ -->
+  <div class="page" id="page-links">
+    <h2 class="pg">Link Health</h2>
+    <div class="pgsub">Every posted backlink, tracked. Dofollow = passes SEO value. Re-check re-verifies all links (works after deployment).</div>
+    <button class="btn ghost" onclick="recheckLinks()">🔄 Re-check all links</button>
+    <div class="card" style="margin-top:14px; overflow:auto"><div id="linksTable"></div></div>
+  </div>
+
+  <!-- ============ API KEYS ============ -->
+  <div class="page" id="page-apikeys">
+    <h2 class="pg">API Keys</h2>
+    <div class="pgsub">Same providers AutoBlog uses — the software creates backlink content the exact same way AutoBlog creates blogs (Chat API writes, Image API creates the image).</div>
+    <div class="grid g2">
+      <div class="card">
+        <h3>💬 Chat API (writes the content)</h3>
+        <div id="chatStatus" class="hint" style="margin-bottom:8px">Status: checking…</div>
+        <label class="f">PROVIDER</label>
+        <select id="chat-provider">
+          <option value="gemini">Google Gemini</option>
+          <option value="openai">OpenAI</option>
+          <option value="huggingface">HuggingFace</option>
+          <option value="openrouter">OpenRouter</option>
+          <option value="anthropic">Anthropic (Claude)</option>
+          <option value="pollinations">Pollinations (free)</option>
+          <option value="custom">Custom (OpenAI-compatible endpoint)</option>
+        </select>
+        <label class="f">API KEY</label>
+        <input id="chat-key" type="password" placeholder="paste your key (leave empty to keep the saved one)">
+        <div id="chat-keyhint" class="hint" style="margin-top:4px"></div>
+        <label class="f">MODEL</label>
+        <input id="chat-model" placeholder="e.g. gemini-2.5-flash-lite / gpt-4o-mini">
+        <label class="f">CUSTOM ENDPOINT (only for Custom provider)</label>
+        <input id="chat-endpoint" placeholder="https://…/v1/chat/completions">
+        <div style="display:flex; gap:8px; margin-top:14px">
+          <button class="btn" onclick="saveVault('chat')">💾 Save Chat API</button>
+          <button class="btn ghost" onclick="testVault('chat')">🔌 Test</button>
+        </div>
+        <div id="chat-test-result" style="margin-top:10px"></div>
+      </div>
+      <div class="card">
+        <h3>🎨 Image API (creates the image for each post)</h3>
+        <div id="imgStatus" class="hint" style="margin-bottom:8px">Status: checking…</div>
+        <label class="f">PROVIDER</label>
+        <select id="img-provider">
+          <option value="huggingface">HuggingFace (FLUX)</option>
+          <option value="gemini">Google Gemini (image model)</option>
+          <option value="openai">OpenAI (gpt-image-1)</option>
+          <option value="pollinations">Pollinations (free)</option>
+          <option value="custom">Custom (OpenAI-compatible)</option>
+        </select>
+        <label class="f">API KEY</label>
+        <input id="img-key" type="password" placeholder="paste your key (Pollinations can be empty… a token is still needed)">
+        <div id="img-keyhint" class="hint" style="margin-top:4px"></div>
+        <label class="f">MODEL</label>
+        <input id="img-model" placeholder="e.g. black-forest-labs/FLUX.1-schnell / gemini-2.5-flash-image / flux">
+        <label class="f">CUSTOM ENDPOINT (only for Custom provider)</label>
+        <input id="img-endpoint" placeholder="https://…/v1/images/generations">
+        <div style="display:flex; gap:8px; margin-top:14px">
+          <button class="btn" onclick="saveVault('image')">💾 Save Image API</button>
+          <button class="btn ghost" onclick="testVault('image')">🔌 Test (demo image appears below)</button>
+        </div>
+        <div id="img-test-result" style="margin-top:10px"></div>
+      </div>
+    </div>
+
+    <!-- Named API profiles: different APIs per website -->
+    <div class="card" style="margin-top:14px">
+      <h3>🗂 API Profiles — use a DIFFERENT Chat / Image API per website</h3>
+      <div class="hint" style="margin:6px 0 12px">Save as many API setups as you need (each with its own name + provider + key + model). Then on every website's panel (Site Panels → ⚙ Open panel) choose which Chat API and which Image API <b>that website</b> uses. Leave it on <b>(default)</b> to use the API saved above.</div>
+      <div class="row2">
+        <div style="border:1px solid var(--line);border-radius:10px;padding:12px">
+          <b style="font-size:13px">💬 Chat API profiles</b>
+          <div id="chat-profile-list" class="hint" style="margin-top:8px">none saved</div>
+        </div>
+        <div style="border:1px solid var(--line);border-radius:10px;padding:12px">
+          <b style="font-size:13px">🎨 Image API profiles</b>
+          <div id="img-profile-list" class="hint" style="margin-top:8px">none saved</div>
+        </div>
+      </div>
+      <div style="border:1px dashed var(--line);border-radius:10px;padding:12px;margin-top:12px">
+        <b style="font-size:13px">➕ Add a profile</b>
+        <div class="row2" style="margin-top:10px">
+          <div><label class="f">KIND</label><select id="pf-kind"><option value="chat">Chat API</option><option value="image">Image API</option></select></div>
+          <div><label class="f">NAME (how it appears in site panels)</label><input id="pf-name" placeholder="e.g. Gemini key 2 / HuggingFace images"></div>
+        </div>
+        <div class="row2" style="margin-top:10px">
+          <div><label class="f">PROVIDER</label><select id="pf-provider"><option value="gemini">Google Gemini</option><option value="openai">OpenAI</option><option value="huggingface">HuggingFace</option><option value="openrouter">OpenRouter</option><option value="anthropic">Anthropic (Claude)</option><option value="pollinations">Pollinations (free)</option><option value="custom">Custom (OpenAI-compatible)</option></select></div>
+          <div><label class="f">MODEL</label><input id="pf-model" placeholder="e.g. gemini-2.5-flash-lite"></div>
+        </div>
+        <div class="row2" style="margin-top:10px">
+          <div><label class="f">API KEY</label><input id="pf-key" type="password" placeholder="paste key"></div>
+          <div><label class="f">CUSTOM ENDPOINT (only for Custom)</label><input id="pf-endpoint" placeholder="https://…"></div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:12px">
+          <button class="btn" onclick="saveProfile()">💾 Save profile</button>
+          <span class="hint">Keys are stored on the server in <b>backlink_maker.db</b> — replacing files never deletes them.</span>
+        </div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:14px">
+      <h3>ℹ️ How it works</h3>
+      <div class="kv">
+        • Without keys: the system still runs end-to-end in <b>template mode</b> (local content + fallback image) so you can test everything.<br>
+        • With keys: AI-written human-sounding content (anti-AI cleanup applied, same as AutoBlog) + AI-generated images, downloaded as real files for you.
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- target edit modal for mark-posted -->
+<div class="modal-bg" id="markModalBg">
+  <div class="modal">
+    <h3 style="margin-bottom:6px">✅ Mark as posted</h3>
+    <div class="hint" id="markJobTitle" style="margin-bottom:12px"></div>
+    <label class="f">LIVE URL OF YOUR NEW POST</label>
+    <input id="markUrl" placeholder="https://site.com/your-new-post">
+    <div style="display:flex; gap:8px; margin-top:16px">
+      <button class="btn ok" onclick="confirmMark()">Confirm — start tracking this link</button>
+      <button class="btn ghost" onclick="closeMark()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let S = { sandbox: false, markJobId: null };
+
+const $ = id => document.getElementById(id);
+function toast(msg, ok = true) {
+  const t = $('toast'); t.textContent = msg; t.className = 'toast show ' + (ok ? 'ok' : 'err');
+  clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 4200);
+}
+async function api(path, method = 'GET', body = null) {
+  const opts = { method, headers: { 'Content-Type': 'application/json' } };
+  if (body) opts.body = JSON.stringify(body);
+  const r = await fetch(path, opts);
+  let d; try { d = await r.json(); } catch (e) { d = { error: 'Bad response' }; }
+  if (!r.ok && !d.error) d.error = 'HTTP ' + r.status;
+  return d;
+}
+function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+
+// ---------- tabs ----------
+document.querySelectorAll('.tab').forEach(t => t.onclick = () => {
+  document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(x => x.classList.remove('active'));
+  t.classList.add('active');
+  $('page-' + t.dataset.page).classList.add('active');
+  refreshPage(t.dataset.page);
+});
+function refreshPage(p) {
+  if (p === 'overview') loadOverview();
+  if (p === 'websites') loadTargets();
+  if (p === 'panels') loadPanels();
+  if (p === 'runner') loadRunner();
+  if (p === 'queue') loadQueue();
+  if (p === 'links') loadLinks();
+  if (p === 'apikeys') loadVault();
+}
+function goPage(p) {
+  const tab = document.querySelector('.tab[data-page="' + p + '"]');
+  if (tab) tab.click();
+}
+
+// ---------- overview ----------
+async function loadOverview() {
+  const s = await api('/api/status');
+  S.sandbox = s.sandbox;
+  $('sandboxPill').style.display = s.sandbox ? '' : 'none';
+  $('st-targets').textContent = s.targets_active;
+  $('st-today').textContent = s.posts_today;
+  $('st-live').textContent = s.published_total + (s.dofollow_live ? ` (${s.dofollow_live} dofollow)` : '');
+  $('st-waiting').textContent = s.manual_waiting;
+  let sys = `Main site: <b>${esc(s.main_site_url || 'not set yet ⚠️')}</b><br>`;
+  sys += `Chat API: ${s.chat_configured ? '✅ configured' : '⚪ not set (template mode)'}<br>`;
+  sys += `Image API: ${s.image_configured ? '✅ configured' : '⚪ not set (fallback image)'}<br>`;
+  sys += s.sandbox ? `<span style="color:var(--warn)">⚠️ Preview sandbox: outbound HTTP (AI calls, link checks, API posting) is disabled here. Everything works normally on your subdomain.</span>` : '✅ Live server mode';
+  $('sysStatus').innerHTML = sys;
+  const jobs = await api('/api/jobs?limit=6');
+  $('todayJobs').innerHTML = jobs.length ? jobs.map(jobRow).join('') : '<div class="empty">No posts yet. Add websites, then run the batch.</div>';
+  const log = await api('/api/runlog');
+  $('recentLog').innerHTML = log.slice(0, 6).map(l => `<div class="logline"><b>${esc(l.created_at)}</b> — ${esc(l.message)}</div>`).join('') || '<div class="empty">No runs yet</div>';
+}
+function statusBadge(st) {
+  const m = { 'Published': ['b-green', '● Auto-posted'], 'Manual Ready': ['b-amber', '📋 Ready for you'], 'Manual Posted': ['b-blue', '✔ Posted'], 'Failed': ['b-red', '✖ Failed'], 'Queued': ['b-gray', 'Queued'], 'Content Ready': ['b-gray', 'Creating'], 'Auto Posting': ['b-blue', 'Posting…'] };
+  const [c, l] = m[st] || ['b-gray', st];
+  return `<span class="badge ${c}">${l}</span>`;
+}
+function jobRow(j) {
+  return `<div class="logline"><b>${esc(j.title)}</b><br><span style="color:var(--mut)">${esc(j.target_name)} · ${esc(j.run_date)}</span> ${statusBadge(j.status)}
+  ${j.published_url ? ` · <a href="${esc(j.published_url)}" target="_blank">view ↗</a>` : ''}
+  ${j.error_message ? `<br><span style="color:#f87171;font-size:11.5px">${esc(j.error_message)}</span>` : ''}</div>`;
+}
+
+// ---------- targets ----------
+let targets = [];
+async function loadTargets() {
+  targets = await api('/api/targets');
+  const el = $('targetsTable');
+  if (!targets.length) { el.innerHTML = '<div class="empty">No websites yet. Use the form on the right to add your first backlink website →</div>'; return; }
+  el.innerHTML = `<table><tr><th>Site</th><th>Type</th><th>Mode</th><th>Last posted</th><th>Posts</th><th>On</th><th></th></tr>` +
+    targets.map(t => {
+      const cred = (t.credentials && Object.keys(t.credentials).length) || (t.credential_json && t.credential_json !== '{}');
+      return `<tr>
+        <td><b>${esc(t.name)}</b><br><span class="kv">${esc(t.site_url)}</span>${t.niche ? `<br><span class="kv">niche: ${esc(t.niche)} · every ${t.min_interval_days}d</span>` : ''}</td>
+        <td>${esc(t.target_type)}</td>
+        <td>${t.publish_mode === 'api' ? `<span class="badge b-blue">⚡ API (${esc(t.platform)})</span>` : '<span class="badge b-gray">📋 manual</span>'}</td>
+        <td>${t.last_posted_at ? esc(t.last_posted_at.slice(0, 10)) : '—'}</td>
+        <td>${t.post_count}</td>
+        <td><div class="switch ${t.is_active ? 'on' : ''}" onclick="toggleTarget(${t.id})"></div></td>
+        <td style="white-space:nowrap">
+          ${t.publish_mode === 'api' ? `<button class="btn sm ghost" onclick="testTarget(${t.id})">🔌 Test</button>` : ''}
+          <button class="btn sm ghost" onclick="editTarget(${t.id})">Edit</button>
+          <button class="btn sm bad" onclick="delTarget(${t.id})">✕</button>
+        </td>
+      </tr>`;
+    }).join('') + '</table>';
+}
+function resetTargetForm() {
+  ['t-id', 't-name', 't-url', 't-niche', 't-notes'].forEach(id => $(id).value = '');
+  $('t-type').value = 'blog'; $('t-mode').value = 'manual'; $('t-interval').value = 7;
+  $('targetFormTitle').textContent = '➕ Add backlink website';
+  ['c-blogid', 'c-clientid', 'c-clientsecret', 'c-refreshtoken', 'c-wpsite', 'c-wpuser', 'c-wppass', 'c-ghostsite', 'c-ghostkey', 'c-hashpub', 'c-hashtoken', 'c-wixsite', 'c-wixcid', 'c-wixcs', 'c-wixinst', 'c-wixtok', 'c-hookurl'].forEach(id => $(id).value = '');
+  toggleCredFields();
+}
+function editTarget(id) {
+  const t = targets.find(x => x.id === id); if (!t) return;
+  $('t-id').value = t.id; $('t-name').value = t.name; $('t-url').value = t.site_url;
+  $('t-type').value = t.target_type; $('t-mode').value = t.publish_mode; $('t-platform').value = t.platform || 'blogger';
+  $('t-niche').value = t.niche || ''; $('t-interval').value = t.min_interval_days || 7; $('t-notes').value = t.account_notes || '';
+  const c = t.credentials || {};
+  $('c-blogid').value = c.blog_id || ''; $('c-clientid').value = c.client_id || ''; $('c-clientsecret').value = c.client_secret || ''; $('c-refreshtoken').value = c.refresh_token || '';
+  $('c-wpsite').value = c.site_url || ''; $('c-wpuser').value = c.username || ''; $('c-wppass').value = c.app_password || '';
+  $('c-ghostsite').value = c.site_url || ''; $('c-ghostkey').value = c.admin_key || '';
+  $('c-hashpub').value = c.publication_id || ''; $('c-hashtoken').value = c.personal_token || '';
+  $('c-wixsite').value = c.site_id || ''; $('c-wixcid').value = c.client_id || ''; $('c-wixcs').value = c.client_secret || '';
+  $('c-wixinst').value = c.instance_id || ''; $('c-wixtok').value = c.access_token || '';
+  $('c-hookurl').value = c.webhook_url || '';
+  $('targetFormTitle').textContent = '✏️ Edit: ' + t.name;
+  toggleCredFields();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+function toggleCredFields() {
+  $('credWrap').style.display = $('t-mode').value === 'api' ? '' : 'none';
+  const p = $('t-platform').value;
+  ['blogger', 'wordpress', 'ghost', 'hashnode', 'wix', 'webhook'].forEach(x => $('cred-' + x).style.display = x === p ? '' : 'none');
+}
+function collectCreds() {
+  const p = $('t-platform').value;
+  if (p === 'blogger') return { blog_id: $('c-blogid').value, client_id: $('c-clientid').value, client_secret: $('c-clientsecret').value, refresh_token: $('c-refreshtoken').value };
+  if (p === 'wordpress') return { site_url: $('c-wpsite').value, username: $('c-wpuser').value, app_password: $('c-wppass').value };
+  if (p === 'ghost') return { site_url: $('c-ghostsite').value, admin_key: $('c-ghostkey').value };
+  if (p === 'hashnode') return { publication_id: $('c-hashpub').value, personal_token: $('c-hashtoken').value };
+  if (p === 'wix') {
+    let su = $('t-url').value.trim();
+    if (su && !/^https?:\/\//i.test(su)) su = 'https://' + su;
+    return {
+      site_id: $('c-wixsite').value, client_id: $('c-wixcid').value, client_secret: $('c-wixcs').value,
+      instance_id: $('c-wixinst').value, access_token: $('c-wixtok').value, site_url: su,
+    };
+  }
+  return { webhook_url: $('c-hookurl').value };
+}
+async function saveTarget() {
+  const id = $('t-id').value;
+  const body = {
+    name: $('t-name').value, site_url: $('t-url').value, target_type: $('t-type').value,
+    publish_mode: $('t-mode').value, platform: $('t-mode').value === 'api' ? $('t-platform').value : '',
+    credentials: $('t-mode').value === 'api' ? collectCreds() : {},
+    niche: $('t-niche').value, min_interval_days: $('t-interval').value, account_notes: $('t-notes').value,
+  };
+  const d = id ? await api('/api/targets/' + id, 'PUT', body) : await api('/api/targets', 'POST', body);
+  if (d.error) return toast(d.error, false);
+  toast(id ? 'Website updated ✅' : 'Website added ✅');
+  resetTargetForm(); loadTargets();
+}
+async function toggleTarget(id) {
+  const t = targets.find(x => x.id === id); if (!t) return;
+  await api('/api/targets/' + id, 'PUT', { is_active: t.is_active ? 0 : 1 });
+  loadTargets();
+}
+async function testTarget(id) {
+  toast('Testing connection… (runs on the live server)');
+  const d = await api('/api/targets/' + id + '/test', 'POST', {});
+  let msg = d.message || d.error || 'No response';
+  const extras = [];
+  if (d.endpoint) extras.push('endpoint: ' + d.endpoint);
+  if (d.http_code) extras.push('HTTP ' + d.http_code);
+  if (d.final_url && d.final_url !== d.endpoint) extras.push('final_url: ' + d.final_url);
+  if (d.content_type) extras.push('type: ' + d.content_type);
+  if (d.response_start) extras.push('response: ' + String(d.response_start).slice(0, 200).replace(/<[^>]+>/g, ''));
+  if (extras.length) msg += '\n\n' + extras.join('\n');
+  if (d.success) toast('✅ ' + msg);
+  else {
+    // long diagnostic → alert box so the full text is readable
+    const box = document.createElement('div');
+    box.className = 'modal-bg show';
+    box.innerHTML = `<div class="modal"><h3 style="margin-bottom:10px">🔌 Connection test result</h3><pre class="code" style="max-height:50vh">${esc(msg)}</pre><div style="margin-top:14px"><button class="btn" onclick="this.closest('.modal-bg').remove()">OK</button> ${d.error ? '<button class="btn ghost" id="copyDiag">📋 Copy for support</button>' : ''}</div></div>`;
+    document.body.appendChild(box);
+    box.addEventListener('click', (e) => { if (e.target === box) box.remove(); });
+    const cb = box.querySelector('#copyDiag');
+    if (cb) cb.onclick = async () => { await navigator.clipboard.writeText(msg); cb.textContent = '✅ Copied'; };
+  }
+}
+async function delTarget(id) {
+  if (!confirm('Remove this website from the backlink list?')) return;
+  await api('/api/targets/' + id, 'DELETE');
+  toast('Removed'); loadTargets();
+}
+
+// ---------- site panels (one per website) ----------
+S.openSiteId = null;
+async function loadPanels() {
+  targets = await api('/api/targets');
+  // studio target picker
+  const sel = $('studio-target');
+  sel.innerHTML = targets.map(t => `<option value="${t.id}">${esc(t.name)} ${t.publish_mode === 'api' ? '(' + esc(t.platform || 'api') + ')' : '(manual — good for Copy Studio)'}</option>`).join('');
+  // site cards — or the dedicated single-site page if one is open
+  const wrap = $('sitePanels');
+  if (S.openSiteId) {
+    const t = targets.find(x => x.id === S.openSiteId);
+    if (t) { renderSiteDetail(t); return; }
+    S.openSiteId = null;
+  }
+  if (!targets.length) { wrap.innerHTML = '<div class="card empty">No websites yet — add them in <b>Backlink Websites</b> first.</div>'; return; }
+  wrap.innerHTML = targets.map(t => {
+    const isWix = t.platform === 'wix';
+    const blogMode = t.blog_mode || 'auto';
+    const blogCount = t.blog_daily_count || 1;
+    const commCount = t.community_daily_count || 2;
+    return `
+    <div class="card" style="margin-bottom:16px" id="sp-card-${t.id}">
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <div>
+          <b style="font-size:15px">${esc(t.name)}</b>
+          ${t.publish_mode === 'api' ? `<span class="badge b-blue">⚡ API · ${esc(t.platform)}</span>` : '<span class="badge b-gray">📋 manual / copy</span>'}
+          ${t.is_active ? '' : '<span class="badge b-red">paused</span>'}
+          <div class="kv" style="margin-top:4px">${esc(t.site_url)}${t.niche ? ' · niche: ' + esc(t.niche) : ''}</div>
+        </div>
+        <div style="margin-left:auto;display:flex;align-items:center;gap:10px">
+          <button class="btn sm" onclick="openSitePanel(${t.id})">⚙ Open panel</button>
+          <span class="kv">on/off</span>
+          <div class="switch ${t.is_active ? 'on' : ''}" onclick="toggleTarget(${t.id})"></div>
+        </div>
+      </div>
+
+      <div class="row2" style="margin-top:16px">
+        <!-- BLOG -->
+        <div style="border:1px solid var(--line);border-radius:12px;padding:14px">
+          <h3>📝 Blog — auto posting</h3>
+          <label class="f">MODE</label>
+          <select id="p-mode-${t.id}">
+            <option value="auto" ${blogMode==='auto'?'selected':''}>⚡ Full auto (posts as soon as it's due)</option>
+            <option value="scheduled" ${blogMode==='scheduled'?'selected':''}>⏰ Scheduled — posts at the timer time below</option>
+            <option value="manual" ${blogMode==='manual'?'selected':''}>📋 Manual — I paste from Copy Studio</option>
+          </select>
+          <div class="row2" style="margin-top:12px">
+            <div>
+              <label class="f">POSTS PER DAY (1–5)</label>
+              <select id="p-count-${t.id}">${[1,2,3,4,5].map(n => `<option value="${n}" ${blogCount===n?'selected':''}>${n}</option>`).join('')}</select>
+            </div>
+            <div>
+              <label class="f">MINIMUM GAP (DAYS) — wins if bigger</label>
+              <input id="p-gap-${t.id}" type="number" min="1" max="90" value="${t.min_interval_days || 1}">
+            </div>
+          </div>
+          <div class="row2" style="margin-top:12px">
+            <div>
+              <label class="f">POST TIME (TIMER — HH:MM)</label>
+              <input id="p-time-${t.id}" type="time" value="${t.blog_time || ''}">
+            </div>
+            <div style="align-self:end">
+              ${t.publish_mode === 'api' ? `<button class="btn sm ghost" onclick="testTarget(${t.id})">🔌 Test connection</button>` : '<span class="hint">No API on this site — use Copy Studio above.</span>'}
+            </div>
+          </div>
+          ${isWix ? `<button class="btn sm" style="margin-top:12px" onclick="wixDraftTest(${t.id})">🧪 Create a DRAFT post — I can see it, it's not public</button>` : ''}
+          <div class="hint" style="margin-top:10px">Last posted: ${t.last_posted_at ? esc(t.last_posted_at) : 'never'} · total posts: ${t.post_count}</div>
+        </div>
+
+        <!-- COMMUNITY (Wix only) -->
+        ${isWix ? `
+        <div style="border:1px solid var(--line);border-radius:12px;padding:14px">
+          <h3>💬 Community — Wix Groups auto commenting</h3>
+          <div style="display:flex;align-items:center;gap:10px">
+            <div class="switch ${t.community_enabled ? 'on' : ''}" id="p-commsw-${t.id}" onclick="this.classList.toggle('on')"></div>
+            <b>Enable</b>
+            <span class="hint">finds topics, writes a useful comment with your link, posts it</span>
+          </div>
+          <div class="row2" style="margin-top:12px">
+            <div>
+              <label class="f">COMMENTS PER DAY (1–3, bot-safe)</label>
+              <select id="p-commcount-${t.id}">${[1,2,3].map(n => `<option value="${n}" ${commCount===n?'selected':''}>${n}</option>`).join('')}</select>
+            </div>
+            <div>
+              <label class="f">COMMENT TIME (HH:MM)</label>
+              <input id="p-commtime-${t.id}" type="time" value="${t.community_time || ''}">
+            </div>
+          </div>
+          <label class="f">COMMUNITY / GROUP</label>
+          <div style="display:flex;gap:8px">
+            <select id="p-commgroup-${t.id}">
+              <option value="">— auto (first group) —</option>
+              ${(t.community_group_id ? `<option value="${esc(t.community_group_id)}" selected>${esc(t.community_group_id)}</option>` : '')}
+            </select>
+            <button class="btn sm ghost" style="flex:none" onclick="loadWixGroups(${t.id})">↻ Load groups</button>
+          </div>
+          <div class="copybar" style="margin-top:12px">
+            <button class="btn sm" onclick="exploreCommunity(${t.id})">🔎 Find topics + prepare our comments</button>
+            <button class="btn sm ghost" onclick="runCommunityNow(${t.id})">🚀 Post one comment now</button>
+          </div>
+          <div id="comm-results-${t.id}"></div>
+          <div class="hint" style="margin-top:8px">Last comment: ${t.community_last_at ? esc(t.community_last_at) : 'never'}</div>
+        </div>` : `<div style="border:1px dashed var(--line);border-radius:12px;padding:14px;color:var(--mut);font-size:13px;display:flex;align-items:center">💬 Community auto commenting is available for <b>Wix</b> sites (Wix Groups).${t.publish_mode !== 'api' ? ' This site has no API connected.' : ''}</div>`}
+      </div>
+
+      <div style="margin-top:14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <button class="btn" onclick="savePanel(${t.id})">💾 Save this site's settings</button>
+        <span class="hint">Scheduling: if the 30-minute cron is set (Auto Runner tab), timers fire at the exact time. With only the daily 06:00 cron, pacing still works and times are approximate.</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function savePanel(id) {
+  const body = {
+    blog_mode: $('p-mode-' + id).value,
+    blog_daily_count: $('p-count-' + id).value,
+    min_interval_days: $('p-gap-' + id).value,
+    blog_time: $('p-time-' + id).value,
+  };
+  // community fields only exist on Wix cards
+  const cc = $('p-commcount-' + id);
+  if (cc) {
+    body.community_enabled = $('p-commsw-' + id).classList.contains('on') ? 1 : 0;
+    body.community_daily_count = cc.value;
+    body.community_time = $('p-commtime-' + id).value;
+    body.community_group_id = $('p-commgroup-' + id).value;
+  }
+  const d = await api('/api/targets/' + id, 'PUT', body);
+  toast(d.error ? d.error : "Site saved ✅", !d.error);
+  loadPanels();
+}
+
+// ---------- dedicated panel PAGE per website ----------
+const CRED_FIELDS_DEF = {
+  blogger:   [['blog_id', 'Blogger Blog ID'], ['client_id', 'Google OAuth Client ID'], ['client_secret', 'Client Secret'], ['refresh_token', 'OAuth Refresh Token']],
+  wordpress: [['site_url', 'WP Site URL (https://…)'], ['username', 'WP Username'], ['app_password', 'WP Application Password']],
+  ghost:     [['site_url', 'Ghost Site URL'], ['admin_key', 'Admin API Key']],
+  hashnode:  [['publication_id', 'Publication ID'], ['personal_token', 'Personal Access Token']],
+  wix:       [['site_id', 'Wix Site ID'], ['client_id', 'Wix OAuth Client ID (App ID)'], ['client_secret', 'OAuth Client Secret'], ['instance_id', 'Instance ID (optional)'], ['access_token', 'Access Token (optional — auto-fills with Client ID + Secret)']],
+  webhook:   [['webhook_url', 'Webhook URL']]
+};
+function credFieldHtml(platform, cred, siteUrl) {
+  const defs = CRED_FIELDS_DEF[platform] || CRED_FIELDS_DEF.webhook;
+  let html = platform === 'wix' ? `<label class="f">SITE URL (https://yoursite.com)</label><input id="spc-siteurl" value="${esc(siteUrl || '')}">` : '';
+  return html + defs.map(([k, label]) => `<label class="f">${label}</label><input id="spc-${k}" value="${esc((cred && cred[k]) || '')}">`).join('');
+}
+function collectSiteCreds(platform) {
+  const defs = CRED_FIELDS_DEF[platform] || CRED_FIELDS_DEF.webhook;
+  const out = {};
+  defs.forEach(([k]) => { out[k] = $('spc-' + k) ? $('spc-' + k).value : ''; });
+  if (platform === 'wix' && $('spc-siteurl')) {
+    let su = $('spc-siteurl').value.trim();
+    if (su && !/^https?:\/\//i.test(su)) su = 'https://' + su;
+    out.site_url = su;
+  }
+  return out;
+}
+function profileSelectHtml(kind, current) {
+  const data = S.profiles[kind] || { default: { configured: false, provider: '' }, profiles: [] };
+  let opts = `<option value="">(default)${data.default.configured ? ' — ' + esc(data.default.provider) + (data.default.model ? ' · ' + esc(data.default.model) : '') : ' — NOT SET, template mode'}${current === '' ? ' selected' : ''}</option>`;
+  opts += (data.profiles || []).map(p => `<option value="${p.id}" ${p.id === current ? 'selected' : ''}>${esc(p.name)} — ${esc(p.provider)}${p.model ? ' · ' + esc(p.model) : ''}</option>`).join('');
+  return opts;
+}
+async function openSitePanel(id) {
+  S.openSiteId = id;
+  await loadProfiles(); // make sure the profile lists are fresh
+  const sel = $('studio-target'); if (sel) sel.value = id;
+  loadPanels();
+}
+async function closeSitePanel() { S.openSiteId = null; loadPanels(); }
+
+function renderSiteDetail(t) {
+  const wrap = $('sitePanels');
+  const isWix = t.platform === 'wix';
+  const hasApi = t.publish_mode === 'api';
+  let cred = {};
+  try { cred = JSON.parse(t.credential_json || '{}'); } catch (e) {}
+  const blogMode = t.blog_mode || 'auto';
+  const blogCount = t.blog_daily_count || 1;
+  const commCount = t.community_daily_count || 2;
+  const platLabel = { wix: 'Wix', blogger: 'Blogger', wordpress: 'WordPress', ghost: 'Ghost', hashnode: 'Hashnode', webhook: 'Webhook' }[t.platform] || (t.platform || 'Site');
+
+  wrap.innerHTML = `
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap">
+    <button class="btn sm ghost" onclick="closeSitePanel()">← All websites</button>
+    <b style="font-size:19px">${esc(t.name)}</b>
+    ${hasApi ? `<span class="badge b-blue">⚡ API · ${esc(t.platform)}</span>` : '<span class="badge b-gray">📋 manual / copy</span>'}
+    ${t.is_active ? '<span class="badge b-green">running</span>' : '<span class="badge b-red">paused</span>'}
+    <div class="kv">${esc(t.site_url)}</div>
+  </div>
+
+  <div class="row2">
+    <!-- its own authentication -->
+    <div class="card">
+      <h3>🔑 ${esc(platLabel)} authentication — just for this website</h3>
+      ${hasApi ? credFieldHtml(t.platform, cred, t.site_url) : '<div class="hint">This website has <b>no API</b> (manual / copy mode) — there is nothing to authenticate here. You post its links with the Copy &amp; Paste Studio below.</div>'}
+      ${hasApi ? `<div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
+          <button class="btn" onclick="saveSiteCreds(${t.id})">💾 Save authentication</button>
+          <button class="btn ghost" onclick="testTarget(${t.id})">🔌 Test connection</button>
+        </div>
+        ${isWix ? '<div class="hint" style="margin-top:10px">Wix setup: <b>dev.wix.com</b> → your app → <b>OAuth</b> tab → Client ID + Secret. The <b>Site ID</b> is in your Wix dashboard URL. After saving, click <b>🧪 Draft Test</b> — it creates a real draft you can see in your Wix blog (nothing goes public).</div>' : ''}` : ''}
+    </div>
+    <!-- its own API profile choice -->
+    <div class="card">
+      <h3>🗂 Which APIs THIS website uses</h3>
+      <div class="hint" style="margin:6px 0 12px">Every website can use <b>its own</b> Chat + Image API — different key, different provider, whatever each site needs. <b>(default)</b> = the API saved in the API Keys tab. Manage all saved APIs in <a href="#" onclick="goPage('apikeys');return false" style="color:#7ab">API Keys → API Profiles</a>.</div>
+      <label class="f">💬 CHAT API (writes this site's content)</label>
+      <select id="sp-chat-${t.id}">${profileSelectHtml('chat', t.chat_profile || '')}</select>
+      <label class="f" style="margin-top:12px">🎨 IMAGE API (makes this site's images)</label>
+      <select id="sp-img-${t.id}">${profileSelectHtml('image', t.image_profile || '')}</select>
+      <button class="btn" style="margin-top:14px" onclick="saveSiteApi(${t.id})">💾 Save API choice for this website</button>
+      <div class="hint" style="margin-top:8px">Applies to: auto posts, Copy Studio generation, and Wix community comments for this site.</div>
+    </div>
+  </div>
+
+  <!-- its own blog automation -->
+  <div class="card" style="margin-top:16px">
+    <h3>✍️ Blog auto posting — this website's own system</h3>
+    <div class="hint" style="margin:6px 0 12px">This page controls <b>only this website</b> — its own pace, timer, mode and APIs. Every website you add gets its own page like this automatically.</div>
+    <label class="f">MODE</label>
+    <select id="dsp-mode-${t.id}">
+      <option value="auto" ${blogMode==='auto'?'selected':''}>⚡ Full auto (posts as soon as it's due)</option>
+      <option value="scheduled" ${blogMode==='scheduled'?'selected':''}>⏰ Scheduled — posts at the timer time below</option>
+      <option value="manual" ${blogMode==='manual'?'selected':''}>📋 Manual — I paste from Copy Studio</option>
+    </select>
+    <div class="row2" style="margin-top:12px">
+      <div>
+        <label class="f">POSTS PER DAY (1–5)</label>
+        <select id="dsp-count-${t.id}">${[1,2,3,4,5].map(n => `<option value="${n}" ${blogCount===n?'selected':''}>${n}</option>`).join('')}</select>
+      </div>
+      <div>
+        <label class="f">MINIMUM GAP (DAYS) — wins if bigger</label>
+        <input id="dsp-gap-${t.id}" type="number" min="1" max="90" value="${t.min_interval_days || 1}">
+      </div>
+    </div>
+    <div class="row2" style="margin-top:12px">
+      <div>
+        <label class="f">POST TIME (TIMER — HH:MM)</label>
+        <input id="dsp-time-${t.id}" type="time" value="${t.blog_time || ''}">
+      </div>
+      <div style="align-self:end;display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn sm" onclick="saveSiteSettings(${t.id})">💾 Save this website's settings</button>
+        <button class="btn sm ghost" onclick="runSiteNow(${t.id})">🚀 Run this website now (blog${isWix ? ' + 1 comment' : ''})</button>
+        ${isWix ? `<button class="btn sm" onclick="wixDraftTest(${t.id})">🧪 Draft Test</button>` : ''}
+      </div>
+    </div>
+    <div class="hint" style="margin-top:10px">Last posted: ${t.last_posted_at ? esc(t.last_posted_at) : 'never'} · total posts: ${t.post_count} · min gap: ${t.min_interval_days || 1} day(s)</div>
+    <div id="run-now-result-${t.id}" style="margin-top:10px"></div>
+  </div>
+
+  <!-- its own community (Wix) -->
+  ${isWix ? `
+  <div class="card" style="margin-top:16px">
+    <h3>💬 Community — Wix Groups auto commenting — this website</h3>
+    <div style="display:flex;align-items:center;gap:10px">
+      <div class="switch ${t.community_enabled ? 'on' : ''}" id="dsp-commsw-${t.id}" onclick="this.classList.toggle('on')"></div>
+      <b>Enable</b>
+      <span class="hint">finds topics, writes a useful comment with your link, posts it — slow &amp; human-like</span>
+    </div>
+    <div class="row2" style="margin-top:12px">
+      <div>
+        <label class="f">COMMENTS PER DAY (1–3, bot-safe)</label>
+        <select id="dsp-commcount-${t.id}">${[1,2,3].map(n => `<option value="${n}" ${commCount===n?'selected':''}>${n}</option>`).join('')}</select>
+      </div>
+      <div>
+        <label class="f">COMMENT TIME (HH:MM)</label>
+        <input id="dsp-commtime-${t.id}" type="time" value="${t.community_time || ''}">
+      </div>
+    </div>
+    <label class="f">COMMUNITY / GROUP</label>
+    <div style="display:flex;gap:8px">
+      <select id="dsp-commgroup-${t.id}">
+        <option value="">— auto (first group) —</option>
+        ${(t.community_group_id ? `<option value="${esc(t.community_group_id)}" selected>${esc(t.community_group_id)}</option>` : '')}
+      </select>
+      <button class="btn sm ghost" style="flex:none" onclick="loadWixGroups(${t.id})">↻ Load groups</button>
+    </div>
+    <div class="copybar" style="margin-top:12px">
+      <button class="btn sm" onclick="exploreCommunity(${t.id})">🔎 Find topics + prepare our comments</button>
+      <button class="btn sm ghost" onclick="runCommunityNow(${t.id})">🚀 Post one comment now</button>
+    </div>
+    <div id="comm-results-${t.id}"></div>
+    <div class="hint" style="margin-top:8px">Last comment: ${t.community_last_at ? esc(t.community_last_at) : 'never'}</div>
+  </div>` : ''}
+
+  <!-- its own activity -->
+  <div class="card" style="margin-top:16px">
+    <h3>📜 Recent activity — this website only</h3>
+    <div id="sp-activity-${t.id}" class="hint">Loading…</div>
+  </div>`;
+  loadSiteActivity(t.id);
+}
+
+async function saveSiteCreds(id) {
+  const t = targets.find(x => x.id === id); if (!t) return;
+  const body = { credentials: collectSiteCreds(t.platform || 'webhook') };
+  const d = await api('/api/targets/' + id, 'PUT', body);
+  toast(d.error ? d.error : 'Authentication saved ✅ (stored in backlink_maker.db on your server — file updates never erase it)', !d.error);
+  if (!d.error) loadPanels();
+}
+async function saveSiteApi(id) {
+  const body = { chat_profile: $('sp-chat-' + id).value, image_profile: $('sp-img-' + id).value };
+  const d = await api('/api/targets/' + id, 'PUT', body);
+  toast(d.error ? d.error : "This website now uses its own selected APIs ✅ — saves to its panel, applies to every auto post from here on", !d.error);
+}
+async function saveSiteSettings(id) {
+  const body = {
+    blog_mode: $('dsp-mode-' + id).value,
+    blog_daily_count: $('dsp-count-' + id).value,
+    min_interval_days: $('dsp-gap-' + id).value,
+    blog_time: $('dsp-time-' + id).value,
+  };
+  const cc = $('dsp-commcount-' + id);
+  if (cc) {
+    body.community_enabled = $('dsp-commsw-' + id).classList.contains('on') ? 1 : 0;
+    body.community_daily_count = cc.value;
+    body.community_time = $('dsp-commtime-' + id).value;
+    body.community_group_id = $('dsp-commgroup-' + id).value;
+  }
+  const d = await api('/api/targets/' + id, 'PUT', body);
+  toast(d.error ? d.error : "This website's settings saved ✅ (its own mode, pace and timer)", !d.error);
+}
+async function runSiteNow(id) {
+  const box = $('run-now-result-' + id); if (!box) return;
+  box.innerHTML = '<div class="hint">Running this website now — blog post (+ community comment if enabled) — 20–60s…</div>';
+  const d = await api('/api/targets/' + id + '/run', 'POST', {});
+  const rows = (d.details || []).map(x => `<div style="border:1px solid var(--line);border-radius:10px;padding:10px;margin-top:8px">
+      <b>${x.part === 'community' ? '💬 Community' : '📝 Blog'}</b>
+      <span class="badge ${x.status === 'Published' || x.status === 'Posted' ? 'b-green' : (x.status === 'Draft' ? 'b-blue' : 'b-amber')}" style="margin-left:8px">${esc(x.status)}</span>
+      ${x.title ? '<div class="hint" style="margin-top:4px">' + esc(x.title) + '</div>' : ''}
+      ${x.url ? '<div style="margin-top:4px"><a href="' + esc(x.url) + '" target="_blank" style="font-size:12px">' + esc(x.url) + '</a></div>' : ''}
+      ${x.error ? '<div style="margin-top:4px;color:#f87171;font-size:12px">' + esc(x.error) + '</div>' : ''}</div>`).join('');
+  box.innerHTML = rows || '<div class="hint">Nothing ran.</div>';
+  toast('Done — see results below', true);
+  loadSiteActivity(id);
+  loadPanels();
+}
+async function loadSiteActivity(id) {
+  const box = $('sp-activity-' + id); if (!box) return;
+  const d = await api('/api/targets/' + id + '/activity');
+  const jobs = (d.jobs || []).map(j => `<div style="display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px dashed var(--line);font-size:12.5px;flex-wrap:wrap">
+      <span class="badge ${j.status === 'Published' ? 'b-green' : j.status === 'Draft' ? 'b-blue' : 'b-red'}">${esc(j.status)}</span>
+      <b>${esc(j.title || '(untitled)')}</b><span class="kv">${esc(j.run_date || '')}</span>
+      ${j.published_url ? '<a class="kv" href="' + esc(j.published_url) + '" target="_blank" style="margin-left:auto">open ↗</a>' : (j.error_message ? '<span class="kv" style="margin-left:auto;color:#f87171">' + esc(j.error_message).slice(0, 90) + '</span>' : '')}</div>`).join('');
+  const comms = (d.community || []).map(c => `<div style="display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px dashed var(--line);font-size:12.5px;flex-wrap:wrap">
+      <span class="badge ${c.status === 'ok' ? 'b-green' : 'b-red'}">${c.status === 'ok' ? '💬 posted' : 'failed'}</span>
+      <b>${esc(c.topic_title || 'topic')}</b><span class="kv">${esc(c.created_at || '')}</span>
+      ${c.error_message ? '<span class="kv" style="margin-left:auto;color:#f87171">' + esc(c.error_message).slice(0, 90) + '</span>' : ''}</div>`).join('');
+  box.innerHTML = `<b style="font-size:12.5px">Blog posts</b><div style="margin-top:6px">${jobs || '<span class="hint">No blog posts yet for this website.</span>'}</div>
+    ${comms ? '<b style="font-size:12.5px;display:block;margin-top:12px">Community comments</b><div style="margin-top:6px">' + comms + '</div>' : ''}`;
+}
+
+// ---------- Copy & Paste Studio ----------
+S.studio = null;
+async function studioGenerate() {
+  const id = $('studio-target').value;
+  if (!id) return toast('Add a website first (Backlink Websites tab).', false);
+  $('studio-result').innerHTML = '<div class="empty">Generating article + image… (10–40s if AI APIs are set)</div>';
+  const d = await api('/api/targets/' + id + '/copy-content', 'POST', {});
+  if (d.error) { $('studio-result').innerHTML = `<div class="empty" style="color:#f87171">❌ ${esc(d.error)}</div>`; return; }
+  S.studio = d;
+  $('studio-result').innerHTML = `
+    <div class="pkg">
+      <div class="head">
+        <div><div class="title">${esc(d.title)}</div>
+        <div class="meta">topic: ${esc(d.topic)} · angle: ${esc(d.angle)} · anchor: ${esc(d.anchor)}</div></div>
+      </div>
+      <div class="body">
+        <div class="copybar">
+          <button class="btn sm" onclick="studioCopy('title')">📋 Copy Title</button>
+          <button class="btn sm" onclick="studioCopy('html')">📋 Copy Body (rich — paste into site editor)</button>
+          <button class="btn sm" onclick="studioCopy('text')">📋 Copy Body (plain text)</button>
+          <button class="btn sm" onclick="studioCopy('markdown')">📋 Copy Markdown (best for Hashnode)</button>
+          <a class="btn sm ghost" href="${esc(d.image_file)}" download>⬇ Download Image</a>
+        </div>
+        <img class="thumb" src="${esc(d.image_file)}" alt="article image" style="max-width:520px">
+        <div style="border:1px solid var(--line);border-radius:10px;padding:14px;margin-top:12px;font-size:13.5px;line-height:1.65">${d.html}</div>
+        <div class="copybar" style="margin-top:14px">
+          <button class="btn sm ghost" onclick="studioQueue(${id})">📥 Save to Paste Queue (track it later)</button>
+          <button class="btn sm ok" onclick="studioAskUrl(${id})">✅ I pasted it — I have the live URL</button>
+        </div>
+        <div id="studio-urlbox" style="display:none;gap:8px;align-items:center;flex-wrap:wrap">
+          <input id="studio-url" placeholder="https://site.com/your-new-post" style="max-width:420px">
+          <button class="btn sm ok" onclick="studioConfirmMark(${id})">Confirm — start tracking this backlink</button>
+        </div>
+      </div>
+    </div>`;
+}
+async function studioCopy(which) {
+  const d = S.studio; if (!d) return;
+  await navigator.clipboard.writeText(d[which] || '');
+  toast('Copied ✅ (' + which + ') — now paste it into the site');
+}
+async function studioQueue(id) {
+  const d = S.studio; if (!d) return;
+  const r = await api('/api/targets/' + id + '/copy-job', 'POST', d);
+  if (r.error) return toast(r.error, false);
+  toast('Saved to Paste Queue ✅ — you can mark it posted from the Paste Queue tab after you paste it');
+  $('studio-urlbox').style.display = 'none';
+}
+function studioAskUrl(id) {
+  const box = $('studio-urlbox');
+  box.style.display = 'flex';
+  $('studio-url').value = '';
+  $('studio-url').focus();
+}
+async function studioConfirmMark(id) {
+  const d = S.studio; if (!d) return;
+  const url = $('studio-url').value.trim();
+  if (!url) return toast('Paste the live URL of your new post first.', false);
+  const r = await api('/api/targets/' + id + '/copy-job', 'POST', Object.assign({}, d, { published_url: url }));
+  if (r.error) return toast(r.error, false);
+  toast('✅ Marked posted — link added to Link Health tracking');
+  $('studio-urlbox').style.display = 'none';
+  $('studio-result').innerHTML = '<div class="empty">✅ Done! Backlink tracked. Generate another whenever you like.</div>';
+  S.studio = null;
+}
+
+// ---------- Wix: draft test + groups + community ----------
+async function wixDraftTest(id) {
+  toast('🧪 Creating a DRAFT post on your Wix blog… (not public)');
+  const d = await api('/api/targets/' + id + '/wix/draft-test', 'POST', {});
+  if (d.success) {
+    const url = d.url ? `<br><a href="${esc(d.url)}" target="_blank">Open the post URL ↗</a>` : '<br>(no URL came back — find the draft titled "AutoBacklink draft test" in Wix → Blog → Posts → Drafts)';
+    alert('✅ DRAFT created successfully! It is NOT public. Open Wix dashboard → Blog → Posts → Drafts to see it.\n\nIf you see it there, auto-posting will work.\n\n' + (d.warn || ''));
+    toast('✅ Draft created — check Wix → Blog → Drafts');
+  } else {
+    alert('❌ Draft test failed:\n\n' + (d.error || 'unknown error'));
+    toast('❌ ' + (d.error || 'draft failed'), false);
+  }
+}
+async function loadWixGroups(id) {
+  const sel = $('p-commgroup-' + id);
+  sel.innerHTML = '<option value="">loading…</option>';
+  const d = await api('/api/targets/' + id + '/wix/groups');
+  if (!d.success) {
+    sel.innerHTML = '<option value="">— could not load groups —</option>';
+    alert('Could not load Wix groups:\n\n' + (d.error || 'no response') + '\n\nFirst make sure the Wix Site ID + OAuth keys are saved (Backlink Websites → Edit), and that your Wix site has the Groups app installed.');
+    return;
+  }
+  const current = sel.value;
+  sel.innerHTML = '<option value="">— auto (first group) —</option>' + d.groups.map(g => `<option value="${esc(g.id)}">${esc(g.name)} [${esc(g.id)}]</option>`).join('');
+  if (current) sel.value = current;
+  toast('Loaded ' + d.groups.length + ' group(s) ✅ — pick the community you want to comment in');
+}
+S.comm = {};
+async function exploreCommunity(id) {
+  const box = $('comm-results-' + id);
+  box.innerHTML = '<div class="empty">Searching the community for topics… (preparing a useful answer for each — 10–60s)</div>';
+  const d = await api('/api/targets/' + id + '/community/explore', 'POST', { group_id: $('p-commgroup-' + id).value });
+  if (!d.success) {
+    box.innerHTML = '<div class="empty" style="color:#f87171;white-space:pre-wrap">❌ ' + esc(d.error || 'failed') + (d.tried && d.tried.length ? '\n\ntried:\n' + d.tried.join('\n') : '') + '</div>';
+    return;
+  }
+  if (!d.topics.length) { box.innerHTML = '<div class="empty">No new topics found (all visible topics were already answered, or the group is empty). Try another group or come back later.</div>'; return; }
+  S.comm[id] = d.topics;
+  box.innerHTML = d.topics.map((tp, i) => `
+    <div style="border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:10px" id="comm-item-${id}-${i}">
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        ${tp.url ? `<a href="${esc(tp.url)}" target="_blank" style="font-weight:700">🔗 ${esc(tp.title || '(untitled topic)')} ↗</a>` : `<span style="font-weight:700">📍 ${esc(tp.title || '(untitled topic)')}</span>`}
+        ${tp.url ? '' : '<span class="hint">(API gave no direct link — you can still read &amp; answer it from your Wix site → Groups)</span>'}
+        <span class="badge b-amber">match ${tp.match}</span>
+        ${tp.used_ai ? '<span class="badge b-blue">AI answer</span>' : '<span class="badge b-gray">template answer</span>'}
+      </div>
+      <div class="kv" style="margin-top:6px">Question/topic: ${esc(tp.text || '(no text shown by the API)')}</div>
+      <label class="f">OUR ANSWER — edit before posting if you like:</label>
+      <textarea id="comm-ans-${id}-${i}" style="min-height:74px">${esc(tp.comment)}</textarea>
+      <div style="margin-top:8px">
+        <button class="btn sm ok" onclick="postCommunityComment(${id}, ${i})">📩 Post this comment</button>
+        <span class="hint" style="margin-left:8px">Only posts when you click — nothing is sent automatically by this button.</span>
+      </div>
+    </div>`).join('');
+}
+async function postCommunityComment(id, i) {
+  const tp = (S.comm[id] || [])[i]; if (!tp) return;
+  const text = $('comm-ans-' + id + '-' + i).value.trim();
+  if (!text) return toast('The answer is empty — write something first.', false);
+  const d = await api('/api/targets/' + id + '/community/post', 'POST', { group_id: $('p-commgroup-' + id).value, topic_id: tp.id, topic_title: tp.title, topic_url: tp.url, comment: text });
+  const item = $('comm-item-' + id + '-' + i);
+  if (d.success) {
+    if (item) { item.innerHTML = `<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span class="badge b-green">✔ Posted</span> <a href="${esc(tp.url || '#')}" target="_blank">🔗 ${esc(tp.title)} ↗</a></div>`; }
+    toast('📩 Comment posted to the community ✅');
+  } else {
+    alert('❌ Could not post the comment:\n\n' + (d.error || 'unknown error'));
+  }
+}
+async function runCommunityNow(id) {
+  const box = $('comm-results-' + id);
+  box.innerHTML = '<div class="empty">Picking the best topic + writing + posting… (20–90s)</div>';
+  const d = await api('/api/targets/' + id + '/community/run', 'POST', {});
+  if (d.success) {
+    box.innerHTML = `<div style="border:1px solid #14532d;border-radius:10px;padding:12px">
+      <span class="badge b-green">✔ Posted</span>
+      <div style="margin-top:8px"><b>Topic:</b> ${d.topic && d.topic.url ? `<a href="${esc(d.topic.url)}" target="_blank">${esc(d.topic.title)} ↗</a>` : esc(d.topic ? d.topic.title : '')}</div>
+      <div class="kv" style="margin-top:6px;white-space:pre-wrap">${esc(d.comment || '')}</div></div>`;
+    toast('🚀 Community comment posted ✅');
+    loadPanels();
+  } else {
+    box.innerHTML = '<div class="empty" style="color:#f87171;white-space:pre-wrap">❌ ' + esc(d.error || 'failed') + '</div>';
+  }
+}
+
+// ---------- runner ----------
+async function loadRunner() {
+  const s = await api('/api/settings');
+  $('s-mainsite').value = s.main_site_url || '';
+  $('s-anchors').value = (s.anchor_pool || []).join('\n');
+  $('s-topics').value = s.custom_topics || '';
+  $('s-count').value = s.daily_count || 5;
+  $('s-time').value = s.daily_time || '06:00';
+  updateCronCmd();
+  const log = await api('/api/runlog');
+  $('runnerLog').innerHTML = log.slice(0, 20).map(l => `<div class="logline"><b>${esc(l.created_at)}</b> — ${esc(l.message)}</div>`).join('') || '<div class="empty">No runs yet</div>';
+}
+function updateCronCmd() {
+  const t = $('s-time').value || '06:00';
+  const [h, m] = t.split(':');
+  $('cronCmd').textContent = `${m} ${h} * * * php /home/USERNAME/public_html/backlink-maker/cron/daily.php`;
+}
+$('s-time') && ($('s-time').onchange = updateCronCmd);
+async function saveSettings() {
+  const d = await api('/api/settings', 'POST', {
+    main_site_url: $('s-mainsite').value,
+    anchor_pool: $('s-anchors').value.split('\n').map(s => s.trim()).filter(Boolean),
+    custom_topics: $('s-topics').value,
+    daily_count: $('s-count').value,
+    daily_time: $('s-time').value,
+  });
+  toast(d.error || 'Runner settings saved ✅', !d.error);
+  loadRunner();
+}
+async function runNow() {
+  toast('Running today\'s batch… (takes ~10-30s per site)');
+  const d = await api('/api/run', 'POST', {});
+  if (d.error) return toast(d.error, false);
+  toast(d.message || 'Run finished ✅');
+  refreshPage('overview');
+  if ($('page-runner').classList.contains('active')) loadRunner();
+  if ($('page-queue').classList.contains('active')) loadQueue();
+}
+
+// ---------- paste queue ----------
+let queue = [];
+async function loadQueue() {
+  queue = await api('/api/jobs?status=Manual Ready&limit=50');
+  const el = $('queueList');
+  if (!queue.length) { el.innerHTML = '<div class="empty">🎉 Nothing waiting. The daily run fills this queue with ready-to-paste packages.</div>'; return; }
+  el.innerHTML = queue.map(j => `
+    <div class="pkg" id="pkg-${j.id}">
+      <div class="head">
+        <div>
+          <div class="title">${esc(j.title)}</div>
+          <div class="meta">📌 ${esc(j.target_name)} · <a href="${esc(j.target_site_url)}" target="_blank">${esc(j.target_site_url)}</a> · ${esc(j.run_date)} · angle: ${esc(j.angle)}</div>
+        </div>
+        <div style="margin-left:auto; display:flex; gap:8px">
+          ${j.account_notes ? `<span class="badge b-gray">📝 ${esc(j.account_notes).slice(0, 60)}</span>` : ''}
+          <button class="btn sm ok" onclick="openMark(${j.id}, '${esc(j.title).replace(/'/g, "\\'")}')">✅ Mark as posted</button>
+        </div>
+      </div>
+      <div class="body">
+        <div class="copybar">
+          <button class="btn sm" onclick="copyJob(${j.id}, 'title')">📋 Copy Title</button>
+          <button class="btn sm" onclick="copyJob(${j.id}, 'html')">📋 Copy Body (HTML)</button>
+          <button class="btn sm" onclick="copyJob(${j.id}, 'text')">📋 Copy Body (Plain Text)</button>
+          <button class="btn sm ghost" onclick="copyJob(${j.id}, 'anchor')">🔗 Copy Anchor</button>
+          <a class="btn sm ghost" href="/api/jobs/${j.id}/image" download>⬇ Download Image</a>
+          <a class="btn sm ghost" href="${esc(j.image_file)}" target="_blank">🖼 Open Image</a>
+        </div>
+        <div id="body-${j.id}"></div>
+        <details style="margin-top:8px">
+          <summary style="cursor:pointer;color:var(--mut);font-size:12.5px">📖 Instructions for ${esc(j.target_name)} + preview</summary>
+          <div class="kv" style="white-space:pre-wrap;margin-top:8px">${esc(j.instructions || 'Open the site, paste title & body, upload image, submit, then mark as posted.')}</div>
+          <img class="thumb" src="${esc(j.image_file)}" style="max-width:360px;margin:10px 0" alt="generated image">
+          <pre class="code" id="preview-${j.id}"></pre>
+        </details>
+      </div>
+    </div>`).join('');
+  queue.forEach(j => {
+    const full = api('/api/jobs/' + j.id).then(d => {
+      $('preview-' + j.id).textContent = d.content_html || d.content_text || '';
+    });
+  });
+}
+async function copyJob(id, what) {
+  const d = await api('/api/jobs/' + id + '/copy');
+  if (d.error) return toast(d.error, false);
+  const map = { title: d.title, html: d.html, text: d.text, anchor: d.anchor };
+  await navigator.clipboard.writeText(map[what] || '');
+  toast('Copied to clipboard ✅ (' + what + ')');
+}
+
+// ---------- mark posted ----------
+function openMark(id, title) {
+  S.markJobId = id;
+  $('markJobTitle').textContent = title;
+  $('markUrl').value = '';
+  $('markModalBg').classList.add('show');
+}
+function closeMark() { $('markModalBg').classList.remove('show'); }
+async function confirmMark() {
+  const d = await api('/api/jobs/' + S.markJobId + '/posted', 'POST', { published_url: $('markUrl').value });
+  if (d.error) return toast(d.error, false);
+  closeMark();
+  toast('Marked as posted ✅ — link added to Link Health tracking');
+  loadQueue();
+}
+
+// ---------- link health ----------
+async function loadLinks() {
+  const rows = await api('/api/links');
+  const el = $('linksTable');
+  if (!rows.length) { el.innerHTML = '<div class="empty">No live links yet. Links appear here after auto-posting or after you mark manual posts as posted.</div>'; return; }
+  el.innerHTML = `<table><tr><th>Date</th><th>Site</th><th>Post</th><th>URL</th><th>Follow</th><th>Last check</th></tr>` +
+    rows.map(r => `<tr>
+      <td>${esc(r.run_date)}</td><td>${esc(r.target_name)}</td><td>${esc(r.title)}</td>
+      <td><a href="${esc(r.published_url)}" target="_blank">${esc(r.published_url).slice(0, 44)}…</a></td>
+      <td>${r.is_dofollow === null || r.is_dofollow === 'null' || r.is_dofollow === undefined ? '<span class="badge b-gray">not checked</span>' : r.is_dofollow == 1 ? '<span class="badge b-green">dofollow</span>' : '<span class="badge b-amber">nofollow</span>'}</td>
+      <td class="kv">${r.last_verified_at ? esc(r.last_verified_at.slice(0, 16)) : '—'}</td>
+    </tr>`).join('') + '</table>';
+}
+async function recheckLinks() {
+  const d = await api('/api/links/recheck', 'POST', {});
+  if (d.error) return toast(d.error, false);
+  toast(`Checked ${d.checked} links ✅`);
+  loadLinks();
+}
+
+// ---------- api keys ----------
+S.vaultSaved = { chat: null, image: null };
+async function loadVault() {
+  const c = await api('/api/vault/chat');
+  S.vaultSaved.chat = c;
+  $('chatStatus').textContent = 'Status: ' + (c.configured ? '✅ configured (' + (c.provider || 'custom') + (c.model ? ' · ' + c.model : '') + ')' : '⚪ not set — template mode active');
+  $('chat-keyhint').textContent = c.configured ? '🔑 Saved on server (masked): ' + (c.key_masked || '') + ' — the key stays saved even if you replace files. Leave the field empty to keep it.' : 'No key saved yet.';
+  if (c.provider) $('chat-provider').value = c.provider;
+  if (c.model) $('chat-model').value = c.model;
+  const i = await api('/api/vault/image');
+  S.vaultSaved.image = i;
+  $('imgStatus').textContent = 'Status: ' + (i.configured ? '✅ configured (' + (i.provider || 'custom') + (i.model ? ' · ' + i.model : '') + ')' : '⚪ not set — fallback image active');
+  $('img-keyhint').textContent = i.configured ? '🔑 Saved on server (masked): ' + (i.key_masked || '') + ' — the key stays saved even if you replace files. Leave the field empty to keep it.' : 'No key saved yet.';
+  if (i.provider) $('img-provider').value = i.provider;
+  if (i.model) $('img-model').value = i.model;
+  loadProfiles();
+}
+async function saveVault(which) {
+  const saved = S.vaultSaved[which];
+  const keyField = which === 'chat' ? $('chat-key').value : $('img-key').value;
+  // empty field = keep the saved key (so changing only the model doesn't wipe it)
+  const key = keyField.trim() !== '' ? keyField : (saved && saved.configured ? saved.saved_key : '');
+  const body = which === 'chat'
+    ? { provider: $('chat-provider').value, api_key: key, model: $('chat-model').value, endpoint: $('chat-endpoint').value, _keep_key: keyField.trim() === '' }
+    : { provider: $('img-provider').value, api_key: key, model: $('img-model').value, endpoint: $('img-endpoint').value, _keep_key: keyField.trim() === '' };
+  const d = await api('/api/vault/' + which, 'POST', body);
+  toast(d.error || (which === 'chat' ? 'Chat' : 'Image') + ' API saved ✅ (stored in backlink_maker.db on your server)', !d.error);
+  loadVault();
+}
+async function testVault(which) {
+  const box = $(which === 'chat' ? 'chat-test-result' : 'img-test-result');
+  box.innerHTML = '<div class="hint">Testing ' + which + ' API… (10–60s)</div>';
+  toast('Testing ' + which + ' API…');
+  const d = await api('/api/vault/test/' + which, 'POST', {});
+  if (which === 'image') {
+    box.innerHTML = d.success
+      ? `<div style="border:1px solid #14532d;border-radius:10px;padding:10px">
+           <span class="badge b-green">✅ Image API test successful</span>
+           <div class="hint" style="margin:6px 0">${esc(d.note || '')}</div>
+           <img class="thumb" src="${esc(d.preview)}" alt="demo test image">
+         </div>`
+      : `<div style="border:1px solid #7f1d1d;border-radius:10px;padding:10px;color:#f87171;font-size:12.5px;white-space:pre-wrap">❌ ${esc(d.error || 'failed')}</div>`;
+    toast(d.success ? '✅ Image pipeline verified — real images will be used' : '❌ ' + (d.error || 'image test failed').slice(0, 120), !!d.success);
+  } else {
+    box.innerHTML = d.success
+      ? `<div style="border:1px solid #14532d;border-radius:10px;padding:10px"><span class="badge b-green">✅ Chat API works</span> <span class="hint" style="margin-left:8px">${esc((d.content || '').slice(0, 120))}</span></div>`
+      : `<div style="border:1px solid #7f1d1d;border-radius:10px;padding:10px;color:#f87171;font-size:12.5px">❌ ${esc(d.error || 'failed')}</div>`;
+    toast(d.success ? '✅ Chat API works: ' + (d.content || '').slice(0, 60) : '❌ ' + (d.error || 'failed'), !!d.success);
+  }
+}
+
+// ---- named API profiles ----
+S.profiles = { chat: { profiles: [] }, image: { profiles: [] } };
+async function loadProfiles() {
+  const c = await api('/api/profiles/chat');
+  const i = await api('/api/profiles/image');
+  S.profiles.chat = c; S.profiles.image = i;
+  renderProfileList('chat'); renderProfileList('image');
+}
+function renderProfileList(kind) {
+  const el = $(kind === 'chat' ? 'chat-profile-list' : 'img-profile-list');
+  if (!el) return; // profile lists only render on the API Keys page
+  const list = (S.profiles[kind] || {}).profiles || [];
+  if (!list.length) { el.innerHTML = 'none saved yet — add one below ↓'; return; }
+  el.innerHTML = list.map(p => `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px dashed var(--line);font-size:12.5px">
+      <b>${esc(p.name)}</b> <span class="kv">${esc(p.provider)}${p.model ? ' · ' + esc(p.model) : ''} · ${esc(p.key_masked || 'no key')}</span>
+      <span style="margin-left:auto;display:flex;gap:6px">
+        <button class="btn sm ghost" onclick="testProfile('${kind}','${p.id}')">🔌 Test</button>
+        <button class="btn sm bad" onclick="deleteProfile('${kind}','${p.id}')">✕</button>
+      </span></div>`).join('') + '<div id="pf-test-' + kind + '" style="margin-top:8px"></div>';
+}
+async function saveProfile() {
+  const d = await api('/api/profiles/' + $('pf-kind').value, 'POST', {
+    name: $('pf-name').value, provider: $('pf-provider').value, api_key: $('pf-key').value, model: $('pf-model').value, endpoint: $('pf-endpoint').value,
+  });
+  if (d.error) return toast(d.error, false);
+  toast('Profile "' + $('pf-name').value + '" saved ✅ — you can now pick it on any website\'s panel');
+  ['pf-name','pf-key','pf-model','pf-endpoint'].forEach(x => $(x).value = '');
+  loadProfiles();
+}
+async function deleteProfile(kind, id) {
+  if (!confirm('Delete this API profile?')) return;
+  await api('/api/profiles/' + kind + '/' + id + '/delete', 'POST', {});
+  loadProfiles();
+}
+async function testProfile(kind, id) {
+  const box = $('pf-test-' + kind);
+  box.innerHTML = '<div class="hint">Testing… (10–60s)</div>';
+  const d = await api('/api/profiles/' + kind + '/' + id + '/test', 'POST', {});
+  if (kind === 'image') {
+    box.innerHTML = d.success ? `<span class="badge b-green">✅ works</span> <img class="thumb" src="${esc(d.preview)}" style="max-width:220px;margin-top:8px">` : `<span style="color:#f87171;font-size:12px;white-space:pre-wrap">❌ ${esc(d.error || '')}</span>`;
+  } else {
+    box.innerHTML = d.success ? '<span class="badge b-green">✅ works: ' + esc((d.content || '').slice(0, 80)) + '</span>' : '<span style="color:#f87171;font-size:12px">❌ ' + esc(d.error || '') + '</span>';
+  }
+}
+
+// ---------- logout ----------
+async function logout() { await api('/api/auth/logout', 'POST', {}); location.href = '/login.php'; }
+
+// ---------- init ----------
+(async function init() {
+  const st = await api('/api/auth/state');
+  S.sandbox = st.sandbox;
+  $('sandboxPill').style.display = st.sandbox ? '' : 'none';
+  loadOverview();
+})();
+</script>
+</body>
+</html>

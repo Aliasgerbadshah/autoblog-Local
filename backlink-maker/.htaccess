@@ -1,0 +1,22 @@
+# AutoBacklink — routing + security
+Options -Indexes
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+
+  # Block direct access to sensitive folders/files
+  RewriteRule ^(includes|cron)/ - [F,L]
+  RewriteRule \.db$ - [F,L]
+  RewriteRule ^data_maker\.log$ - [F,L]
+  RewriteRule ^backlink_maker\.db(-wal|-shm)?$ - [F,L]
+
+  # Everything else → index.php (handles pages, /api/*, /packages/*)
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteRule ^ index.php [L]
+</IfModule>
+
+# Security headers
+<IfModule mod_headers.c>
+  Header set X-Content-Type-Options "nosniff"
+  Header set X-Frame-Options "SAMEORIGIN"
+</IfModule>
