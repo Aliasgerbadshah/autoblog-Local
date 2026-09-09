@@ -1150,9 +1150,12 @@ function pickArticleThumbnailUrl($imageVault, $title, $keyword, $ctx = []) {
     $imageVault = blogSafeImageVault($imageVault);
     $provider = strtolower((string)($imageVault['provider'] ?? ''));
     $hasKey = !empty($imageVault['api_key']);
-    // Web request: only Pollinations URL-only. OpenAI/HF/Gemini image HTTP causes nginx 504 and leaves Draft HTML.
+    // Pollinations returns a fast URL; Gemini images are allowed whenever the
+    // user picked Gemini as the slot's Image model (returns an inline image).
+    // OpenAI/HF/other slow HTTP images stay CLI-only to avoid nginx 504 timeouts.
     $allowSlowImage = (PHP_SAPI === 'cli');
-    if ($hasKey && ($provider === 'pollinations' || ($allowSlowImage && in_array($provider, ['openai', 'openrouter', 'custom'], true)))) {
+    $geminiOk = ($provider === 'gemini' && $hasKey);
+    if ($hasKey && ($provider === 'pollinations' || $geminiOk || ($allowSlowImage && in_array($provider, ['openai', 'openrouter', 'custom'], true)))) {
         try {
             $imgResult = AIProviderClient::image($imageVault, $prompt);
             if (!empty($imgResult['success']) && !empty($imgResult['url']) && (stripos($imgResult['url'], 'http') === 0 || str_starts_with($imgResult['url'], 'data:image/'))) {

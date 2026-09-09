@@ -140,6 +140,7 @@ class AIProviderClient {
         if (empty($model)) {
             if ($provider === 'pollinations') $model = 'flux';
             elseif ($provider === 'huggingface') $model = 'black-forest-labs/FLUX.1-schnell';
+            elseif ($provider === 'gemini') $model = 'gemini-2.5-flash-image';
             else $model = 'gpt-image-1';
         }
 
@@ -181,12 +182,20 @@ class AIProviderClient {
             }
 
             if ($provider === 'gemini') {
-                $endpoint = $credentials['endpoint'] ?: "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent";
+                // Accept either the full :generateContent URL or a base URL like
+                // https://generativelanguage.googleapis.com/v1beta (auto-append the
+                // /models/{model}:generateContent path for the chosen image model).
+                $endpoint = trim((string)($credentials['endpoint'] ?? ''));
+                if ($endpoint === '') {
+                    $endpoint = "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent";
+                } elseif (stripos($endpoint, '/models/') === false) {
+                    $endpoint = rtrim($endpoint, '/') . "/models/{$model}:generateContent";
+                }
                 $payload = [
                     'contents' => [['parts' => [['text' => $prompt]]]],
                     'generationConfig' => ['responseModalities' => ['TEXT', 'IMAGE']]
                 ];
-                $result = curlPost($endpoint . '?key=' . $key, $payload, ['Content-Type: application/json'], 180);
+                $result = curlPost($endpoint . '?key=' . $key, $payload, ['Content-Type: application/json'], (PHP_SAPI === 'cli') ? 180 : 55);
                 $data = $result['data'] ?? [];
 
                 if ($result['http_code'] >= 400) {

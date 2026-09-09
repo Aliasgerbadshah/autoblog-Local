@@ -675,7 +675,7 @@ function handleApiRoute($uri) {
         $imageResult = ['success' => false];
         $imageProvider = strtolower((string)($imageVault['provider'] ?? ''));
         $imageVault = function_exists('blogSafeImageVault') ? blogSafeImageVault($imageVault) : $imageVault;
-        $imageAllowed = ($imageProvider === 'pollinations') || (PHP_SAPI === 'cli' && in_array($imageProvider, ['openai', 'openrouter', 'custom'], true));
+        $imageAllowed = ($imageProvider === 'pollinations') || ($imageProvider === 'gemini') || (PHP_SAPI === 'cli' && in_array($imageProvider, ['openai', 'openrouter', 'custom'], true));
         if ($imageAllowed && !empty($imageVault['api_key'])) {
             try {
                 // Chat-written detailed image prompt (title + keyword + website
@@ -2897,11 +2897,11 @@ function handleApiRoute($uri) {
         $imgUrl = '';
         $errMsg = '';
         // TESTER POLICY: this is a deliberate test box, so paid Image APIs
-        // (OpenAI etc.) ARE allowed from the web here. Real blog generation
-        // still avoids them on web to prevent Hostinger 504 timeouts. Gemini /
-        // Hugging Face return heavy binary/data payloads — CLI only.
-        $canCallApi = ($provider === 'pollinations' || in_array($provider, ['openai', 'openrouter', 'custom'], true))
-            || (PHP_SAPI === 'cli' && in_array($provider, ['gemini', 'huggingface'], true));
+        // (OpenAI + Gemini) ARE allowed from the web here. Real blog generation
+        // also runs Gemini when it is the slot's chosen Image model. Only
+        // Hugging Face (heavy binary payloads) stays CLI-only.
+        $canCallApi = ($provider === 'pollinations' || in_array($provider, ['openai', 'openrouter', 'custom', 'gemini'], true))
+            || (PHP_SAPI === 'cli' && in_array($provider, ['huggingface'], true));
         if ($canCallApi && $hasKey) {
             try {
                 $imgResult = AIProviderClient::image($imageVault, $prompt);
@@ -2915,7 +2915,7 @@ function handleApiRoute($uri) {
                 $errMsg = $e->getMessage();
             }
         } elseif (!$canCallApi && $provider !== '' && $provider !== 'pollinations') {
-            $errMsg = 'Gemini/HuggingFace image tests are only allowed from CLI (heavy responses) — pick Pollinations, OpenAI, or a saved OpenAI-compatible account in this tester. Showing the free Pollinations topic-URL fallback below so you can still preview the prompt.';
+            $errMsg = 'Hugging Face image tests are only allowed from CLI (heavy binary responses). Pick Pollinations, OpenAI, or Gemini in this tester. Showing the free Pollinations topic-URL fallback below so you can still preview the prompt.';
         } elseif (!$hasKey && $provider !== 'pollinations') {
             $errMsg = 'No Image API key — showing the free Pollinations topic-URL mode that blogs use as fallback. Pick a saved account above or save an Image API in the Vault.';
         }

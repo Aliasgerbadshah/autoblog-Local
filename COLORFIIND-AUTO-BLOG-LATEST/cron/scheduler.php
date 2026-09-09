@@ -141,7 +141,7 @@ foreach ($dueItems as $item) {
             $featuredUrl = topicPhotoUrlForTitle($art['title'], $keyword, 1);
             $imageVault = function_exists('blogSafeImageVault') ? blogSafeImageVault($imageVault) : $imageVault;
             $imageProvider = strtolower((string)($imageVault['provider'] ?? ''));
-            $imageAllowed = ($imageProvider === 'pollinations') || (PHP_SAPI === 'cli' && in_array($imageProvider, ['openai', 'openrouter', 'custom'], true));
+            $imageAllowed = ($imageProvider === 'pollinations') || ($imageProvider === 'gemini') || (PHP_SAPI === 'cli' && in_array($imageProvider, ['openai', 'openrouter', 'custom'], true));
             if ($imageAllowed && !empty($imageVault['api_key'])) {
                 // Chat-written detailed prompt (title + keyword + website theme),
                 // same flow as the Image Prompt Tester, before calling the image API.
