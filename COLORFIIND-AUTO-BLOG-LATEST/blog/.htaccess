@@ -1,0 +1,33 @@
+# Blog .htaccess — lives at colorfiind.com/blog/
+# NOTE: when uploading via Hostinger File Manager, enable "Show Hidden Files"
+# or this file will be silently skipped and category/tag/sitemap URLs break.
+RewriteEngine On
+RewriteBase /blog/
+
+# Sitemap + RSS are served LIVE from the database (always fresh, always correct
+# URLs). Static sitemap.xml/rss.xml files are still written on publish as backup.
+RewriteRule ^sitemap\.xml$ sitemap.php [L]
+RewriteRule ^rss\.xml$ rss.php [L]
+
+# Category page: /blog/category/General/ -> listing filtered by category
+RewriteRule ^category/(.+)/$ index.php?category=$1 [L,QSA]
+
+# Tag page: /blog/tag/design/ -> listing filtered by tag
+RewriteRule ^tag/(.+)/$ index.php?tag=$1 [L,QSA]
+
+# Paged listing: /blog/page/2/ -> listing page 2
+RewriteRule ^page/([0-9]+)/?$ index.php?page=$1 [L,QSA]
+
+# API endpoint for related posts
+RewriteRule ^api/related$ api/related.php [L,QSA]
+
+# Posts directory (static HTML files — already have index.html)
+# /blog/posts/2026/08/slug/ -> serves /posts/2026/08/slug/index.html automatically
+
+# Protect PHP includes/templates from direct access
+RewriteRule ^(includes|templates)/ - [F,L]
+
+# Default: front controller for anything else that is not a real file/dir
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ index.php [L,QSA]

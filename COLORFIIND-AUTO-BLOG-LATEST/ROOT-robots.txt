@@ -1,0 +1,10 @@
+# colorfiind.com robots.txt — upload AS public_html/robots.txt
+# (There is currently no robots.txt at the site root, so Google never gets
+# told about the blog sitemap. This file fixes that.)
+User-agent: *
+Allow: /
+
+# Main site sitemap (palettes, categories, seasons)
+Sitemap: https://colorfiind.com/sitemap.xml
+# Blog sitemap (all articles — generated live from the database)
+Sitemap: https://colorfiind.com/blog/sitemap.xml

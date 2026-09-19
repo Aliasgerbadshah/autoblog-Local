@@ -20,7 +20,40 @@ $page = max(1, intval($_GET['page'] ?? 1));
 $category = trim($_GET['category'] ?? '');
 $tag = trim($_GET['tag'] ?? '');
 $search = trim($_GET['q'] ?? '');
-$posts = $publisher->getPosts($page, $cfg['posts_per_page'], $category ?: null, $tag ?: null, $search ?: null);
+$perPage = max(1, intval($cfg['posts_per_page'] ?? 12));
+$posts = $publisher->getPosts($page, $perPage, $category ?: null, $tag ?: null, $search ?: null);
+// Total count so page 1 can link to page 2 (crawlers must reach every page).
+try {
+    $totalPosts = $publisher->countPosts($category ?: null, $tag ?: null, $search ?: null);
+} catch (Throwable $e) {
+    $totalPosts = count($posts) >= $perPage ? ($page * $perPage + 1) : count($posts);
+}
+$totalPages = max(1, (int)ceil($totalPosts / $perPage));
+
+// One-time repair: old static article files baked broken /blog/blog/... canonicals.
+// Runs once (flag file), then never again. Wrapped so it can never break the page.
+$seoFlag = __DIR__ . '/.seo_repair_v1.done';
+if (!file_exists($seoFlag)) {
+    try {
+        $publisher->repairStaticSeo();
+        @file_put_contents($seoFlag, date('c'));
+    } catch (Throwable $e) {
+        error_log('[Website Blog] one-time SEO repair: ' . $e->getMessage());
+    }
+}
+
+// Canonical for THIS view (listing / category / tag / search / paged).
+$homeUrl = rtrim($cfg['site_url'], '/') . '/';
+if ($category !== '' || $tag !== '' || $search !== '' || $page > 1) {
+    $q = [];
+    if ($category !== '') $q['category'] = $category;
+    if ($tag !== '') $q['tag'] = $tag;
+    if ($search !== '') $q['q'] = $search;
+    if ($page > 1) $q['page'] = $page;
+    $canonicalUrl = $homeUrl . '?' . http_build_query($q);
+} else {
+    $canonicalUrl = $homeUrl;
+}
 
 // Get categories for sidebar
 $categories = [];
@@ -40,10 +73,10 @@ if (file_exists($dbFile)) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo htmlspecialchars($cfg['site_name']); if ($category) echo ' — ' . htmlspecialchars($category); if ($search) echo ' — Search: ' . htmlspecialchars($search); ?></title>
+    <title><?php echo htmlspecialchars($cfg['site_name']); if ($category) echo ' — ' . htmlspecialchars($category); if ($tag) echo ' — ' . htmlspecialchars($tag); if ($search) echo ' — Search: ' . htmlspecialchars($search); if ($page > 1) echo ' — Page ' . $page; ?></title>
     <meta name="description" content="<?php echo htmlspecialchars($cfg['site_tagline']); ?>">
-    <meta name="robots" content="index, follow">
-    <link rel="canonical" href="<?php echo htmlspecialchars(rtrim($cfg['site_url'], '/') . '/'); ?>">
+    <meta name="robots" content="<?php echo $search !== '' ? 'noindex, follow' : 'index, follow'; ?>">
+    <link rel="canonical" href="<?php echo htmlspecialchars($canonicalUrl); ?>">
     <link rel="alternate" type="application/rss+xml" title="<?php echo htmlspecialchars($cfg['site_name']); ?>" href="<?php echo $cfg['site_url']; ?>/rss.xml">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -175,13 +208,31 @@ if (file_exists($dbFile)) {
                 <?php endforeach; ?>
             </div>
             
-            <?php if ($page > 1): ?>
+            <?php if ($totalPages > 1): ?>
                 <div class="pagination">
-                    <?php if ($page > 1): ?>
-                        <a href="?page=<?php echo $page - 1; ?>&category=<?php echo urlencode($category); ?>&q=<?php echo urlencode($search); ?>">← Previous</a>
+                    <?php
+                    $pgBase = '?category=' . urlencode($category) . '&tag=' . urlencode($tag) . '&q=' . urlencode($search) . '&page=';
+                    if ($page > 1): ?>
+                        <a href="<?php echo $pgBase . ($page - 1); ?>">← Previous</a>
                     <?php endif; ?>
-                    <span class="current">Page <?php echo $page; ?></span>
-                    <a href="?page=<?php echo $page + 1; ?>&category=<?php echo urlencode($category); ?>&q=<?php echo urlencode($search); ?>">Next →</a>
+                    <?php
+                    $pgFrom = max(1, $page - 2);
+                    $pgTo = min($totalPages, $page + 2);
+                    if ($pgFrom > 1) echo '<a href="' . $pgBase . '1">1</a>';
+                    if ($pgFrom > 2) echo '<span>…</span>';
+                    for ($pg = $pgFrom; $pg <= $pgTo; $pg++):
+                        if ($pg === $page): ?>
+                            <span class="current"><?php echo $pg; ?></span>
+                        <?php else: ?>
+                            <a href="<?php echo $pgBase . $pg; ?>"><?php echo $pg; ?></a>
+                        <?php endif;
+                    endfor;
+                    if ($pgTo < $totalPages - 1) echo '<span>…</span>';
+                    if ($pgTo < $totalPages) echo '<a href="' . $pgBase . $totalPages . '">' . $totalPages . '</a>';
+                    ?>
+                    <?php if ($page < $totalPages): ?>
+                        <a href="<?php echo $pgBase . ($page + 1); ?>">Next →</a>
+                    <?php endif; ?>
                 </div>
             <?php endif; ?>
         <?php endif; ?>

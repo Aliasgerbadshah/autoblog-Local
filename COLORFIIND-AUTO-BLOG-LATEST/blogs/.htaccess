@@ -1,0 +1,2 @@
+# /blogs redirect shim — upload as public_html/blogs/.htaccess
+DirectoryIndex index.php

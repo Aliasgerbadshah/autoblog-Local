@@ -9,16 +9,55 @@ class WebsitePublisher {
     
     private $config;
     private $postsDir;
-    
+    private $blogDir;      // this copy's blog/ dir (may be sub_apps/blog)
+    private $liveBlogDir;  // public live blog/ dir (public_html/blog) when detectable
+
     public function __construct() {
         $this->config = require __DIR__ . '/../config.php';
+        $this->blogDir = dirname(__DIR__);
+        $this->liveBlogDir = $this->blogDir;
         $this->postsDir = __DIR__ . '/../posts';
         // If this copy lives in sub_apps/blog but the live site is public_html/blog, write there.
         $livePosts = dirname(__DIR__, 2) . '/blog/posts';
         if (strpos(str_replace('\\', '/', __DIR__), '/sub_apps/') !== false && is_dir(dirname($livePosts))) {
             $this->postsDir = $livePosts;
+            $this->liveBlogDir = dirname($livePosts);
         }
         $this->ensureDirs();
+    }
+
+    /** Root domain without the /blog suffix, e.g. https://colorfiind.com */
+    private function siteRoot() {
+        $base = rtrim($this->config['site_url'], '/');
+        if (substr($base, -5) === '/blog') $base = substr($base, 0, -5);
+        return $base !== '' ? $base : rtrim($this->config['site_url'], '/');
+    }
+
+    /**
+     * Absolute URL for a stored post path like /blog/posts/2026/09/slug/.
+     * Stored paths already start with /blog/ while site_url ends with /blog,
+     * so naive concatenation makes /blog/blog/... (broken canonicals). Fixed here.
+     */
+    public function absoluteUrl($path) {
+        $path = '/' . ltrim((string)$path, '/');
+        $base = rtrim($this->config['site_url'], '/');
+        if (substr($base, -5) === '/blog' && strpos($path, '/blog/') === 0) {
+            $base = substr($base, 0, -5);
+        }
+        return $base . $path;
+    }
+
+    /** Alias kept because updateRSS() historically called this name (it was missing = fatal 500). */
+    public function absolutePostUrl($path) {
+        return $this->absoluteUrl($path);
+    }
+
+    /** Write a blog-root file (sitemap.xml / rss.xml) to BOTH this copy and the live dir. */
+    private function writeBlogFile($name, $content) {
+        $targets = array_unique([$this->blogDir . '/' . $name, $this->liveBlogDir . '/' . $name]);
+        foreach ($targets as $f) {
+            @file_put_contents($f, (string)$content);
+        }
     }
     
     private function ensureDirs() {
@@ -189,6 +228,7 @@ class WebsitePublisher {
             '{{FONT_FAMILY}}' => $cfg['font_family'],
             '{{TITLE}}' => htmlspecialchars($t['title']),
             '{{CATEGORY}}' => htmlspecialchars($t['category']),
+            '{{CATEGORY_URL}}' => rawurlencode($t['category']),
             '{{CONTENT_HTML}}' => $t['content_html'],
             '{{THUMBNAIL_URL}}' => $t['thumbnail_url'] ?: ($cfg['og_image_default'] ?? ''),
             '{{AUTHOR}}' => htmlspecialchars($t['author']),
@@ -197,7 +237,7 @@ class WebsitePublisher {
             '{{READING_TIME}}' => $t['reading_time'],
             '{{META_DESCRIPTION}}' => htmlspecialchars($t['meta_description']),
             '{{META_KEYWORDS}}' => htmlspecialchars($t['meta_keywords'] ?? ''),
-            '{{ARTICLE_URL}}' => $cfg['site_url'] . $t['url'],
+            '{{ARTICLE_URL}}' => $this->absoluteUrl($t['url']),
             '{{OG_IMAGE}}' => $t['thumbnail_url'] ?: $cfg['og_image_default'],
             '{{TWITTER_HANDLE}}' => $cfg['twitter_handle'],
             '{{BREADCRUMB}}' => $this->renderBreadcrumb($t),
@@ -257,14 +297,14 @@ class WebsitePublisher {
      * Render share buttons.
      */
     private function renderShareButtons($t) {
-        $url = urlencode($this->config['site_url'] . $t['url']);
+        $url = urlencode($this->absoluteUrl($t['url']));
         $title = urlencode($t['title']);
         return '<div class="share-buttons">
             <span class="share-label">Share:</span>
             <a href="https://twitter.com/intent/tweet?url=' . $url . '&text=' . $title . '" target="_blank" rel="noopener" class="share-btn share-twitter">𝕏</a>
             <a href="https://www.linkedin.com/sharing/share-offsite/?url=' . $url . '" target="_blank" rel="noopener" class="share-btn share-linkedin">in</a>
             <a href="https://www.facebook.com/sharer/sharer.php?u=' . $url . '" target="_blank" rel="noopener" class="share-btn share-facebook">f</a>
-            <a href="javascript:navigator.clipboard.writeText(\'' . $this->config['site_url'] . $t['url'] . '\');alert(\'Link copied!\')" class="share-btn share-copy">📋</a>
+            <a href="javascript:navigator.clipboard.writeText(\'' . $this->absoluteUrl($t['url']) . '\');alert(\'Link copied!\')" class="share-btn share-copy">📋</a>
         </div>';
     }
     
@@ -407,8 +447,12 @@ class WebsitePublisher {
         }
         
         if ($published > 0) {
-            $this->updateRSS();
-            $this->updateSitemap();
+            try {
+                $this->updateRSS();
+                $this->updateSitemap();
+            } catch (Throwable $e) {
+                error_log('[Website Blog] publishScheduled RSS/sitemap: ' . $e->getMessage());
+            }
         }
         
         return ['published' => $published];
@@ -460,65 +504,155 @@ class WebsitePublisher {
     }
     
     /**
+     * Count published posts (for pagination). Same filters as getPosts().
+     */
+    public function countPosts($category = null, $tag = null, $search = null) {
+        try {
+            $autoblogRoot = $this->config['autoblog_root'];
+            $dbFile = $autoblogRoot . '/includes/database.php';
+            if (!file_exists($dbFile)) return 0;
+            require_once $dbFile;
+            $db = Database::getInstance();
+            $where = "status = 'published'";
+            $params = [];
+            if ($category) { $where .= " AND category = ?"; $params[] = $category; }
+            if ($tag) { $where .= " AND tags LIKE ?"; $params[] = "%{$tag}%"; }
+            if ($search) { $where .= " AND (title LIKE ? OR meta_description LIKE ?)"; $params[] = "%{$search}%"; $params[] = "%{$search}%"; }
+            $row = $db->fetchOne("SELECT COUNT(*) AS c FROM website_blog_posts WHERE {$where}", $params);
+            return intval($row['c'] ?? 0);
+        } catch (Throwable $e) {
+            error_log('[Website Blog] countPosts: ' . $e->getMessage());
+            return 0;
+        }
+    }
+
+    /**
      * Update RSS feed.
      */
     public function updateRSS() {
-        if (!$this->config['rss_enabled']) return;
-        
+        if (empty($this->config['rss_enabled'])) return;
+        $this->writeBlogFile('rss.xml', $this->buildRss());
+    }
+
+    /** Build the RSS XML string (also used by blog/rss.php for live serving). */
+    public function buildRss() {
         $posts = $this->getPosts(1, 50);
         $cfg = $this->config;
-        
+
         $rss = '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
         $rss .= '<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">' . "\n";
         $rss .= '<channel>' . "\n";
         $rss .= '<title>' . htmlspecialchars($cfg['site_name']) . '</title>' . "\n";
-        $rss .= '<link>' . rtrim($cfg['site_url'], '/') . '/</link>' . "\n";
+        $rss .= '<link>' . htmlspecialchars(rtrim($cfg['site_url'], '/') . '/') . '</link>' . "\n";
         $rss .= '<description>' . htmlspecialchars($cfg['site_tagline']) . '</description>' . "\n";
-        $rss .= '<atom:link href="' . rtrim($cfg['site_url'], '/') . '/rss.xml" rel="self" type="application/rss+xml"/>' . "\n";
-        
+        $rss .= '<atom:link href="' . htmlspecialchars(rtrim($cfg['site_url'], '/') . '/rss.xml') . '" rel="self" type="application/rss+xml"/>' . "\n";
+
         foreach ($posts as $p) {
-            $itemUrl = $this->absolutePostUrl($p['url'] ?? '');
+            $itemUrl = $this->absoluteUrl($p['url'] ?? '');
             $rss .= '<item>' . "\n";
             $rss .= '<title>' . htmlspecialchars($p['title']) . '</title>' . "\n";
-            $rss .= '<link>' . $itemUrl . '</link>' . "\n";
+            $rss .= '<link>' . htmlspecialchars($itemUrl) . '</link>' . "\n";
+            $rss .= '<guid isPermaLink="true">' . htmlspecialchars($itemUrl) . '</guid>' . "\n";
             $rss .= '<description>' . htmlspecialchars($p['meta_description'] ?: substr(strip_tags($p['content_html'] ?? ''), 0, 200)) . '</description>' . "\n";
             $rss .= '<pubDate>' . date('r', strtotime($p['published_date'])) . '</pubDate>' . "\n";
             $rss .= '<author>' . htmlspecialchars($p['author'] ?? 'ColorFiind Team') . '</author>' . "\n";
             $rss .= '<category>' . htmlspecialchars($p['category']) . '</category>' . "\n";
             $rss .= '</item>' . "\n";
         }
-        
+
         $rss .= '</channel></rss>';
-        
-        file_put_contents(__DIR__ . '/../rss.xml', $rss);
+        return $rss;
     }
     
     /**
      * Update sitemap.xml.
      */
     public function updateSitemap() {
-        if (!$this->config['sitemap_enabled']) return;
-        
-        $posts = $this->getPosts(1, 1000);
+        if (empty($this->config['sitemap_enabled'])) return;
+        $this->writeBlogFile('sitemap.xml', $this->buildSitemap());
+    }
+
+    /** Build the sitemap XML string (also used by blog/sitemap.php for live serving). */
+    public function buildSitemap() {
+        $posts = $this->getPosts(1, 5000);
         $cfg = $this->config;
-        
+        $home = rtrim($cfg['site_url'], '/') . '/';
+
         $xml = '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
         $xml .= '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' . "\n";
-        
-        // Homepage
-        $xml .= '<url><loc>' . $cfg['site_url'] . '/</loc><changefreq>daily</changefreq><priority>1.0</priority></url>' . "\n";
-        
+
+        // Homepage (blog listing)
+        $xml .= '<url><loc>' . htmlspecialchars($home) . '</loc><changefreq>daily</changefreq><priority>1.0</priority></url>' . "\n";
+
+        // Category + tag listing pages (helps crawlers discover filtered archives)
+        try {
+            $dbFile = ($cfg['autoblog_root'] ?? '') . '/includes/database.php';
+            if (is_file($dbFile)) {
+                require_once $dbFile;
+                $db = Database::getInstance();
+                $cats = $db->fetchAll("SELECT name FROM website_blog_categories WHERE post_count > 0 ORDER BY name ASC") ?: [];
+                foreach ($cats as $c) {
+                    $xml .= '<url><loc>' . htmlspecialchars($home . 'category/' . rawurlencode($c['name']) . '/') . '</loc><changefreq>weekly</changefreq><priority>0.6</priority></url>' . "\n";
+                }
+                $tags = $db->fetchAll("SELECT name FROM website_blog_tags WHERE post_count > 0 ORDER BY name ASC") ?: [];
+                foreach ($tags as $t) {
+                    $xml .= '<url><loc>' . htmlspecialchars($home . 'tag/' . rawurlencode($t['name']) . '/') . '</loc><changefreq>weekly</changefreq><priority>0.5</priority></url>' . "\n";
+                }
+            }
+        } catch (Throwable $e) {
+            error_log('[Website Blog] buildSitemap cats/tags: ' . $e->getMessage());
+        }
+
         foreach ($posts as $p) {
             $xml .= '<url>' . "\n";
-            $xml .= '<loc>' . $cfg['site_url'] . $p['url'] . '</loc>' . "\n";
-            $xml .= '<lastmod>' . date('Y-m-d', strtotime($p['updated_at'] ?? $p['published_date'])) . '</lastmod>' . "\n";
+            $xml .= '<loc>' . htmlspecialchars($this->absoluteUrl($p['url'] ?? '')) . '</loc>' . "\n";
+            $xml .= '<lastmod>' . date('Y-m-d', strtotime($p['updated_at'] ?? $p['published_date'] ?? 'now')) . '</lastmod>' . "\n";
             $xml .= '<changefreq>monthly</changefreq><priority>0.8</priority>' . "\n";
             $xml .= '</url>' . "\n";
         }
-        
+
         $xml .= '</urlset>';
-        
-        file_put_contents(__DIR__ . '/../sitemap.xml', $xml);
+        return $xml;
+    }
+
+    /**
+     * One-time SEO repair for already-published static article files.
+     * Old files baked in broken canonicals like https://colorfiind.com/blog/blog/posts/...
+     * (double /blog/) because site_url was concatenated with a path that already
+     * started with /blog/. This rewrites them in place. Idempotent — safe to re-run.
+     * @return array counts
+     */
+    public function repairStaticSeo() {
+        $bad = rtrim($this->config['site_url'], '/') . '/blog/';
+        $good = $this->siteRoot() . '/blog/';
+        $fixed = 0;
+        $scanned = 0;
+        $dirs = array_unique([$this->postsDir, $this->blogDir . '/posts', $this->liveBlogDir . '/posts']);
+        foreach ($dirs as $base) {
+            if (!is_dir($base)) continue;
+            $it = new RecursiveIteratorIterator(
+                new RecursiveDirectoryIterator($base, FilesystemIterator::SKIP_DOTS),
+                RecursiveIteratorIterator::LEAVES_ONLY
+            );
+            foreach ($it as $file) {
+                if ($file->getFilename() !== 'index.html') continue;
+                $path = $file->getPathname();
+                $html = @file_get_contents($path);
+                if ($html === false || strpos($html, $bad) === false) continue;
+                $scanned++;
+                $newHtml = str_replace($bad, $good, $html);
+                if ($newHtml !== $html && @file_put_contents($path, $newHtml) !== false) {
+                    $fixed++;
+                }
+            }
+        }
+        try {
+            $this->updateRSS();
+            $this->updateSitemap();
+        } catch (Throwable $e) {
+            error_log('[Website Blog] repairStaticSeo feeds: ' . $e->getMessage());
+        }
+        return ['scanned' => $scanned, 'fixed' => $fixed, 'bad' => $bad, 'good' => $good];
     }
     
     /**
